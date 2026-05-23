@@ -1,41 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AuthButton() {
   const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    async function load() {
+
+    async function loadSession() {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
       setSession(data?.session ?? null);
     }
-    load();
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session ?? null);
+
+    loadSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSession(session ?? null);
+      }
     });
+
     return () => {
       mounted = false;
-      if (sub?.subscription) sub.subscription.unsubscribe();
+      if (listener?.subscription) listener.subscription.unsubscribe();
     };
   }, []);
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
-    setSession(null);
+    setLoading(false);
   };
 
   if (session) {
     return (
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <a href="/profile">Mi perfil</a>
-        <button onClick={signOut}>Cerrar sesión</button>
-      </div>
+      <button type="button" onClick={handleSignOut} disabled={loading} style={{ padding: '0.5rem 1rem' }}>
+        {loading ? 'Cerrando...' : 'Cerrar sesión'}
+      </button>
     );
   }
 
-  return <a href="/signin">Iniciar sesión</a>;
+  return (
+    <Link href="/signin" style={{ padding: '0.5rem 1rem', display: 'inline-block' }}>
+      Iniciar sesión
+    </Link>
+  );
 }

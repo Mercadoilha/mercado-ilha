@@ -6,4 +6,6 @@
 *.tmp
 *.bak
 .cache/
+.next/
 node_modules/
+.env.local
