@@ -5,13 +5,18 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+type CustomNav = { icon: string; label: string; category_slug: string };
+
 export default function BottomNav() {
   const pathname = usePathname();
   const [hasSession, setHasSession] = useState(false);
+  const [customNav, setCustomNav] = useState<CustomNav>({ icon: "🍽️", label: "Comida", category_slug: "gastronomia" });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setHasSession(!!data?.session));
     const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
+    supabase.from("admin_settings").select("value").eq("key", "nav_custom_1").single()
+      .then(({ data }) => { if (data?.value) setCustomNav(data.value); });
     return () => l?.subscription.unsubscribe();
   }, []);
 
@@ -28,6 +33,8 @@ export default function BottomNav() {
     color: active(href) ? "var(--blue-main)" : "#94a3b8",
     minWidth: 48,
   });
+
+  const customHref = `/listings?category=${customNav.category_slug}`;
 
   return (
     <nav
@@ -78,9 +85,9 @@ export default function BottomNav() {
         +
       </Link>
 
-      <Link href="/listings?category=gastronomia" style={link("/listings?category=gastronomia")}>
-        <span style={{ fontSize: "1.3rem" }}>🍽️</span>
-        Comida
+      <Link href={customHref} style={link(customHref)}>
+        <span style={{ fontSize: "1.3rem" }}>{customNav.icon}</span>
+        {customNav.label}
       </Link>
 
       {hasSession ? (

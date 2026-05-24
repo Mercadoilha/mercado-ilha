@@ -643,10 +643,31 @@ function Categories() {
   const [loadingSubcats, setLoadingSubcats] = useState<Record<number, boolean>>({});
   const [msg, setMsg] = useState("");
 
+  // New category form
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatSlug, setNewCatSlug] = useState("");
+  const [newCatIcon, setNewCatIcon] = useState("");
+  const [newCatType, setNewCatType] = useState("fija");
+  const [newCatBtn, setNewCatBtn] = useState("Contatar");
+  const [newCatSaving, setNewCatSaving] = useState(false);
+  const [pickingNewCatIcon, setPickingNewCatIcon] = useState(false);
+
+  // New subcategory form
+  const [addingSubFor, setAddingSubFor] = useState<number | null>(null);
+  const [newSubName, setNewSubName] = useState("");
+  const [newSubIcon, setNewSubIcon] = useState("");
+  const [newSubSaving, setNewSubSaving] = useState(false);
+  const [pickingNewSubIcon, setPickingNewSubIcon] = useState(false);
+
   useEffect(() => {
     supabase.from("categories").select("id,name,slug,icon,is_active").order("sort_order")
       .then(({ data }) => { setCategories(data ?? []); setLoading(false); });
   }, []);
+
+  const toSlug = (name: string) => name.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
 
   const loadSubcats = async (catId: number) => {
     if (subcats[catId] !== undefined) return;
@@ -662,7 +683,7 @@ function Categories() {
     loadSubcats(catId);
   };
 
-  const flash = (text: string) => { setMsg(text); setTimeout(() => setMsg(""), 2000); };
+  const flash = (text: string) => { setMsg(text); setTimeout(() => setMsg(""), 2500); };
 
   const saveCatIcon = async (catId: number, icon: string) => {
     const { error } = await supabase.from("categories").update({ icon }).eq("id", catId);
@@ -680,86 +701,210 @@ function Categories() {
     setPickingFor(null);
   };
 
+  const toggleCat = async (catId: number, current: boolean) => {
+    await supabase.from("categories").update({ is_active: !current }).eq("id", catId);
+    setCategories((p) => p.map((c) => c.id === catId ? { ...c, is_active: !current } : c));
+  };
+
+  const deleteCat = async (catId: number) => {
+    if (!confirm("Deletar esta categoria? Os anúncios existentes não serão afetados.")) return;
+    const { error } = await supabase.from("categories").delete().eq("id", catId);
+    if (!error) { setCategories((p) => p.filter((c) => c.id !== catId)); flash("Categoria deletada."); }
+    else flash("Erro: " + error.message);
+  };
+
+  const addCategory = async () => {
+    if (!newCatName.trim() || !newCatSlug.trim()) { flash("Nome e slug são obrigatórios."); return; }
+    setNewCatSaving(true);
+    const { data, error } = await supabase.from("categories").insert({
+      name: newCatName.trim(), slug: newCatSlug.trim(), icon: newCatIcon || null,
+      location_type: newCatType, contact_button_text: newCatBtn || "Contatar",
+      is_active: true, sort_order: categories.length,
+    }).select().single();
+    if (!error && data) {
+      setCategories((p) => [...p, data]);
+      setShowNewCat(false); setNewCatName(""); setNewCatSlug(""); setNewCatIcon(""); setNewCatType("fija"); setNewCatBtn("Contatar");
+      flash("Categoria criada.");
+    } else flash("Erro: " + error?.message);
+    setNewCatSaving(false);
+  };
+
+  const toggleSubcat = async (subcatId: number, catId: number, current: boolean) => {
+    await supabase.from("subcategories").update({ is_active: !current }).eq("id", subcatId);
+    setSubcats((p) => ({ ...p, [catId]: (p[catId] ?? []).map((s) => s.id === subcatId ? { ...s, is_active: !current } : s) }));
+  };
+
+  const deleteSubcat = async (subcatId: number, catId: number) => {
+    if (!confirm("Deletar esta subcategoria?")) return;
+    await supabase.from("subcategories").delete().eq("id", subcatId);
+    setSubcats((p) => ({ ...p, [catId]: (p[catId] ?? []).filter((s) => s.id !== subcatId) }));
+    flash("Subcategoria deletada.");
+  };
+
+  const addSubcat = async (catId: number) => {
+    if (!newSubName.trim()) { flash("Informe o nome."); return; }
+    setNewSubSaving(true);
+    const { data, error } = await supabase.from("subcategories").insert({
+      category_id: catId, name: newSubName.trim(), icon: newSubIcon || null,
+      is_active: true, sort_order: (subcats[catId] ?? []).length,
+    }).select().single();
+    if (!error && data) {
+      setSubcats((p) => ({ ...p, [catId]: [...(p[catId] ?? []), data] }));
+      setAddingSubFor(null); setNewSubName(""); setNewSubIcon("");
+      flash("Subcategoria criada.");
+    } else flash("Erro: " + error?.message);
+    setNewSubSaving(false);
+  };
+
   const isPicking = (type: "cat" | "subcat", id: number) => pickingFor?.type === type && pickingFor?.id === id;
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
 
   return (
     <div>
-      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>Categorias</h2>
-      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.875rem" }}>
-        Toque no ícone para escolher. Expanda para editar subcategorias.
-      </p>
-      {msg && <p style={{ fontSize: "0.8rem", color: "#059669", fontWeight: 600, marginBottom: 8 }}>{msg}</p>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.875rem" }}>
+        <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Categorias ({categories.length})</h2>
+        <button type="button" onClick={() => setShowNewCat((v) => !v)} className="btn btn-primary" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem" }}>
+          {showNewCat ? "Cancelar" : "+ Nova"}
+        </button>
+      </div>
+
+      {msg && <p style={{ fontSize: "0.8rem", color: msg.startsWith("Erro") ? "#dc2626" : "#059669", fontWeight: 600, marginBottom: 8 }}>{msg}</p>}
+
+      {/* New category form */}
+      {showNewCat && (
+        <div className="card" style={{ padding: "0.875rem", marginBottom: "0.875rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <button type="button" onClick={() => setPickingNewCatIcon((v) => !v)}
+              style={{ fontSize: "1.4rem", width: 44, height: 44, borderRadius: 10, flexShrink: 0, cursor: "pointer", border: "1px solid var(--border)", background: "#fff" }}>
+              {newCatIcon || "📌"}
+            </button>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+              <input className="form-input" type="text" placeholder="Nome da categoria *" value={newCatName}
+                onChange={(e) => { setNewCatName(e.target.value); setNewCatSlug(toSlug(e.target.value)); }} />
+              <input className="form-input" type="text" placeholder="slug (auto)" value={newCatSlug}
+                onChange={(e) => setNewCatSlug(e.target.value)} />
+            </div>
+          </div>
+          {pickingNewCatIcon && (
+            <IconPicker selected={newCatIcon} onSelect={(e) => { setNewCatIcon(e); setPickingNewCatIcon(false); }} />
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <select className="form-select" value={newCatType} onChange={(e) => setNewCatType(e.target.value)} style={{ flex: 1 }}>
+              <option value="fija">Localização fixa</option>
+              <option value="zonas_de_atencion">Zonas de atendimento</option>
+            </select>
+            <input className="form-input" type="text" placeholder="Botão (ex: Contatar)" value={newCatBtn}
+              onChange={(e) => setNewCatBtn(e.target.value)} style={{ flex: 1 }} />
+          </div>
+          <button type="button" className="btn btn-primary" disabled={newCatSaving} onClick={addCategory}>
+            {newCatSaving ? "Salvando..." : "✅ Criar categoria"}
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
         {categories.map((cat) => (
           <div key={cat.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
             {/* Category row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.75rem" }}>
-              <button
-                type="button"
-                title="Alterar ícone"
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.75rem" }}>
+              <button type="button" title="Alterar ícone"
                 onClick={() => setPickingFor(isPicking("cat", cat.id) ? null : { type: "cat", id: cat.id })}
-                style={{
-                  fontSize: "1.4rem", width: 44, height: 44, borderRadius: 10, flexShrink: 0, cursor: "pointer",
+                style={{ fontSize: "1.4rem", width: 44, height: 44, borderRadius: 10, flexShrink: 0, cursor: "pointer",
                   border: isPicking("cat", cat.id) ? "2px solid var(--blue-main)" : "1px solid var(--border)",
-                  background: isPicking("cat", cat.id) ? "var(--blue-xlight)" : "#fff",
-                }}
-              >
+                  background: isPicking("cat", cat.id) ? "var(--blue-xlight)" : "#fff" }}>
                 {cat.icon || "📌"}
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b" }}>{cat.name}</div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug} · {cat.is_active ? "✅" : "⏸️"}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.875rem", color: cat.is_active ? "#1e293b" : "#94a3b8" }}>{cat.name}</div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</div>
               </div>
+              <button type="button" onClick={() => toggleCat(cat.id, cat.is_active)} title={cat.is_active ? "Desativar" : "Ativar"}
+                style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
+                {cat.is_active ? "✅" : "⏸️"}
+              </button>
               <button type="button" onClick={() => handleExpand(cat.id)}
-                style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.75rem", color: "var(--text-muted)", flexShrink: 0 }}>
-                {expanded === cat.id ? "▲" : "▼"} Sub
+                style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.3rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                {expanded === cat.id ? "▲" : "▼"}
+              </button>
+              <button type="button" onClick={() => deleteCat(cat.id)}
+                style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", color: "#dc2626", fontSize: "0.75rem", flexShrink: 0 }}>
+                🗑️
               </button>
             </div>
 
-            {/* Icon picker for category */}
             {isPicking("cat", cat.id) && (
               <div style={{ padding: "0 0.75rem 0.75rem" }}>
                 <IconPicker selected={cat.icon || ""} onSelect={(icon) => saveCatIcon(cat.id, icon)} />
               </div>
             )}
 
-            {/* Subcategories */}
             {expanded === cat.id && (
               <div style={{ borderTop: "1px solid var(--border)", background: "#f8fafc" }}>
                 {loadingSubcats[cat.id] ? (
                   <div style={{ textAlign: "center", padding: "0.75rem" }}><div className="spinner" /></div>
-                ) : (subcats[cat.id] ?? []).length === 0 ? (
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", padding: "0.75rem", textAlign: "center" }}>Sem subcategorias.</p>
                 ) : (
-                  (subcats[cat.id] ?? []).map((sub) => (
-                    <div key={sub.id}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--border)" }}>
-                        <button
-                          type="button"
-                          title="Alterar ícone"
-                          onClick={() => setPickingFor(isPicking("subcat", sub.id) ? null : { type: "subcat", id: sub.id, catId: cat.id })}
-                          style={{
-                            fontSize: "1.2rem", width: 38, height: 38, borderRadius: 8, flexShrink: 0, cursor: "pointer",
-                            border: isPicking("subcat", sub.id) ? "2px solid var(--blue-main)" : "1px solid var(--border)",
-                            background: isPicking("subcat", sub.id) ? "var(--blue-xlight)" : "#fff",
-                          }}
-                        >
-                          {sub.icon || "•"}
-                        </button>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: "0.8rem", color: "#1e293b" }}>{sub.name}</div>
-                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{sub.is_active ? "✅ Ativa" : "⏸️ Inativa"}</div>
+                  <>
+                    {(subcats[cat.id] ?? []).map((sub) => (
+                      <div key={sub.id}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--border)" }}>
+                          <button type="button" title="Alterar ícone"
+                            onClick={() => setPickingFor(isPicking("subcat", sub.id) ? null : { type: "subcat", id: sub.id, catId: cat.id })}
+                            style={{ fontSize: "1.2rem", width: 36, height: 36, borderRadius: 8, flexShrink: 0, cursor: "pointer",
+                              border: isPicking("subcat", sub.id) ? "2px solid var(--blue-main)" : "1px solid var(--border)",
+                              background: isPicking("subcat", sub.id) ? "var(--blue-xlight)" : "#fff" }}>
+                            {sub.icon || "•"}
+                          </button>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "#1e293b" : "#94a3b8" }}>{sub.name}</div>
+                          </div>
+                          <button type="button" onClick={() => toggleSubcat(sub.id, cat.id, sub.is_active)}
+                            style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
+                            {sub.is_active ? "✅" : "⏸️"}
+                          </button>
+                          <button type="button" onClick={() => deleteSubcat(sub.id, cat.id)}
+                            style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", color: "#dc2626", fontSize: "0.72rem", flexShrink: 0 }}>
+                            🗑️
+                          </button>
+                        </div>
+                        {isPicking("subcat", sub.id) && (
+                          <div style={{ padding: "0.5rem 0.75rem", background: "#f1f5f9", borderBottom: "1px solid var(--border)" }}>
+                            <IconPicker selected={sub.icon || ""} onSelect={(icon) => saveSubcatIcon(sub.id, cat.id, icon)} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add subcategory */}
+                    {addingSubFor === cat.id ? (
+                      <div style={{ padding: "0.625rem 0.75rem", display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <button type="button" onClick={() => setPickingNewSubIcon((v) => !v)}
+                            style={{ fontSize: "1.1rem", width: 36, height: 36, borderRadius: 8, flexShrink: 0, cursor: "pointer", border: "1px solid var(--border)", background: "#fff" }}>
+                            {newSubIcon || "•"}
+                          </button>
+                          <input className="form-input" type="text" placeholder="Nome da subcategoria *" value={newSubName}
+                            onChange={(e) => setNewSubName(e.target.value)} style={{ flex: 1 }} />
+                        </div>
+                        {pickingNewSubIcon && (
+                          <IconPicker selected={newSubIcon} onSelect={(e) => { setNewSubIcon(e); setPickingNewSubIcon(false); }} />
+                        )}
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button type="button" className="btn btn-primary" disabled={newSubSaving} onClick={() => addSubcat(cat.id)} style={{ flex: 1, fontSize: "0.8rem", padding: "0.35rem" }}>
+                            {newSubSaving ? "..." : "Criar"}
+                          </button>
+                          <button type="button" className="btn btn-ghost" onClick={() => { setAddingSubFor(null); setNewSubName(""); setNewSubIcon(""); }} style={{ fontSize: "0.8rem", padding: "0.35rem 0.6rem", border: "1px solid var(--border)" }}>
+                            ✕
+                          </button>
                         </div>
                       </div>
-                      {isPicking("subcat", sub.id) && (
-                        <div style={{ padding: "0.5rem 0.75rem", background: "#f1f5f9", borderBottom: "1px solid var(--border)" }}>
-                          <IconPicker selected={sub.icon || ""} onSelect={(icon) => saveSubcatIcon(sub.id, cat.id, icon)} />
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    ) : (
+                      <button type="button" onClick={() => { setAddingSubFor(cat.id); setNewSubName(""); setNewSubIcon(""); setPickingNewSubIcon(false); }}
+                        style={{ width: "100%", padding: "0.6rem", background: "none", border: "none", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600 }}>
+                        + Nova subcategoria
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -780,16 +925,31 @@ function Settings() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
+  // Bottom nav custom shortcut
+  const [navIcon, setNavIcon] = useState("🍽️");
+  const [navLabel, setNavLabel] = useState("Comida");
+  const [navSlug, setNavSlug] = useState("gastronomia");
+  const [navSaving, setNavSaving] = useState(false);
+  const [navMsg, setNavMsg] = useState("");
+  const [showNavIconPicker, setShowNavIconPicker] = useState(false);
+  const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
+
   useEffect(() => {
-    supabase
-      .from("admin_settings")
-      .select("value")
-      .eq("key", "admin_whatsapp")
-      .single()
-      .then(({ data }) => {
-        if (data?.value?.value) setWhatsapp(String(data.value.value));
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("admin_settings").select("value").eq("key", "admin_whatsapp").single(),
+      supabase.from("admin_settings").select("value").eq("key", "nav_custom_1").single(),
+      supabase.from("categories").select("slug,name").eq("is_active", true).order("sort_order"),
+    ]).then(([waRes, navRes, catRes]) => {
+      if (waRes.data?.value?.value) setWhatsapp(String(waRes.data.value.value));
+      if (navRes.data?.value) {
+        const v = navRes.data.value as { icon?: string; label?: string; category_slug?: string };
+        if (v.icon) setNavIcon(v.icon);
+        if (v.label) setNavLabel(v.label);
+        if (v.category_slug) setNavSlug(v.category_slug);
+      }
+      setCategories(catRes.data ?? []);
+      setLoading(false);
+    });
   }, []);
 
   const save = async () => {
@@ -803,14 +963,28 @@ function Settings() {
     setSaving(false);
   };
 
+  const saveNav = async () => {
+    if (!navLabel.trim() || !navSlug.trim()) { setNavMsg("Preencha o rótulo e a categoria."); return; }
+    setNavSaving(true);
+    setNavMsg("");
+    const { error } = await supabase
+      .from("admin_settings")
+      .upsert({ key: "nav_custom_1", value: { icon: navIcon, label: navLabel.trim(), category_slug: navSlug.trim() } }, { onConflict: "key" });
+    setNavMsg(error ? "Erro: " + error.message : "Atalho salvo com sucesso.");
+    setNavSaving(false);
+  };
+
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
 
   return (
-    <div>
-      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.875rem" }}>Configurações</h2>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Configurações</h2>
+
+      {/* WhatsApp de contato */}
       <div className="card" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>📱 WhatsApp de contato</div>
         <div className="form-group">
-          <label className="form-label">WhatsApp de contato (sugestões e reclamações)</label>
+          <label className="form-label">Número (sugestões e reclamações)</label>
           <input
             className="form-input"
             type="tel"
@@ -830,6 +1004,59 @@ function Settings() {
         )}
         <button type="button" className="btn btn-primary" disabled={saving} onClick={save}>
           {saving ? "Salvando..." : "💾 Salvar número"}
+        </button>
+      </div>
+
+      {/* Bottom nav custom shortcut */}
+      <div className="card" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>🔗 Atalho da barra inferior</div>
+        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
+          O quarto botão da barra de navegação inferior. Aparece como: {navIcon} {navLabel}
+        </p>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <button
+            type="button"
+            onClick={() => setShowNavIconPicker((v) => !v)}
+            title="Escolher ícone"
+            style={{
+              fontSize: "1.5rem", width: 48, height: 48, borderRadius: 10, flexShrink: 0,
+              cursor: "pointer", border: showNavIconPicker ? "2px solid var(--blue-main)" : "1px solid var(--border)",
+              background: showNavIconPicker ? "var(--blue-xlight)" : "#fff",
+            }}
+          >
+            {navIcon}
+          </button>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Rótulo (ex: Comida)"
+              value={navLabel}
+              onChange={(e) => setNavLabel(e.target.value)}
+              maxLength={20}
+            />
+            <select
+              className="form-select"
+              value={navSlug}
+              onChange={(e) => setNavSlug(e.target.value)}
+            >
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>{c.name} ({c.slug})</option>
+              ))}
+              {categories.length === 0 && <option value={navSlug}>{navSlug}</option>}
+            </select>
+          </div>
+        </div>
+        {showNavIconPicker && (
+          <IconPicker selected={navIcon} onSelect={(e) => { setNavIcon(e); setShowNavIconPicker(false); }} />
+        )}
+        {navMsg && (
+          <p style={{ fontSize: "0.8rem", color: navMsg.startsWith("Erro") ? "#dc2626" : "#059669", fontWeight: 600 }}>
+            {navMsg}
+          </p>
+        )}
+        <button type="button" className="btn btn-primary" disabled={navSaving} onClick={saveNav}>
+          {navSaving ? "Salvando..." : "💾 Salvar atalho"}
         </button>
       </div>
     </div>
