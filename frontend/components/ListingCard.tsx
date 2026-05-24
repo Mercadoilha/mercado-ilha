@@ -1,6 +1,6 @@
 "use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
 type ListingCardProps = {
   listing: any;
@@ -10,35 +10,116 @@ type ListingCardProps = {
   busy: boolean;
 };
 
-export default function ListingCard({ listing, isFavorite, onToggleFavorite, sessionExists, busy }: ListingCardProps) {
-  return (
-    <article style={{ border: '1px solid #e6eef6', padding: 12, borderRadius: 8, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      <div>
-        <h3 style={{ margin: '0 0 8px' }}>{listing.title}</h3>
-        <p style={{ margin: 0, color: '#475569' }}>{listing.description}</p>
-        {listing.price != null && <p style={{ marginTop: 8, fontWeight: 700 }}>R$ {listing.price}</p>}
-      </div>
+export default function ListingCard({
+  listing,
+  isFavorite,
+  onToggleFavorite,
+  sessionExists,
+  busy,
+}: ListingCardProps) {
+  const price =
+    listing.price != null
+      ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+      : listing.price_text ?? "Consulte";
 
-      <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => onToggleFavorite(listing.id)}
-          disabled={busy}
+  const firstPhoto = listing.listing_photos?.[0]?.photo_url ?? null;
+
+  return (
+    <article
+      style={{
+        display: "flex",
+        gap: "0.75rem",
+        background: "#fff",
+        borderRadius: 12,
+        border: "1px solid var(--border)",
+        overflow: "hidden",
+        alignItems: "center",
+        padding: "0.625rem",
+        position: "relative",
+      }}
+    >
+      {/* Miniatura */}
+      <Link
+        href={`/listings/${listing.id}`}
+        style={{ flexShrink: 0, textDecoration: "none" }}
+      >
+        <div
           style={{
-            padding: '0.5rem 0.75rem',
-            backgroundColor: isFavorite ? '#f97316' : '#3b82f6',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            cursor: busy ? 'not-allowed' : 'pointer',
+            width: 80,
+            height: 80,
+            borderRadius: 10,
+            background: "var(--blue-xlight)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          {busy ? 'Procesando...' : sessionExists ? (isFavorite ? 'Quitar favorito' : 'Agregar favorito') : 'Inicia sesión para favoritos'}
-        </button>
-        <Link href={`/listings/${listing.id}`} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', backgroundColor: '#e2e8f0', borderRadius: 8, textDecoration: 'none', color: '#111' }}>
-          Ver detalle
+          {firstPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={firstPhoto}
+              alt={listing.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span style={{ fontSize: "2rem" }}>🛍️</span>
+          )}
+        </div>
+      </Link>
+
+      {/* Contenido */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Link
+          href={`/listings/${listing.id}`}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              color: "#1e293b",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {listing.title}
+          </div>
+          <div
+            style={{
+              fontSize: "0.78rem",
+              color: "var(--text-muted)",
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {listing.description}
+          </div>
+          <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--blue-main)", marginTop: 4 }}>
+            {price}
+          </div>
+          {listing.condition && (
+            <span className="badge badge-blue" style={{ marginTop: 4, display: "inline-block" }}>
+              {listing.condition}
+            </span>
+          )}
         </Link>
       </div>
+
+      {/* Favorito */}
+      <button
+        type="button"
+        onClick={() => onToggleFavorite(listing.id)}
+        disabled={busy}
+        className="fav-btn"
+        title={sessionExists ? (isFavorite ? "Remover favorito" : "Favoritar") : "Entre para favoritar"}
+        style={{ flexShrink: 0, alignSelf: "flex-start", paddingTop: 2 }}
+      >
+        {busy ? "⏳" : isFavorite ? "❤️" : "🤍"}
+      </button>
     </article>
   );
 }
