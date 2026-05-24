@@ -187,9 +187,15 @@ export default function ProfilePage() {
                   <span>{profile.whatsapp}</span>
                 </div>
               ) : (
-                <div style={{ color: "#ef4444", fontSize: "0.8rem" }}>
-                  ⚠️ Adicione seu WhatsApp para que os compradores possam te contatar.
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(true)}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+                >
+                  <div style={{ color: "#ef4444", fontSize: "0.8rem", textDecoration: "underline" }}>
+                    ⚠️ Adicione seu WhatsApp para que os compradores possam te contatar. Toque aqui para adicionar.
+                  </div>
+                </button>
               )}
             </div>
           )}
