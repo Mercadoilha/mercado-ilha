@@ -16,131 +16,104 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 
 ## DECISIONES TÉCNICAS
 
-- **Stack:** Next.js (App Router) + TypeScript + Tailwind CSS + Supabase (DB,
-  auth, storage) + Vercel (hosting). Todo gratuito al inicio.
-- **Plataforma:** Web responsive para celular + PWA instalable.
+- **Stack:** Next.js 14 (App Router) + TypeScript + CSS inline con variables CSS
+  (sin Tailwind) + Supabase (DB, Auth, Storage) + Vercel (hosting).
+- **Plataforma:** Web responsive mobile-first (max-width 480px) + PWA instalable.
 - **Idioma de la interfaz:** Portugués brasileño.
-- **Autenticación:** Registro mínimo (nombre, WhatsApp, email, contraseña) para
-  publicar. Navegar y contactar es libre sin registro.
+- **Autenticación:** Email + contraseña (signUpWithPassword / signInWithPassword).
+  Registro captura nombre, WhatsApp, email y contraseña. Navegar y contactar es
+  libre sin registro. Publicar requiere cuenta.
 - **Contacto:** Botón WhatsApp con mensaje pre-armado por categoría. Sin chat
   interno.
 - **Moderación:** Publicación instantánea. Admin puede ocultar/bloquear/eliminar.
-  Usuarios pueden denunciar.
-- **Fotos:** Hasta 6 por anuncio. Compresión automática en el navegador antes de
-  subir (el usuario no hace nada manual).
+  Usuarios pueden denunciar desde el detalle del anuncio.
+- **Fotos:** Hasta 6 por anuncio. Se suben a Supabase Storage bucket
+  `listing-photos`. Preview antes de subir. Sin compresión por ahora.
 - **Expiración:** Configurable por categoría (días o sin expiración). Anuncios
-  vencidos quedan en el panel del vendedor para republicar con un clic. Vendedor
-  puede marcar como "vendido" manualmente.
-- **Perfil-tienda:** Cada vendedor tiene página pública con todos sus anuncios
-  (estilo Nuvemshop).
+  vencidos quedan en el panel del vendedor.
+- **Perfil-tienda:** Cada vendedor tiene página pública `/store/[id]` con todos
+  sus anuncios activos.
+- **WhatsApp del admin:** Guardado en tabla `admin_settings` (key = `admin_whatsapp`).
+  Nunca hardcodeado. Se lee con `frontend/lib/adminSettings.ts`.
 
 ---
 
 ## ESTRUCTURA GEOGRÁFICA (3 niveles, todo administrable)
 
-- **Isla:** Tinharé (expandible a otras islas de Brasil en el futuro)
+- **Isla:** Tinharé (slug: `tinhare`)
 - **Localidades:** Morro de São Paulo, Gamboa, Zimbo, Galeão
 - **Sub-zonas:**
   - Morro de São Paulo: Vila Centro, Lagoa, Primeira Praia, Segunda Praia,
     Terceira Praia, Quarta Praia, Mangaba, Buraco, Outros
   - Gamboa: Nova Gamboa, Vila, Outros
-  - Zimbo: Outros (sin sub-zonas definidas aún)
-  - Galeão: Outros (sin sub-zonas definidas aún)
-- **"Outros":** El usuario escribe referencia en texto libre (no crea sub-zona
-  oficial). El admin ve las referencias repetidas y crea sub-zonas cuando quiera.
+  - Zimbo: Outros
+  - Galeão: Outros
+- **"Outros":** El usuario escribe referencia en texto libre. El admin la ve y
+  puede crear sub-zona oficial cuando quiera.
 
 ---
 
-## CATEGORÍAS (10, todas administrables)
+## CATEGORÍAS (10, todas en Supabase)
 
-Cada categoría tiene: nombre, ícono, orden, días de expiración (o sin expiración),
-mensaje WhatsApp propio, texto del botón de contacto, tipo de ubicación
-(fija/zonas de atención/sin ubicación), campos especiales si aplica.
-
-| # | Categoría | Ubicación | Botón | Expiración |
-|---|-----------|-----------|-------|------------|
-| 1 | Produtos | Fija | Contatar vendedor | 20 días |
-| 2 | Serviços do lar | Zonas de atención | Contatar | Sin expiración |
-| 3 | Construção | Zonas de atención | Pedir orçamento | Sin expiración |
-| 4 | Beleza e bem-estar | Zonas de atención | Contatar | Sin expiración |
-| 5 | Translados | Zonas de atención | Contatar | Sin expiración |
-| 6 | Envios | Zonas de atención | Contatar | Sin expiración |
-| 7 | Gastronomia | Fija + delivery | Fazer pedido | Sin expiración |
-| 8 | Terrenos | Fija | Contatar vendedor | 60 días |
-| 9 | Casas | Fija | Contatar vendedor | 60 días |
-| 10 | Aluguéis | Fija | Contatar | 60 días |
+| # | Categoría | Slug | Ubicación | Botón | Expiración |
+|---|-----------|------|-----------|-------|------------|
+| 1 | Produtos | `produtos` | Fija | Contatar vendedor | 20 días |
+| 2 | Serviços do lar | `servicos-do-lar` | Zonas de atención | Contatar | Sin expiración |
+| 3 | Construção | `construcao` | Zonas de atención | Pedir orçamento | Sin expiración |
+| 4 | Beleza e bem-estar | `beleza-e-bem-estar` | Zonas de atención | Contatar | Sin expiración |
+| 5 | Translados | `translados` | Zonas de atención | Contatar | Sin expiración |
+| 6 | Envios | `envios` | Zonas de atención | Contatar | Sin expiración |
+| 7 | Gastronomia | `gastronomia` | Fija + delivery | Fazer pedido | Sin expiración |
+| 8 | Terrenos | `terrenos` | Fija | Contatar vendedor | 60 días |
+| 9 | Casas | `casas` | Fija | Contatar vendedor | 60 días |
+| 10 | Aluguéis | `alugueis` | Fija | Contatar | 60 días |
 
 **Tipos de ubicación:**
-- FIJA: selector de una sub-zona. Filtro por sub-zona.
-- ZONAS DE ATENCIÓN: el prestador marca varias sub-zonas donde trabaja + opción
-  "Atendo em toda a ilha". El comprador filtra por quién atiende en su zona.
-
-**Campos especiales de Gastronomia:**
-- ¿Hace delivery? (sí/no)
-- Tabla de valor de delivery por sub-zona (sub-zona + precio)
-
-**Subcategorías iniciales:**
-- Produtos: eletrônicos, móveis, eletrodomésticos, roupas, esportes, alimentos, outros
-- Serviços do lar: eletricista, encanador, pintura, jardinagem, limpeza,
-  ar-condicionado/refrigeração, marcenaria/reparos, outros
-- Construção: pedreiro, mestre de obras, empreiteiro, gesso/drywall, telhado, outros
-- Beleza e bem-estar: cabeleireiro, manicure/pedicure, massagem, estética,
-  depilação, terapias, outros
-- Translados: aeroporto/lancha, passeios, buggy/quadriciclo, táxi, outros
-- Envios: motoboy, frete/carga, entregas, outros
-- Gastronomia: restaurante, lanches, doces/sobremesas, bebidas, caseiro/marmita, outros
-- Terrenos: à venda, outros
-- Casas: à venda, outros
-- Aluguéis: temporada/turismo, longa duração, comercial, outros
+- `fija`: selector de una sub-zona. Filtro por sub-zona.
+- `zonas_de_atencion`: el prestador marca sub-zonas donde trabaja + checkbox
+  "Atendo em toda a ilha".
+- `sin_ubicacion`: sin campo de ubicación.
 
 ---
 
 ## DISEÑO Y MARCA
 
-- **Paleta:** Azul mar principal (#185FA5), azules claros (#B5D4F4, #E6F1FB),
-  acento arena/amarillo (#EF9F27, #FAC775), verde-mar apoyo (#9FE1CB, #0F6E56).
-- **Estilo:** Moderno y limpio con identidad de isla (Estilo C).
-- **Logo:** Bolsa de compras (grande) que contiene un montículo de arena con un
-  faro encima (faro blanco con franjas rojas y luz/rayos). SVG.
-- **Layout de anuncios:** LISTA horizontal (miniatura cuadrada a la izquierda +
-  título, precio, ubicación, etiqueta al lado). NO grilla de 2 columnas.
-- **Home (de arriba a abajo):**
-  1. Encabezado azul: logo + selector de ubicación + acceso cuenta
-  2. Barra de búsqueda
-  3. Banner publicitario grande y visible (rotativo, etiqueta "Publicidade")
-  4. Leyenda discreta debajo del banner: "Quer anunciar aqui? Fale conosco"
-  5. Íconos de categorías (3 por fila)
-  6. Lista de anuncios recientes
-  7. Bloque "Fale conosco" solo para sugerencias (abre WhatsApp del admin)
-  8. Barra navegación inferior con botón central arena para publicar (+)
-- **Detalle del anuncio:** galería con contador, precio grande, condición,
-  descripción, ubicación, vendedor + link a su tienda, botón WhatsApp grande,
-  "Denunciar anúncio" discreto abajo.
+- **Paleta:** Azul principal `#185FA5`, azul mid `#1a6fbd`, azul claro `#B5D4F4`,
+  azul xlight `#E6F1FB`, arena `#EF9F27`, arena light `#FAC775`,
+  verde-mar `#9FE1CB`, verde oscuro `#0F6E56`.
+- **Variables CSS:** definidas en `globals.css` como `--blue-main`, `--sand`, etc.
+- **Layout anuncios:** LISTA vertical de cards horizontales (miniatura 80x80px
+  izquierda + título, precio, descripción, favorito derecha). NO grilla.
+- **Home:** header azul → búsqueda → BannerRotativo → 10 categorías (3 por fila)
+  → anuncios recientes → Fale conosco.
+- **Bottom nav fijo:** Início | Anúncios | ➕ (arena, circular) | 🍽️ Comida | Perfil/Entrar
+- **Logo actual:** 🏝️ + texto "Mercado Ilha" (placeholder; el logo SVG definitivo
+  pendiente de diseño: bolsa de compras con montículo de arena y faro).
 
 ---
 
 ## PUBLICIDAD (BANNERS)
 
-- El admin gestiona banners: imagen, link, posición (home/listado), orden,
-  vigencia, activo/inactivo.
-- Varios activos en misma posición = rotan automáticamente.
-- Sin banner activo = muestra invitación "Quer anunciar aqui? Fale conosco".
-- La invitación de publicidad y el "Fale conosco" abren WhatsApp del admin con
-  mensajes pre-armados distintos.
-- Número de WhatsApp del admin configurable (no fijo en código).
+- Admin gestiona banners desde `/admin` tab "Banners": URL imagen, link, posición
+  (`home` / `listado`), activo/inactivo.
+- Varios activos en misma posición = rotan automáticamente cada 4 segundos con
+  dots de navegación.
+- Sin banners activos = muestra placeholder "Seu negócio aqui! + Fale conosco".
+- Número de WhatsApp del admin leído desde `admin_settings` en Supabase.
 
 ---
 
 ## PANEL DE ADMINISTRADOR
 
-Ruta protegida (rol admin). Gestiona:
-- Islas, localidades, sub-zonas
-- Categorías y subcategorías (todos sus atributos)
-- Banners publicitarios
-- Todos los anuncios (ocultar/bloquear/eliminar)
-- Denuncias
-- Usuarios (asignar/quitar rol admin)
-- Ajustes generales (número WhatsApp del admin, etc.)
+Ruta: `/admin` — protegida por rol `admin` en tabla `profiles`.
+Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para admins.
+
+5 tabs implementados:
+- **Dashboard:** contadores (anúncios activos, total, denúncias nuevas, usuarios, banners)
+- **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
+- **Denúncias:** lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic
+- **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
+- **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
 
 ---
 
@@ -148,28 +121,127 @@ Ruta protegida (rol admin). Gestiona:
 
 | Fase | Qué incluye | Estado |
 |------|-------------|--------|
-| 1 | Base de datos Supabase (tablas, RLS, datos iniciales) | Pendiente |
-| 2 | Autenticación (registro, login, roles) | Pendiente |
-| 3 | Publicar y ver anuncios (formulario, home, listado, detalle) | Pendiente |
-| 4 | Búsqueda y filtros | Pendiente |
-| 5 | Cuenta y perfil-tienda del vendedor | Pendiente |
-| 6 | Panel de administrador completo | Pendiente |
-| 7 | Banners rotativos + PWA instalable | Pendiente |
-| 8 | Pulido, GitHub, Vercel, lanzamiento | Pendiente |
+| 1 | Base de datos Supabase (tablas, RLS, datos iniciales) | ✅ SQL en `supabase/fase-1.sql` a `fase-5.sql` |
+| 2 | Autenticación (registro, login, roles) | ✅ Email+password, perfil con nombre y WhatsApp |
+| 3 | Publicar y ver anuncios (formulario, home, listado, detalle) | ✅ Completo |
+| 4 | Búsqueda y filtros | ✅ Por categoría (?category=slug) y texto (?q=texto) |
+| 5 | Cuenta y perfil-tienda del vendedor | ✅ /profile + /store/[id] |
+| 6 | Panel de administrador completo | ✅ /admin con 5 tabs |
+| 7 | Banners rotativos + PWA instalable | ✅ BannerRotativo + manifest + SW + íconos |
+| 8 | Pulido, GitHub, Vercel, lanzamiento | ✅ Pulido completo. Deploy pendiente. |
 
 ---
 
-## ARCHIVOS DEL PROYECTO
+## RUTAS IMPLEMENTADAS
 
-- `GUIA_PASO_A_PASO.md` — Guía completa paso a paso para el dueño (no técnico)
-- `PROMPT_CLAUDE_CODE.md` — Prompt completo para pegar en Claude Code
-- `MEMORY.md` — Este archivo
+| Ruta | Descripción |
+|------|-------------|
+| `/` | Home completa con diseño de marca |
+| `/listings` | Listados + filtro por categoría y búsqueda |
+| `/listings/[id]` | Detalle: galería fotos, precio, vendedor, WhatsApp, denuncia |
+| `/publish` | Formulario publicar: fotos, categoría→subcategoría, localidad→subzona |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios, favoritos, cerrar sesión |
+| `/signin` | Tabs: login y registro completo |
+| `/store/[id]` | Tienda pública del vendedor con banner azul y sus anuncios |
+| `/admin` | Panel de administración (requiere rol admin) |
+| `/api/admin` | Endpoint server-side con Supabase service role |
+
+---
+
+## ARCHIVOS CLAVE DEL FRONTEND
+
+```
+frontend/
+├── app/
+│   ├── globals.css          ← variables CSS de marca, clases utilitarias
+│   ├── layout.tsx           ← layout raíz: BottomNav + RegisterSW + meta PWA
+│   ├── page.tsx             ← home completa
+│   ├── not-found.tsx        ← página 404 con diseño de marca
+│   ├── signin/page.tsx      ← login + registro (tabs)
+│   ├── profile/page.tsx     ← perfil editable + mis anuncios + favoritos
+│   ├── publish/page.tsx     ← formulario publicar anuncio
+│   ├── listings/
+│   │   ├── page.tsx         ← listados + filtros
+│   │   └── [id]/page.tsx    ← detalle del anuncio
+│   ├── store/[id]/page.tsx  ← tienda pública del vendedor
+│   └── admin/page.tsx       ← panel de administración (5 tabs)
+├── components/
+│   ├── BottomNav.tsx        ← nav inferior session-aware
+│   ├── BannerRotativo.tsx   ← banners de Supabase con auto-rotación
+│   ├── ListingCard.tsx      ← card horizontal con foto, precio, favorito
+│   └── RegisterSW.tsx       ← registra el service worker PWA
+├── lib/
+│   ├── supabaseClient.ts    ← cliente Supabase (NEXT_PUBLIC vars)
+│   ├── supabaseAdmin.ts     ← cliente Supabase service role (server-only)
+│   └── adminSettings.ts    ← fetch cacheado de admin_settings (WhatsApp admin)
+└── public/
+    ├── manifest.json        ← PWA manifest
+    ├── sw.js                ← service worker (cache-first assets, network-first HTML)
+    ├── icon-192.png         ← ícono PWA 192×192
+    ├── icon-512.png         ← ícono PWA 512×512
+    └── apple-touch-icon.png ← ícono iOS 180×180
+```
+
+---
+
+## VARIABLES DE ENTORNO REQUERIDAS
+
+En `frontend/.env.local` (local) y en Vercel (producción):
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...   ← solo server-side, nunca al cliente
+```
+
+---
+
+## CHECKLIST DE DEPLOY EN VERCEL
+
+1. Conectar repo GitHub a Vercel (directorio raíz: `frontend`)
+2. Agregar las 3 variables de entorno
+3. En Supabase → Auth → habilitar **Email/Password**
+4. En Supabase → Storage → crear bucket público **`listing-photos`**
+5. En Supabase → SQL Editor → ejecutar `supabase/fase-1.sql` a `fase-5.sql`
+6. En Supabase → Table Editor → tabla `admin_settings` → actualizar el número
+   real de WhatsApp del admin (key = `admin_whatsapp`, campo `value.value`)
+7. En Supabase → tabla `profiles` → asignar `role = 'admin'` al primer usuario
+
+---
+
+## PENDIENTES / IDEAS PARA PRÓXIMAS SESIONES
+
+- Logo SVG definitivo (bolsa + montículo de arena + faro)
+- Íconos PWA con el logo real (reemplazar los placeholders "MI" azules)
+- Botón "Instalar app" in-app para Android (evento `beforeinstallprompt`)
+- Republicar anuncio vencido con un clic desde el perfil
+- Botón "Marcar como vendido" desde el perfil del vendedor
+- Filtros adicionales en listados: precio, sub-zona
+- Panel admin: gestión de localidades y sub-zonas
+- Panel admin: edición de categorías y sus atributos
+
+---
+
+## CÓMO CORRER EL PROYECTO LOCALMENTE
+
+```bash
+cd frontend
+npm run dev           # solo en esta Mac: http://localhost:3000
+npm run dev -- -H 0.0.0.0   # accesible desde celular en misma red WiFi
+```
+
+IP local de la Mac: `192.168.10.9` (puede cambiar según la red)
+
+Para ver desde el celular sin WiFi compartido usar localtunnel:
+```bash
+npx localtunnel --port 3000   # genera URL pública HTTPS temporal
+```
 
 ---
 
 ## CÓMO USAR ESTE ARCHIVO EN UNA CONVERSACIÓN NUEVA
 
-Al inicio del mensaje, escribí algo como:
-"Tengo un proyecto en curso. Te adjunto el contexto completo:"
-y pegá el contenido de este archivo. Así Claude retoma desde donde estaban
+Al inicio del mensaje escribí:
+> "Tengo un proyecto en curso. Te adjunto el contexto completo:"
+
+y pegá el contenido de este archivo. Claude retoma desde donde estaban
 sin necesidad de re-explicar todo.
