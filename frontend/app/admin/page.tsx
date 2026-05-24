@@ -856,11 +856,6 @@ function Categories() {
                 <div style={{ fontWeight: 700, fontSize: "0.875rem", color: cat.is_active ? "#1e293b" : "#94a3b8" }}>{cat.name}</div>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</div>
               </div>
-              <button type="button" title="Editar"
-                onClick={() => setEditingCat(editingCat?.id === cat.id ? null : { id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar" })}
-                style={{ background: editingCat?.id === cat.id ? "var(--blue-xlight)" : "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
-                ✏️
-              </button>
               <button type="button" onClick={() => toggleCat(cat.id, cat.is_active)} title={cat.is_active ? "Desativar" : "Ativar"}
                 style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
                 {cat.is_active ? "✅" : "⏸️"}
@@ -881,32 +876,40 @@ function Categories() {
               </div>
             )}
 
-            {editingCat?.id === cat.id && (
-              <div style={{ padding: "0 0.75rem 0.75rem", display: "flex", flexDirection: "column", gap: 6 }}>
-                <input className="form-input" type="text" placeholder="Nome *" value={editingCat.name}
-                  onChange={(e) => { const n = e.target.value; setEditingCat((p) => p ? { ...p, name: n, slug: toSlug(n) } : p); }} />
-                <input className="form-input" type="text" placeholder="Slug *" value={editingCat.slug}
-                  onChange={(e) => setEditingCat((p) => p ? { ...p, slug: e.target.value } : p)} />
-                <div style={{ display: "flex", gap: 6 }}>
-                  <select className="form-select" value={editingCat.type} onChange={(e) => setEditingCat((p) => p ? { ...p, type: e.target.value } : p)} style={{ flex: 1 }}>
-                    <option value="fija">Localização fixa</option>
-                    <option value="zonas_de_atencion">Zonas de atendimento</option>
-                  </select>
-                  <input className="form-input" type="text" placeholder="Botão" value={editingCat.btn} onChange={(e) => setEditingCat((p) => p ? { ...p, btn: e.target.value } : p)} style={{ flex: 1 }} />
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button type="button" className="btn btn-primary" disabled={editingCatSaving} onClick={saveEditCat} style={{ flex: 1, fontSize: "0.8rem", padding: "0.35rem" }}>
-                    {editingCatSaving ? "..." : "💾 Salvar"}
-                  </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => setEditingCat(null)} style={{ fontSize: "0.8rem", padding: "0.35rem 0.6rem", border: "1px solid var(--border)" }}>
-                    ✕
-                  </button>
-                </div>
-              </div>
-            )}
-
             {expanded === cat.id && (
               <div style={{ borderTop: "1px solid var(--border)", background: "#f8fafc" }}>
+                {/* Edit category form — inside expanded panel */}
+                {editingCat?.id === cat.id ? (
+                  <div style={{ padding: "0.75rem", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, background: "#eff6ff" }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--blue-main)", marginBottom: 2 }}>✏️ Editar categoria</div>
+                    <input className="form-input" type="text" placeholder="Nome *" value={editingCat.name}
+                      onChange={(e) => { const n = e.target.value; setEditingCat((p) => p ? { ...p, name: n, slug: toSlug(n) } : p); }} />
+                    <input className="form-input" type="text" placeholder="Slug *" value={editingCat.slug}
+                      onChange={(e) => setEditingCat((p) => p ? { ...p, slug: e.target.value } : p)} />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select className="form-select" value={editingCat.type} onChange={(e) => setEditingCat((p) => p ? { ...p, type: e.target.value } : p)} style={{ flex: 1 }}>
+                        <option value="fija">Localização fixa</option>
+                        <option value="zonas_de_atencion">Zonas de atendimento</option>
+                      </select>
+                      <input className="form-input" type="text" placeholder="Botão" value={editingCat.btn} onChange={(e) => setEditingCat((p) => p ? { ...p, btn: e.target.value } : p)} style={{ flex: 1 }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button type="button" className="btn btn-primary" disabled={editingCatSaving} onClick={saveEditCat} style={{ flex: 1, fontSize: "0.8rem", padding: "0.35rem" }}>
+                        {editingCatSaving ? "..." : "💾 Salvar"}
+                      </button>
+                      <button type="button" className="btn btn-ghost" onClick={() => setEditingCat(null)} style={{ fontSize: "0.8rem", padding: "0.35rem 0.6rem", border: "1px solid var(--border)" }}>
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button"
+                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar" })}
+                    style={{ width: "100%", padding: "0.5rem 0.75rem", background: "none", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600, textAlign: "left" }}>
+                    ✏️ Editar categoria
+                  </button>
+                )}
+
                 {loadingSubcats[cat.id] ? (
                   <div style={{ textAlign: "center", padding: "0.75rem" }}><div className="spinner" /></div>
                 ) : (
@@ -921,13 +924,12 @@ function Categories() {
                               background: isPicking("subcat", sub.id) ? "var(--blue-xlight)" : "#fff" }}>
                             {sub.icon || "•"}
                           </button>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "#1e293b" : "#94a3b8" }}>{sub.name}</div>
-                          </div>
-                          <button type="button" title="Editar"
+                          <button type="button"
                             onClick={() => setEditingSub(editingSub?.id === sub.id ? null : { id: sub.id, catId: cat.id, name: sub.name })}
-                            style={{ background: editingSub?.id === sub.id ? "var(--blue-xlight)" : "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
-                            ✏️
+                            style={{ flex: 1, minWidth: 0, background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "var(--blue-main)" : "#94a3b8", textDecoration: editingSub?.id === sub.id ? "underline" : "none" }}>
+                              {sub.name} ✏️
+                            </div>
                           </button>
                           <button type="button" onClick={() => toggleSubcat(sub.id, cat.id, sub.is_active)}
                             style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
@@ -944,7 +946,7 @@ function Categories() {
                           </div>
                         )}
                         {editingSub?.id === sub.id && (
-                          <div style={{ padding: "0.5rem 0.75rem", background: "#f1f5f9", borderBottom: "1px solid var(--border)", display: "flex", gap: 6 }}>
+                          <div style={{ padding: "0.5rem 0.75rem", background: "#eff6ff", borderBottom: "1px solid var(--border)", display: "flex", gap: 6 }}>
                             <input className="form-input" type="text" placeholder="Nome *" value={editingSub.name}
                               onChange={(e) => setEditingSub((p) => p ? { ...p, name: e.target.value } : p)}
                               style={{ flex: 1, fontSize: "0.8rem" }} />
