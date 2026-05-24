@@ -62,7 +62,12 @@ export default function SignInPage() {
     });
 
     if (authErr || !data.user) {
-      setError(authErr?.message ?? "Erro ao criar conta.");
+      const msg = authErr?.message ?? "";
+      if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already exists")) {
+        setError("Este email já está cadastrado. Tente fazer login.");
+      } else {
+        setError(msg || "Erro ao criar conta.");
+      }
       setLoading(false);
       return;
     }
