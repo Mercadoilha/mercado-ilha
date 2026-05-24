@@ -879,7 +879,7 @@ function Categories() {
             {expanded === cat.id && (
               <div style={{ borderTop: "1px solid var(--border)", background: "#f8fafc" }}>
                 {/* Edit category form — inside expanded panel */}
-                {editingCat?.id === cat.id ? (
+                {editingCat != null && editingCat.id === cat.id ? (
                   <div style={{ padding: "0.75rem", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 6, background: "#eff6ff" }}>
                     <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--blue-main)", marginBottom: 2 }}>✏️ Editar categoria</div>
                     <input className="form-input" type="text" placeholder="Nome *" value={editingCat.name}
@@ -925,9 +925,9 @@ function Categories() {
                             {sub.icon || "•"}
                           </button>
                           <button type="button"
-                            onClick={() => setEditingSub(editingSub?.id === sub.id ? null : { id: sub.id, catId: cat.id, name: sub.name })}
+                            onClick={() => setEditingSub(editingSub != null && editingSub.id === sub.id ? null : { id: sub.id, catId: cat.id, name: sub.name })}
                             style={{ flex: 1, minWidth: 0, background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "var(--blue-main)" : "#94a3b8", textDecoration: editingSub?.id === sub.id ? "underline" : "none" }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "var(--blue-main)" : "#94a3b8", textDecoration: editingSub != null && editingSub.id === sub.id ? "underline" : "none" }}>
                               {sub.name} ✏️
                             </div>
                           </button>
@@ -945,7 +945,7 @@ function Categories() {
                             <IconPicker selected={sub.icon || ""} onSelect={(icon) => saveSubcatIcon(sub.id, cat.id, icon)} />
                           </div>
                         )}
-                        {editingSub?.id === sub.id && (
+                        {editingSub != null && editingSub.id === sub.id && (
                           <div style={{ padding: "0.5rem 0.75rem", background: "#eff6ff", borderBottom: "1px solid var(--border)", display: "flex", gap: 6 }}>
                             <input className="form-input" type="text" placeholder="Nome *" value={editingSub.name}
                               onChange={(e) => setEditingSub((p) => p ? { ...p, name: e.target.value } : p)}
