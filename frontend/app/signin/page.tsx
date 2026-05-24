@@ -59,6 +59,7 @@ export default function SignInPage() {
     const { data, error: authErr } = await supabase.auth.signUp({
       email: regEmail,
       password: regPassword,
+      options: { data: { full_name: regName.trim(), whatsapp: regWhatsapp.trim() } },
     });
 
     if (authErr || !data.user) {
@@ -72,13 +73,17 @@ export default function SignInPage() {
       return;
     }
 
-    // Create profile
+    // Espera breve para que el trigger de Supabase cree el perfil primero
+    await new Promise((r) => setTimeout(r, 600));
+
+    // Upsert explícito con onConflict para garantizar que se actualiza si ya existe
     await supabase.from("profiles").upsert({
       id: data.user.id,
       full_name: regName.trim(),
       whatsapp: regWhatsapp.trim(),
       role: "user",
-    });
+      is_active: true,
+    }, { onConflict: "id" });
 
     setLoading(false);
 
