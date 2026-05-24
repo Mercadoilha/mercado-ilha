@@ -653,6 +653,10 @@ function Categories() {
   const [newCatSaving, setNewCatSaving] = useState(false);
   const [pickingNewCatIcon, setPickingNewCatIcon] = useState(false);
 
+  // Edit category
+  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string } | null>(null);
+  const [editingCatSaving, setEditingCatSaving] = useState(false);
+
   // New subcategory form
   const [addingSubFor, setAddingSubFor] = useState<number | null>(null);
   const [newSubName, setNewSubName] = useState("");
@@ -660,8 +664,12 @@ function Categories() {
   const [newSubSaving, setNewSubSaving] = useState(false);
   const [pickingNewSubIcon, setPickingNewSubIcon] = useState(false);
 
+  // Edit subcategory
+  const [editingSub, setEditingSub] = useState<{ id: number; catId: number; name: string } | null>(null);
+  const [editingSubSaving, setEditingSubSaving] = useState(false);
+
   useEffect(() => {
-    supabase.from("categories").select("id,name,slug,icon,is_active").order("sort_order")
+    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text").order("sort_order")
       .then(({ data }) => { setCategories(data ?? []); setLoading(false); });
   }, []);
 
@@ -756,6 +764,35 @@ function Categories() {
     setNewSubSaving(false);
   };
 
+  const saveEditCat = async () => {
+    if (!editingCat || !editingCat.name.trim() || !editingCat.slug.trim()) { flash("Nome e slug são obrigatórios."); return; }
+    setEditingCatSaving(true);
+    const { error } = await supabase.from("categories").update({
+      name: editingCat.name.trim(),
+      slug: editingCat.slug.trim(),
+      location_type: editingCat.type,
+      contact_button_text: editingCat.btn || "Contatar",
+    }).eq("id", editingCat.id);
+    if (!error) {
+      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim() } : c));
+      setEditingCat(null);
+      flash("Categoria atualizada.");
+    } else flash("Erro: " + error.message);
+    setEditingCatSaving(false);
+  };
+
+  const saveEditSub = async () => {
+    if (!editingSub || !editingSub.name.trim()) { flash("Informe o nome."); return; }
+    setEditingSubSaving(true);
+    const { error } = await supabase.from("subcategories").update({ name: editingSub.name.trim() }).eq("id", editingSub.id);
+    if (!error) {
+      setSubcats((p) => ({ ...p, [editingSub.catId]: (p[editingSub.catId] ?? []).map((s) => s.id === editingSub.id ? { ...s, name: editingSub.name.trim() } : s) }));
+      setEditingSub(null);
+      flash("Subcategoria atualizada.");
+    } else flash("Erro: " + error.message);
+    setEditingSubSaving(false);
+  };
+
   const isPicking = (type: "cat" | "subcat", id: number) => pickingFor?.type === type && pickingFor?.id === id;
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
@@ -819,6 +856,11 @@ function Categories() {
                 <div style={{ fontWeight: 700, fontSize: "0.875rem", color: cat.is_active ? "#1e293b" : "#94a3b8" }}>{cat.name}</div>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</div>
               </div>
+              <button type="button" title="Editar"
+                onClick={() => setEditingCat(editingCat?.id === cat.id ? null : { id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar" })}
+                style={{ background: editingCat?.id === cat.id ? "var(--blue-xlight)" : "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
+                ✏️
+              </button>
               <button type="button" onClick={() => toggleCat(cat.id, cat.is_active)} title={cat.is_active ? "Desativar" : "Ativar"}
                 style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
                 {cat.is_active ? "✅" : "⏸️"}
@@ -836,6 +878,30 @@ function Categories() {
             {isPicking("cat", cat.id) && (
               <div style={{ padding: "0 0.75rem 0.75rem" }}>
                 <IconPicker selected={cat.icon || ""} onSelect={(icon) => saveCatIcon(cat.id, icon)} />
+              </div>
+            )}
+
+            {editingCat?.id === cat.id && (
+              <div style={{ padding: "0 0.75rem 0.75rem", display: "flex", flexDirection: "column", gap: 6 }}>
+                <input className="form-input" type="text" placeholder="Nome *" value={editingCat.name}
+                  onChange={(e) => { const n = e.target.value; setEditingCat((p) => p ? { ...p, name: n, slug: toSlug(n) } : p); }} />
+                <input className="form-input" type="text" placeholder="Slug *" value={editingCat.slug}
+                  onChange={(e) => setEditingCat((p) => p ? { ...p, slug: e.target.value } : p)} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <select className="form-select" value={editingCat.type} onChange={(e) => setEditingCat((p) => p ? { ...p, type: e.target.value } : p)} style={{ flex: 1 }}>
+                    <option value="fija">Localização fixa</option>
+                    <option value="zonas_de_atencion">Zonas de atendimento</option>
+                  </select>
+                  <input className="form-input" type="text" placeholder="Botão" value={editingCat.btn} onChange={(e) => setEditingCat((p) => p ? { ...p, btn: e.target.value } : p)} style={{ flex: 1 }} />
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button type="button" className="btn btn-primary" disabled={editingCatSaving} onClick={saveEditCat} style={{ flex: 1, fontSize: "0.8rem", padding: "0.35rem" }}>
+                    {editingCatSaving ? "..." : "💾 Salvar"}
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditingCat(null)} style={{ fontSize: "0.8rem", padding: "0.35rem 0.6rem", border: "1px solid var(--border)" }}>
+                    ✕
+                  </button>
+                </div>
               </div>
             )}
 
@@ -858,6 +924,11 @@ function Categories() {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 600, fontSize: "0.8rem", color: sub.is_active ? "#1e293b" : "#94a3b8" }}>{sub.name}</div>
                           </div>
+                          <button type="button" title="Editar"
+                            onClick={() => setEditingSub(editingSub?.id === sub.id ? null : { id: sub.id, catId: cat.id, name: sub.name })}
+                            style={{ background: editingSub?.id === sub.id ? "var(--blue-xlight)" : "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
+                            ✏️
+                          </button>
                           <button type="button" onClick={() => toggleSubcat(sub.id, cat.id, sub.is_active)}
                             style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
                             {sub.is_active ? "✅" : "⏸️"}
@@ -870,6 +941,19 @@ function Categories() {
                         {isPicking("subcat", sub.id) && (
                           <div style={{ padding: "0.5rem 0.75rem", background: "#f1f5f9", borderBottom: "1px solid var(--border)" }}>
                             <IconPicker selected={sub.icon || ""} onSelect={(icon) => saveSubcatIcon(sub.id, cat.id, icon)} />
+                          </div>
+                        )}
+                        {editingSub?.id === sub.id && (
+                          <div style={{ padding: "0.5rem 0.75rem", background: "#f1f5f9", borderBottom: "1px solid var(--border)", display: "flex", gap: 6 }}>
+                            <input className="form-input" type="text" placeholder="Nome *" value={editingSub.name}
+                              onChange={(e) => setEditingSub((p) => p ? { ...p, name: e.target.value } : p)}
+                              style={{ flex: 1, fontSize: "0.8rem" }} />
+                            <button type="button" className="btn btn-primary" disabled={editingSubSaving} onClick={saveEditSub} style={{ fontSize: "0.75rem", padding: "0.3rem 0.6rem" }}>
+                              {editingSubSaving ? "..." : "💾"}
+                            </button>
+                            <button type="button" className="btn btn-ghost" onClick={() => setEditingSub(null)} style={{ fontSize: "0.75rem", padding: "0.3rem 0.5rem", border: "1px solid var(--border)" }}>
+                              ✕
+                            </button>
                           </div>
                         )}
                       </div>
