@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
+import { compressImage } from "../../lib/imageUtils";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -161,24 +162,28 @@ export default function PublishPage() {
       return;
     }
 
-    // Upload photos
+    // Upload photos to R2
     if (photos.length > 0) {
       for (let i = 0; i < photos.length; i++) {
-        const file = photos[i];
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${listing.id}/${Date.now()}_${i}.${ext}`;
-        const { data: uploaded, error: uploadErr } = await supabase.storage
-          .from("listing-photos")
-          .upload(path, file, { upsert: false });
+        try {
+          const compressed = await compressImage(photos[i]);
+          const form = new FormData();
+          form.append("file", compressed);
+          form.append("folder", "listings");
 
-        if (!uploadErr && uploaded) {
-          const { data: urlData } = supabase.storage.from("listing-photos").getPublicUrl(path);
-          await supabase.from("listing_photos").insert({
-            listing_id: listing.id,
-            photo_url: urlData.publicUrl,
-            storage_path: path,
-            sort_order: i,
-          });
+          const res = await fetch("/api/upload", { method: "POST", body: form });
+          const data = await res.json();
+
+          if (res.ok && data.url) {
+            await supabase.from("listing_photos").insert({
+              listing_id: listing.id,
+              photo_url: data.url,
+              storage_path: data.key ?? null,
+              sort_order: i,
+            });
+          }
+        } catch {
+          // continue uploading remaining photos even if one fails
         }
       }
     }

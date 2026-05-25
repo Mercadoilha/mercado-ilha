@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import AvatarUpload from "../../components/AvatarUpload";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -92,6 +93,33 @@ export default function ProfilePage() {
     setSaving(false);
   };
 
+  const deleteListing = async (id: number) => {
+    if (!confirm("Deletar este anúncio permanentemente?")) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token ?? "";
+
+    // Fetch photos first, then delete from R2 (non-blocking per photo)
+    const { data: photos } = await supabase
+      .from("listing_photos")
+      .select("photo_url")
+      .eq("listing_id", id);
+
+    if (photos?.length) {
+      await Promise.allSettled(
+        photos.map((p) =>
+          fetch("/api/delete-file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ url: p.photo_url, listingId: id }),
+          }),
+        ),
+      );
+    }
+
+    await supabase.from("listings").delete().eq("id", id);
+    setMyListings((prev) => prev.filter((l) => l.id !== id));
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     router.push("/");
@@ -145,22 +173,15 @@ export default function ProfilePage() {
           className="card"
           style={{ padding: "1rem" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: "50%",
-                background: "var(--blue-light)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                flexShrink: 0,
-              }}
-            >
-              👤
-            </div>
+          {profile != null && (
+            <AvatarUpload
+              userId={session.user.id}
+              currentAvatarUrl={profile.avatar_url ?? null}
+              fullName={profile.full_name ?? ""}
+              onUpdate={(url) => setProfile((p: any) => ({ ...p, avatar_url: url }))}
+            />
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, marginTop: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.full_name}
@@ -241,34 +262,49 @@ export default function ProfilePage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {myListings.map((l) => (
-                <Link
+                <div
                   key={l.id}
-                  href={`/listings/${l.id}`}
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
                     alignItems: "center",
                     background: "#fff",
                     border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "0.75rem",
-                    textDecoration: "none",
-                    color: "inherit",
                     gap: 8,
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <Link
+                    href={`/listings/${l.id}`}
+                    style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}
+                  >
                     <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {l.title}
                     </div>
                     <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
                       {listingPrice(l)}
                     </div>
-                  </div>
+                  </Link>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0 }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
-                </Link>
+                  <button
+                    type="button"
+                    onClick={() => deleteListing(l.id)}
+                    title="Deletar anúncio"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#dc2626",
+                      fontSize: "1rem",
+                      padding: "0 2px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    🗑
+                  </button>
+                </div>
               ))}
             </div>
           )}

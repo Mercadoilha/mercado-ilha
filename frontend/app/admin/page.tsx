@@ -299,6 +299,27 @@ function Listings() {
   const deleteL = async (id: number) => {
     if (!confirm("Deletar permanentemente este anúncio?")) return;
     setBusy(id);
+
+    // Clean up R2 photos before deleting the listing
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token ?? "";
+    const { data: photos } = await supabase
+      .from("listing_photos")
+      .select("photo_url")
+      .eq("listing_id", id);
+
+    if (photos?.length) {
+      await Promise.allSettled(
+        photos.map((p) =>
+          fetch("/api/delete-file", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ url: p.photo_url, listingId: id }),
+          }),
+        ),
+      );
+    }
+
     await supabase.from("listings").delete().eq("id", id);
     setListings((prev) => prev.filter((l) => l.id !== id));
     setBusy(null);

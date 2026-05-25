@@ -20,7 +20,7 @@ export default function StorePage() {
 
     async function load() {
       const [sellerRes, listingsRes] = await Promise.all([
-        supabase.from("profiles").select("id,full_name,whatsapp,created_at").eq("id", sellerId).single(),
+        supabase.from("profiles").select("id,full_name,whatsapp,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
           .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order)")
@@ -107,9 +107,14 @@ export default function StorePage() {
             justifyContent: "center",
             fontSize: "2rem",
             margin: "0 auto 0.75rem",
+            overflow: "hidden",
+            border: "2px solid rgba(255,255,255,0.5)",
           }}
         >
-          👤
+          {seller.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={seller.avatar_url} alt={seller.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : "👤"}
         </div>
         <div style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 4 }}>{seller.full_name}</div>
         <div style={{ fontSize: "0.8rem", opacity: 0.85 }}>
