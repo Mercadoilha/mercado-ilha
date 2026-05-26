@@ -2,6 +2,27 @@ const MAX_SIDE = 1200;
 const QUALITY = 0.82;
 const SKIP_THRESHOLD = 200 * 1024; // 200 KB
 
+function isHeic(file: File): boolean {
+  const lower = file.name.toLowerCase();
+  return (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    lower.endsWith(".heic") ||
+    lower.endsWith(".heif")
+  );
+}
+
+export async function normalizeFile(file: File): Promise<File> {
+  if (!isHeic(file)) return file;
+  const heic2any = (await import("heic2any")).default;
+  const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+  const blob = Array.isArray(result) ? result[0] : result;
+  return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
 export async function compressImage(file: File): Promise<File> {
   if (file.size < SKIP_THRESHOLD) return file;
 

@@ -12,7 +12,7 @@ const r2 = new S3Client({
 });
 
 const ALLOWED_FOLDERS = ["listings", "profiles"] as const;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB (after compression files will be small, but guard server-side too)
 
 export async function POST(req: NextRequest) {

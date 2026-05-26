@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
-import { compressImage } from "../../lib/imageUtils";
+import { compressImage, normalizeFile } from "../../lib/imageUtils";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -88,16 +88,17 @@ export default function PublishPage() {
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
   const locationType = selectedCategory?.location_type ?? "";
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).slice(0, 6 - photos.length);
-    if (!files.length) return;
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = Array.from(e.target.files ?? []).slice(0, 6 - photos.length);
+    if (!raw.length) return;
+    e.target.value = "";
+    const files = await Promise.all(raw.map(normalizeFile));
     setPhotos((prev) => [...prev, ...files].slice(0, 6));
     files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (ev) => setPhotoPreviews((prev) => [...prev, ev.target?.result as string].slice(0, 6));
       reader.readAsDataURL(file);
     });
-    e.target.value = "";
   };
 
   const removePhoto = (idx: number) => {

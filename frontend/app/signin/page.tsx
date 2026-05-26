@@ -32,6 +32,10 @@ function SignInContent() {
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
 
+  const [showLoginPw, setShowLoginPw] = useState(false);
+  const [showRegPw, setShowRegPw] = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -182,16 +186,27 @@ function SignInContent() {
             </div>
             <div className="form-group">
               <label className="form-label">Senha</label>
-              <input
-                className="form-input"
-                type="password"
-                placeholder="••••••••"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                minLength={6}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className="form-input"
+                  type={showLoginPw ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  minLength={6}
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPw((v) => !v)}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, lineHeight: 1 }}
+                  aria-label={showLoginPw ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showLoginPw ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
             <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem", marginTop: 4 }}>
               {loading ? "Entrando..." : "Entrar"}
@@ -251,29 +266,51 @@ function SignInContent() {
             </div>
             <div className="form-group">
               <label className="form-label">Senha *</label>
-              <input
-                className="form-input"
-                type="password"
-                placeholder="Mínimo 6 caracteres"
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className="form-input"
+                  type={showRegPw ? "text" : "password"}
+                  placeholder="Mínimo 6 caracteres"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPw((v) => !v)}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, lineHeight: 1 }}
+                  aria-label={showRegPw ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showRegPw ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Confirmar senha *</label>
-              <input
-                className="form-input"
-                type="password"
-                placeholder="Repita a senha"
-                value={regConfirm}
-                onChange={(e) => setRegConfirm(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className="form-input"
+                  type={showRegConfirm ? "text" : "password"}
+                  placeholder="Repita a senha"
+                  value={regConfirm}
+                  onChange={(e) => setRegConfirm(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegConfirm((v) => !v)}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, lineHeight: 1 }}
+                  aria-label={showRegConfirm ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {showRegConfirm ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
             <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem", marginTop: 4 }}>
               {loading ? "Criando conta..." : "Criar conta grátis"}
@@ -285,6 +322,25 @@ function SignInContent() {
         )}
       </div>
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
   );
 }
 
