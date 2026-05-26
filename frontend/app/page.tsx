@@ -59,7 +59,7 @@ export default function Home() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "40px", width: "auto", display: "block" }} />
+          <img src="/mercado-ilha-icone.svg" alt="Mercado Ilha" style={{ height: "40px", width: "40px", display: "block" }} />
 
           {/* Auth */}
           {session ? (

@@ -1,0 +1,26 @@
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <title>Mercado Ilha — ícone</title>
+  <desc>Ícone bolsa azul com sol</desc>
+
+  <!-- Fundo -->
+  <rect x="0" y="0" width="48" height="48" rx="12" fill="#185FA5"/>
+
+  <!-- Corpo da bolsa -->
+  <path d="M8,24 L5,46 Q5,48 7,48 L41,48 Q43,48 43,46 L40,24 Z" fill="#1a6fbd" stroke="#B5D4F4" stroke-width="1.5"/>
+
+  <!-- Linhas de costura -->
+  <path d="M14,25 L12,46" stroke="#B5D4F4" stroke-width="0.9" opacity="0.28"/>
+  <path d="M34,25 L36,46" stroke="#B5D4F4" stroke-width="0.9" opacity="0.28"/>
+
+  <!-- Borda superior -->
+  <rect x="7" y="20" width="34" height="6" rx="2" fill="#1e7fd8" stroke="#B5D4F4" stroke-width="1"/>
+
+  <!-- Alça — mesmo arco do logo grande -->
+  <path d="M15,20 Q15,13 20,10 Q24,8 28,10 Q33,13 33,20" fill="none" stroke="#B5D4F4" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M15,20 Q15,13 20,10 Q24,8 28,10 Q33,13 33,20" fill="none" stroke="#185FA5" stroke-width="1" opacity="0.45" stroke-linecap="round"/>
+
+  <!-- Sol centralizado -->
+  <circle cx="24" cy="36" r="8" fill="#EF9F27" opacity="0.25"/>
+  <circle cx="24" cy="36" r="5.5" fill="#EF9F27" opacity="0.6"/>
+  <circle cx="24" cy="36" r="3.5" fill="#FAC775"/>
+</svg>
