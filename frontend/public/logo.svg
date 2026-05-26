@@ -6,8 +6,8 @@
 <g id="Sin-tÃ­tulo" vectornator:layerName="Sin tÃ­tulo">
 <g opacity="1" vectornator:layerName="g">
 <path d="M26 45L12 125C11.3333 130.333 13.6667 133.333 19 134L137 134C142.333 133.333 144.667 130.333 144 125L130 45L26 45Z" fill="#1a6fbd" fill-rule="nonzero" opacity="1" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.8" vectornator:layerName="path"/>
-<path d="M44 46L39 132" fill="#ffffff" fill-rule="nonzero" opacity="0.28" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.8" vectornator:layerName="path"/>
-<path d="M112 46L117 132" fill="#ffffff" fill-rule="nonzero" opacity="0.28" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.8" vectornator:layerName="path"/>
+<path d="M44 46L39 132" fill="#000000" fill-rule="nonzero" opacity="0.28" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.8" vectornator:layerName="path"/>
+<path d="M112 46L117 132" fill="#000000" fill-rule="nonzero" opacity="0.28" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.8" vectornator:layerName="path"/>
 <path d="M28 39L128 39C129.657 39 131 40.3431 131 42L131 46C131 47.6569 129.657 49 128 49L28 49C26.3431 49 25 47.6569 25 46L25 42C25 40.3431 26.3431 39 28 39Z" fill="#1e7fd8" fill-rule="nonzero" opacity="1" stroke="#b5d4f4" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="1.2" vectornator:layerName="rect"/>
 <path d="M42 39C42 27 46.6667 19 56 15C70.6667 10.3333 85.3333 10.3333 100 15C109.333 19 114 27 114 39" fill="none" opacity="1" stroke="#b5d4f4" stroke-linecap="round" stroke-linejoin="miter" stroke-width="5" vectornator:layerName="path"/>
 <path d="M42 39C42 27 46.6667 19 56 15C70.6667 10.3333 85.3333 10.3333 100 15C109.333 19 114 27 114 39" fill="none" opacity="0.45" stroke="#185fa5" stroke-linecap="round" stroke-linejoin="miter" stroke-width="2.2" vectornator:layerName="path"/>
