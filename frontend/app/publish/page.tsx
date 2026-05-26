@@ -127,9 +127,7 @@ export default function PublishPage() {
     }
 
     const selectedSubcat = subcategories.find((s) => s.id === Number(subcategoryId));
-    const expiresAt = selectedCategory?.expires_in_days
-      ? new Date(Date.now() + selectedCategory.expires_in_days * 86400000).toISOString()
-      : null;
+    const expiresAt = new Date(Date.now() + (selectedCategory?.expires_in_days ?? 30) * 86400000).toISOString();
 
     // Insert listing
     const { data: listing, error: insertErr } = await supabase

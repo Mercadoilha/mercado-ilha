@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<number | null>(null);
 
   // Edit profile
   const [editMode, setEditMode] = useState(false);
@@ -61,7 +62,7 @@ export default function ProfilePage() {
       }
 
       const [listRes, favRes] = await Promise.all([
-        supabase.from("listings").select("id,title,price,price_text,status,created_at").eq("user_id", uid).order("created_at", { ascending: false }),
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false }),
         supabase.from("favorites").select("id,listing_id,listings(id,title,price,price_text,status)").eq("profile_id", uid).order("created_at", { ascending: false }),
       ]);
 
@@ -118,6 +119,18 @@ export default function ProfilePage() {
 
     await supabase.from("listings").delete().eq("id", id);
     setMyListings((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const toggleStatus = async (id: number, currentStatus: string) => {
+    setToggling(id);
+    const goActive = currentStatus !== "active";
+    const update: Record<string, unknown> = {
+      status: goActive ? "active" : "paused",
+      ...(goActive && { expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }),
+    };
+    const { error: e } = await supabase.from("listings").update(update).eq("id", id);
+    if (!e) setMyListings((prev) => prev.map((l) => l.id === id ? { ...l, ...update } : l));
+    setToggling(null);
   };
 
   const signOut = async () => {
@@ -251,6 +264,11 @@ export default function ProfilePage() {
             </Link>
           </div>
 
+          {/* Leyenda de validez */}
+          <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 10, padding: "0.7rem 0.875rem", fontSize: "0.78rem", color: "#0369a1", marginBottom: "0.5rem", lineHeight: 1.5 }}>
+            Os anúncios ficam ativos por <strong>30 dias</strong> e depois são desativados automaticamente. Você pode reativá-los a qualquer momento.
+          </div>
+
           {myListings.length === 0 ? (
             <div className="card" style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
               <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
@@ -288,6 +306,28 @@ export default function ProfilePage() {
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0 }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
+                  {l.status !== "blocked" && l.status !== "sold" && (
+                    <button
+                      type="button"
+                      disabled={toggling === l.id}
+                      onClick={() => toggleStatus(l.id, l.status)}
+                      title={l.status === "active" ? "Pausar anúncio" : "Reativar anúncio"}
+                      style={{
+                        background: l.status === "active" ? "#f1f5f9" : "#dcfce7",
+                        border: "none",
+                        borderRadius: 6,
+                        cursor: toggling === l.id ? "not-allowed" : "pointer",
+                        color: l.status === "active" ? "#64748b" : "#059669",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        padding: "0.25rem 0.5rem",
+                        flexShrink: 0,
+                        opacity: toggling === l.id ? 0.5 : 1,
+                      }}
+                    >
+                      {l.status === "active" ? "Pausar" : "Ativar"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => deleteListing(l.id)}
