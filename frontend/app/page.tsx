@@ -58,16 +58,8 @@ export default function Home() {
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontSize: "1.75rem" }}>🏝️</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: "1.15rem", letterSpacing: "-0.02em" }}>
-                Mercado Ilha
-              </div>
-              <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>Tinharé · Morro de São Paulo</div>
-            </div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "40px", width: "auto", display: "block" }} />
 
           {/* Auth */}
           {session ? (
