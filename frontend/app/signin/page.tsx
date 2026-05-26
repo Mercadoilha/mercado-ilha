@@ -133,9 +133,8 @@ function SignInContent() {
 
       {/* Logo */}
       <div style={{ textAlign: "center", padding: "1.5rem 1rem 0.5rem" }}>
-        <div style={{ fontSize: "2.5rem" }}>🏝️</div>
-        <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "var(--blue-main)" }}>Mercado Ilha</div>
-        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>Tinharé · Morro de São Paulo</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "52px", width: "auto", display: "inline-block" }} />
       </div>
 
       {/* Banner de contexto */}
