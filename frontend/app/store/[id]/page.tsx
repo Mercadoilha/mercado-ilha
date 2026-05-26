@@ -1,18 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 
 export default function StorePage() {
   const params = useParams();
+  const router = useRouter();
   const sellerId = params?.id as string;
 
   const [seller, setSeller] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
+    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setSession(s ?? null));
+    return () => l?.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!sellerId) { setError("Vendedor não encontrado."); setLoading(false); return; }
@@ -122,10 +130,13 @@ export default function StorePage() {
         </div>
 
         {seller.whatsapp && (
-          <a
-            href={`https://wa.me/${seller.whatsapp.replace(/\D/g, "").replace(/^(?!55)/, "55")}?text=${encodeURIComponent(`Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}`}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => {
+              if (!session) { router.push("/signin?msg=contact"); return; }
+              const num = seller.whatsapp.replace(/\D/g, "").replace(/^(?!55)/, "55");
+              window.open(`https://wa.me/${num}?text=${encodeURIComponent(`Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}`, "_blank", "noreferrer");
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -137,11 +148,12 @@ export default function StorePage() {
               borderRadius: 999,
               fontWeight: 700,
               fontSize: "0.875rem",
-              textDecoration: "none",
+              border: "none",
+              cursor: "pointer",
             }}
           >
             💬 Falar com o vendedor
-          </a>
+          </button>
         )}
       </div>
 

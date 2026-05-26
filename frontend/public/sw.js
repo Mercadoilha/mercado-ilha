@@ -1,4 +1,4 @@
-const CACHE = 'mercado-ilha-v1';
+const CACHE = 'mercado-ilha-v2';
 const PRECACHE = ['/', '/listings', '/signin', '/manifest.json'];
 
 self.addEventListener('install', (e) => {

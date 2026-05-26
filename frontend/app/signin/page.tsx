@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
 type Tab = "login" | "register";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const contactMsg = searchParams.get("msg") === "contact";
   const [tab, setTab] = useState<Tab>("login");
 
   // Login
@@ -123,6 +125,13 @@ export default function SignInPage() {
         <div style={{ fontWeight: 800, fontSize: "1.2rem", color: "var(--blue-main)" }}>Mercado Ilha</div>
         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>Tinharé · Morro de São Paulo</div>
       </div>
+
+      {/* Banner de contexto */}
+      {contactMsg && (
+        <div style={{ margin: "1rem 1rem 0", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#92400e", fontWeight: 600 }}>
+          Para entrar em contato com o vendedor, você precisa estar cadastrado. É gratuito e rápido! 🎉
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid var(--border)", margin: "1rem 1rem 0" }}>

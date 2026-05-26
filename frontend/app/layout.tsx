@@ -12,6 +12,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000")
+  ),
   title: "Mercado Ilha",
   description: "Marketplace de Tinharé — Morro de São Paulo. Compre, venda e encontre serviços na ilha.",
   manifest: "/manifest.json",
@@ -34,7 +40,7 @@ export const metadata: Metadata = {
     description: "Marketplace de Tinharé — Morro de São Paulo",
     type: "website",
     locale: "pt_BR",
-    images: [{ url: "/logo.svg" }],
+    images: [{ url: "/icon-512.png", width: 512, height: 512, type: "image/png" }],
   },
 };
 

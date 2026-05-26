@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 
 export default function ListingDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const listingId = Number(params?.id);
 
   const [listing, setListing] = useState<any>(null);
@@ -303,15 +304,17 @@ export default function ListingDetailPage() {
         {/* Botão WhatsApp */}
         {!isOwner && (
           seller?.whatsapp ? (
-            <a
-              href={buildWhatsAppUrl()}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => {
+                if (!session) { router.push("/signin?msg=contact"); return; }
+                window.open(buildWhatsAppUrl(), "_blank", "noreferrer");
+              }}
               className="btn btn-whatsapp btn-block"
-              style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12 }}
+              style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}
             >
               💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
-            </a>
+            </button>
           ) : (
             <div
               style={{
