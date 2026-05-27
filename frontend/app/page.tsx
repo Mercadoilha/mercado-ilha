@@ -31,7 +31,7 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("listings").select("id, title, price, price_text, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
+      supabase.from("listings").select("id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(name)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
       supabase.from("categories").select("id,name,slug,icon").eq("is_active", true).order("sort_order"),
       getAdminSettings(),
     ]).then(([{ data: listData }, { data: catData }, settings]) => {
@@ -96,8 +96,8 @@ export default function Home() {
         </div>
 
         {/* ── Barra de búsqueda ── */}
-        <form onSubmit={handleSearch} style={{ marginTop: "0.875rem" }}>
-          <div style={{ position: "relative" }}>
+        <form onSubmit={handleSearch} style={{ marginTop: "0.875rem", display: "flex", gap: 8 }}>
+          <div style={{ position: "relative", flex: 1 }}>
             <span
               style={{
                 position: "absolute",
@@ -127,6 +127,23 @@ export default function Home() {
               }}
             />
           </div>
+          <button
+            type="submit"
+            style={{
+              padding: "0 1rem",
+              borderRadius: 12,
+              border: "none",
+              background: "rgba(255,255,255,0.25)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Buscar
+          </button>
         </form>
       </header>
 
@@ -249,6 +266,10 @@ function RecentListingRow({ listing }: { listing: any }) {
   );
   const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
 
+  const localityName: string | null = (listing.localities as any)?.name ?? null;
+  const subzoneName: string | null = (listing.subzones as any)?.name ?? null;
+  const locationText = [localityName, subzoneName].filter(Boolean).join(", ");
+
   return (
     <Link
       href={`/listings/${listing.id}`}
@@ -310,9 +331,16 @@ function RecentListingRow({ listing }: { listing: any }) {
         <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--blue-main)", marginTop: 2 }}>
           {price}
         </div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-          📍 Tinharé
-        </div>
+        {locationText && (
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            📍 {locationText}
+          </div>
+        )}
+        {listing.condition && (
+          <span style={{ display: "inline-block", marginTop: 3, fontSize: "0.65rem", fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 7px" }}>
+            {listing.condition}
+          </span>
+        )}
       </div>
 
       <span style={{ fontSize: "1rem", color: "#cbd5e1", flexShrink: 0 }}>›</span>

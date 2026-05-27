@@ -85,10 +85,17 @@ export default function BottomNav() {
         +
       </Link>
 
-      <Link href={customHref} style={link(customHref)}>
-        <span style={{ fontSize: "1.3rem" }}>{customNav.icon}</span>
-        {customNav.label}
-      </Link>
+      {hasSession ? (
+        <Link href="/favorites" style={link("/favorites")}>
+          <span style={{ fontSize: "1.3rem" }}>❤️</span>
+          Favoritos
+        </Link>
+      ) : (
+        <Link href={customHref} style={link(customHref)}>
+          <span style={{ fontSize: "1.3rem" }}>{customNav.icon}</span>
+          {customNav.label}
+        </Link>
+      )}
 
       {hasSession ? (
         <Link href="/profile" style={link("/profile")}>

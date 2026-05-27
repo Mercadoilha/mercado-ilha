@@ -35,6 +35,8 @@ function ListingsContent() {
   const [categoryLabel, setCategoryLabel] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [conditionFilter, setConditionFilter] = useState("");
+  const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
+  const [zoneFilter, setZoneFilter] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -49,6 +51,15 @@ function ListingsContent() {
       listener?.subscription.unsubscribe();
     };
   }, []);
+
+  // Load localities for zone filter
+  useEffect(() => {
+    supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
+      .then(({ data }) => setLocalities(data ?? []));
+  }, []);
+
+  // Reset zone filter when category/search changes
+  useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
 
   // Resolve category slug → id
   useEffect(() => {
@@ -74,13 +85,14 @@ function ListingsContent() {
     async function load() {
       let query = supabase
         .from("listings")
-        .select("*, listing_photos(photo_url, sort_order)")
+        .select("*, listing_photos(photo_url, sort_order), localities(name), subzones(name)")
         .eq("status", "active")
         .limit(60);
 
       if (categoryId) query = query.eq("category_id", categoryId);
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       if (conditionFilter) query = query.eq("condition", conditionFilter);
+      if (zoneFilter) query = query.eq("locality_id", zoneFilter);
 
       if (sortBy === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
       else if (sortBy === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
@@ -114,7 +126,7 @@ function ListingsContent() {
     load();
 
     return () => { mounted = false; };
-  }, [session, categoryId, categorySlug, searchQuery, sortBy, conditionFilter]);
+  }, [session, categoryId, categorySlug, searchQuery, sortBy, conditionFilter, zoneFilter]);
 
   const toggleFavorite = async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }
@@ -210,7 +222,7 @@ function ListingsContent() {
         </div>
         {/* Condição — solo para Produtos */}
         {categorySlug === "produtos" && (
-          <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0.5rem", overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0", overflowX: "auto" }}>
             {[
               { key: "", label: "Todos" },
               { key: "Novo", label: "✨ Novo" },
@@ -234,6 +246,48 @@ function ListingsContent() {
                 }}
               >
                 {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Zona */}
+        {localities.length > 0 && (
+          <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0.5rem", overflowX: "auto" }}>
+            <button
+              type="button"
+              onClick={() => setZoneFilter(null)}
+              style={{
+                flexShrink: 0,
+                padding: "0.28rem 0.7rem",
+                borderRadius: 999,
+                border: zoneFilter === null ? "none" : "1px solid var(--border)",
+                background: zoneFilter === null ? "var(--blue-main)" : "#fff",
+                color: zoneFilter === null ? "#fff" : "var(--text-muted)",
+                fontWeight: 600,
+                fontSize: "0.72rem",
+                cursor: "pointer",
+              }}
+            >
+              📍 Todas as zonas
+            </button>
+            {localities.map((loc) => (
+              <button
+                key={loc.id}
+                type="button"
+                onClick={() => setZoneFilter(loc.id)}
+                style={{
+                  flexShrink: 0,
+                  padding: "0.28rem 0.7rem",
+                  borderRadius: 999,
+                  border: zoneFilter === loc.id ? "none" : "1px solid var(--border)",
+                  background: zoneFilter === loc.id ? "var(--blue-main)" : "#fff",
+                  color: zoneFilter === loc.id ? "#fff" : "var(--text-muted)",
+                  fontWeight: 600,
+                  fontSize: "0.72rem",
+                  cursor: "pointer",
+                }}
+              >
+                {loc.name}
               </button>
             ))}
           </div>
