@@ -248,7 +248,7 @@ function SignInContent() {
                 autoComplete="tel"
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                DDD + número, sem +55. Ex: 75 99999-9999
+                Brasil: só DDD + número (ex: 75 99999-9999). Outro país: com + e código (ex: +54 11 9999-9999)
               </span>
             </div>
             <div className="form-group">

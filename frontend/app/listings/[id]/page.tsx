@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
+import { buildWaUrl } from "../../../lib/whatsappUrl";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -191,17 +192,9 @@ export default function ListingDetailPage() {
 
   const buildWhatsAppUrl = () => {
     if (!seller?.whatsapp) return "#";
-    // Remove all non-digits, then strip any leading country code "55" if number is already 13 digits
-    // (country 55 + DDD 2 digits + number 9 digits = 13 total)
-    // If user stored with +55 (old placeholder), we handle it transparently
-    let raw = seller.whatsapp.replace(/\D/g, "");
-    // If already 13 digits starting with 55, use as-is; if ≤11 digits (no country code), prepend 55
-    if (!raw.startsWith("55") || raw.length < 12) {
-      raw = "55" + raw.replace(/^55/, ""); // ensure exactly one "55" prefix
-    }
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
     const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
-    return `https://wa.me/${raw}?text=${encodeURIComponent(message)}`;
+    return buildWaUrl(seller.whatsapp, message);
   };
 
   const sendReport = async () => {

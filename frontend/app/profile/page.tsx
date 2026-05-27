@@ -244,7 +244,7 @@ export default function ProfilePage() {
                 <label className="form-label">WhatsApp</label>
                 <input className="form-input" type="tel" placeholder="71 99999-9999" value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} maxLength={20} />
                 <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, display: "block" }}>
-                  DDD + número, sem +55. Ex: 75 99999-9999
+                  Brasil: só DDD + número (ex: 75 99999-9999). Outro país: com + e código (ex: +54 11 9999-9999)
                 </span>
               </div>
               {saveMsg && <p style={{ fontSize: "0.8rem", color: saveMsg.startsWith("Erro") ? "#dc2626" : "#059669" }}>{saveMsg}</p>}
