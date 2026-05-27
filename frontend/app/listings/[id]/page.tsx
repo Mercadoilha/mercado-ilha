@@ -33,6 +33,8 @@ export default function ListingDetailPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportSent, setReportSent] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
@@ -190,6 +192,37 @@ export default function ListingDetailPage() {
     setIsDragging(false);
   };
 
+  // Load favorite status whenever session or listing changes
+  useEffect(() => {
+    if (!session || !listingId || Number.isNaN(listingId)) { setIsFavorite(false); return; }
+    supabase
+      .from("favorites")
+      .select("id")
+      .eq("profile_id", session.user.id)
+      .eq("listing_id", listingId)
+      .maybeSingle()
+      .then(({ data }) => setIsFavorite(!!data));
+  }, [session, listingId]);
+
+  const toggleFavorite = async () => {
+    if (!session) { router.push("/signin?msg=fav"); return; }
+    setFavBusy(true);
+    if (isFavorite) {
+      await supabase
+        .from("favorites")
+        .delete()
+        .eq("listing_id", listingId)
+        .eq("profile_id", session.user.id);
+      setIsFavorite(false);
+    } else {
+      await supabase
+        .from("favorites")
+        .insert({ listing_id: listingId, profile_id: session.user.id });
+      setIsFavorite(true);
+    }
+    setFavBusy(false);
+  };
+
   const buildWhatsAppUrl = () => {
     if (!seller?.whatsapp) return "#";
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
@@ -241,9 +274,33 @@ export default function ListingDetailPage() {
       {/* Header */}
       <header className="page-header">
         <Link href="/listings" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
-        <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
           {listing.title}
         </h1>
+        {!isOwner && (
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            disabled={favBusy}
+            title={session ? (isFavorite ? "Remover dos favoritos" : "Salvar nos favoritos") : "Entre para favoritar"}
+            style={{
+              background: "rgba(255,255,255,0.15)",
+              border: "none",
+              borderRadius: "50%",
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: favBusy ? "wait" : "pointer",
+              fontSize: "1.15rem",
+              flexShrink: 0,
+              transition: "background 0.15s, transform 0.1s",
+            }}
+          >
+            {favBusy ? "⏳" : isFavorite ? "❤️" : "🤍"}
+          </button>
+        )}
       </header>
 
       {/* ── Galería de fotos ── */}
