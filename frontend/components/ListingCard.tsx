@@ -27,9 +27,7 @@ export default function ListingCard({
   );
   const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
 
-  const localityName: string | null = (listing.localities as any)?.name ?? null;
-  const subzoneName: string | null = (listing.subzones as any)?.name ?? null;
-  const locationText = [localityName, subzoneName].filter(Boolean).join(", ");
+  const locationText: string | null = (listing.localities as any)?.name ?? null;
 
   return (
     <article

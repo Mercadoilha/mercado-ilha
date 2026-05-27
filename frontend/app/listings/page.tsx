@@ -85,7 +85,7 @@ function ListingsContent() {
     async function load() {
       let query = supabase
         .from("listings")
-        .select("*, listing_photos(photo_url, sort_order), localities(name), subzones(name)")
+        .select("*, listing_photos(photo_url, sort_order), localities(name)")
         .eq("status", "active")
         .limit(60);
 

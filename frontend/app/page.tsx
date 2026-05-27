@@ -31,7 +31,7 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("listings").select("id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(name)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
+      supabase.from("listings").select("id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
       supabase.from("categories").select("id,name,slug,icon").eq("is_active", true).order("sort_order"),
       getAdminSettings(),
     ]).then(([{ data: listData }, { data: catData }, settings]) => {
@@ -266,9 +266,7 @@ function RecentListingRow({ listing }: { listing: any }) {
   );
   const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
 
-  const localityName: string | null = (listing.localities as any)?.name ?? null;
-  const subzoneName: string | null = (listing.subzones as any)?.name ?? null;
-  const locationText = [localityName, subzoneName].filter(Boolean).join(", ");
+  const locationText: string | null = (listing.localities as any)?.name ?? null;
 
   return (
     <Link

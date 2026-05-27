@@ -32,7 +32,7 @@ export default function FavoritesPage() {
 
     supabase
       .from("favorites")
-      .select("id, listing_id, listings(id, title, price, price_text, condition, status, locality_id, subzone_id, localities(name), subzones(name), listing_photos(photo_url, sort_order))")
+      .select("id, listing_id, listings(id, title, price, price_text, condition, status, locality_id, subzone_id, localities(name), listing_photos(photo_url, sort_order))")
       .eq("profile_id", session.user.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -99,9 +99,7 @@ export default function FavoritesPage() {
                 (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
               );
               const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
-              const localityName: string | null = (l.localities as any)?.name ?? null;
-              const subzoneName: string | null = (l.subzones as any)?.name ?? null;
-              const locationText = [localityName, subzoneName].filter(Boolean).join(", ");
+              const locationText: string | null = (l.localities as any)?.name ?? null;
               const isInactive = l.status !== "active";
 
               return (
