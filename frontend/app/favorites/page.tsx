@@ -24,7 +24,7 @@ export default function FavoritesPage() {
   }, []);
 
   useEffect(() => {
-    if (session === null && !loading) { router.push("/signin?msg=favorites"); return; }
+    if (session === null) { setLoading(false); return; }
     if (!session) return;
 
     let mounted = true;
@@ -42,7 +42,7 @@ export default function FavoritesPage() {
       });
 
     return () => { mounted = false; };
-  }, [session, loading, router]);
+  }, [session]);
 
   const removeFavorite = async (favId: number, listingId: number) => {
     setRemovingId(listingId);
@@ -55,6 +55,23 @@ export default function FavoritesPage() {
     l.price != null
       ? `R$ ${Number(l.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
       : l.price_text ?? "Consulte";
+
+  // Not logged in
+  if (!loading && !session) {
+    return (
+      <div className="page-body">
+        <header className="page-header">
+          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <h1>Favoritos</h1>
+        </header>
+        <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
+          <div style={{ fontSize: "3rem", marginBottom: 16 }}>🔒</div>
+          <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1e293b", marginBottom: 8 }}>Entre para ver seus favoritos</p>
+          <Link href="/signin" className="btn btn-primary btn-block" style={{ marginTop: 8 }}>Entrar / Cadastrar</Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="page-body" style={{ display: "flex", justifyContent: "center", paddingTop: "4rem" }}>

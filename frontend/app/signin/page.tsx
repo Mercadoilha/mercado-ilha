@@ -236,11 +236,11 @@ function SignInContent() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">WhatsApp (com DDD) *</label>
+              <label className="form-label">WhatsApp *</label>
               <input
                 className="form-input"
                 type="tel"
-                placeholder="+55 71 99999-9999"
+                placeholder="71 99999-9999"
                 value={regWhatsapp}
                 onChange={(e) => setRegWhatsapp(e.target.value)}
                 required
@@ -248,7 +248,7 @@ function SignInContent() {
                 autoComplete="tel"
               />
               <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                Os compradores vão te contatar por aqui.
+                DDD + número, sem +55. Ex: 75 99999-9999
               </span>
             </div>
             <div className="form-group">

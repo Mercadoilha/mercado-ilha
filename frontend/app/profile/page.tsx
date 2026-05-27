@@ -241,8 +241,11 @@ export default function ProfilePage() {
                 <input className="form-input" type="text" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={80} />
               </div>
               <div className="form-group">
-                <label className="form-label">WhatsApp (com DDD)</label>
-                <input className="form-input" type="tel" placeholder="+55 71 99999-9999" value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} maxLength={20} />
+                <label className="form-label">WhatsApp</label>
+                <input className="form-input" type="tel" placeholder="71 99999-9999" value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} maxLength={20} />
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, display: "block" }}>
+                  DDD + número, sem +55. Ex: 75 99999-9999
+                </span>
               </div>
               {saveMsg && <p style={{ fontSize: "0.8rem", color: saveMsg.startsWith("Erro") ? "#dc2626" : "#059669" }}>{saveMsg}</p>}
               {error && <p className="text-error">{error}</p>}

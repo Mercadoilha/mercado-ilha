@@ -134,7 +134,8 @@ export default function StorePage() {
             type="button"
             onClick={() => {
               if (!session) { router.push("/signin?msg=contact"); return; }
-              const num = seller.whatsapp.replace(/\D/g, "").replace(/^(?!55)/, "55");
+              let num = seller.whatsapp.replace(/\D/g, "");
+              if (!num.startsWith("55") || num.length < 12) num = "55" + num.replace(/^55/, "");
               window.open(`https://wa.me/${num}?text=${encodeURIComponent(`Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}`, "_blank", "noreferrer");
             }}
             style={{
