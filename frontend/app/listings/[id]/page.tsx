@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
@@ -21,6 +21,14 @@ export default function ListingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const touchStart = useRef<{ dist: number; panX: number; panY: number } | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportSent, setReportSent] = useState(false);
@@ -81,6 +89,105 @@ export default function ListingDetailPage() {
     load();
     return () => { mounted = false; };
   }, [listingId]);
+
+  const openLightbox = (idx: number) => {
+    setLightboxIdx(idx);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = useCallback(() => {
+    setLightboxOpen(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  const lightboxNext = useCallback(() => {
+    setLightboxIdx((i) => (i + 1) % photos.length);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [photos.length]);
+
+  const lightboxPrev = useCallback(() => {
+    setLightboxIdx((i) => (i - 1 + photos.length) % photos.length);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [photos.length]);
+
+  // Close on Escape / navigate with arrow keys
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight") lightboxNext();
+      if (e.key === "ArrowLeft") lightboxPrev();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxOpen, closeLightbox, lightboxNext, lightboxPrev]);
+
+  // Mouse drag to pan when zoomed
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom <= 1) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || zoom <= 1) return;
+    setPan({
+      x: dragStart.current.panX + (e.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (e.clientY - dragStart.current.y),
+    });
+  };
+  const handleMouseUp = () => setIsDragging(false);
+
+  // Scroll wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    setZoom((z) => Math.min(5, Math.max(1, z - e.deltaY * 0.005)));
+    if (zoom <= 1) setPan({ x: 0, y: 0 });
+  };
+
+  // Touch: pinch-to-zoom + double-tap
+  const lastTap = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStart.current = { dist: Math.hypot(dx, dy), panX: pan.x, panY: pan.y };
+    } else if (e.touches.length === 1) {
+      // double tap to zoom
+      const now = Date.now();
+      if (now - lastTap.current < 300) {
+        setZoom((z) => (z > 1 ? 1 : 2.5));
+        setPan({ x: 0, y: 0 });
+      }
+      lastTap.current = now;
+      // prepare drag
+      dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, panX: pan.x, panY: pan.y };
+      setIsDragging(true);
+    }
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStart.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scale = dist / touchStart.current.dist;
+      setZoom((z) => Math.min(5, Math.max(1, z * scale)));
+      touchStart.current.dist = dist;
+    } else if (e.touches.length === 1 && isDragging && zoom > 1) {
+      setPan({
+        x: dragStart.current.panX + (e.touches[0].clientX - dragStart.current.x),
+        y: dragStart.current.panY + (e.touches[0].clientY - dragStart.current.y),
+      });
+    }
+  };
+  const handleTouchEnd = () => {
+    touchStart.current = null;
+    setIsDragging(false);
+  };
 
   const buildWhatsAppUrl = () => {
     if (!seller?.whatsapp) return "#";
@@ -148,8 +255,26 @@ export default function ListingDetailPage() {
             <img
               src={photos[photoIdx]?.photo_url}
               alt={listing.title}
-              style={{ width: "100%", height: 260, objectFit: "cover", display: "block" }}
+              onClick={() => openLightbox(photoIdx)}
+              style={{ width: "100%", height: 260, objectFit: "cover", display: "block", cursor: "zoom-in" }}
             />
+            {/* Zoom hint */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 10,
+                left: 12,
+                background: "rgba(0,0,0,0.45)",
+                color: "#fff",
+                fontSize: "0.68rem",
+                fontWeight: 600,
+                borderRadius: 999,
+                padding: "3px 8px",
+                pointerEvents: "none",
+              }}
+            >
+              🔍 Toque para ampliar
+            </div>
             {/* Counter */}
             <div
               style={{
@@ -405,6 +530,134 @@ export default function ListingDetailPage() {
         )}
 
       </div>
+
+      {/* ── Lightbox ── */}
+      {lightboxOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.92)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeLightbox(); }}
+        >
+          {/* Top bar */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,0,0,0.5)", zIndex: 2 }}>
+            <span style={{ color: "#fff", fontSize: "0.85rem", fontWeight: 700 }}>
+              {lightboxIdx + 1} / {photos.length}
+            </span>
+            {zoom > 1 && (
+              <button
+                type="button"
+                onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+                style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 999, padding: "4px 12px", fontSize: "0.78rem", cursor: "pointer", fontWeight: 700 }}
+              >
+                Resetar zoom
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={closeLightbox}
+              style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: "50%", width: 36, height: 36, fontSize: "1.1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Image container */}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onDoubleClick={() => { setZoom((z) => (z > 1 ? 1 : 2.5)); setPan({ x: 0, y: 0 }); }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={photos[lightboxIdx]?.photo_url}
+              alt={listing.title}
+              draggable={false}
+              style={{
+                maxWidth: "100vw",
+                maxHeight: "100vh",
+                objectFit: "contain",
+                transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                transformOrigin: "center center",
+                transition: isDragging ? "none" : "transform 0.15s ease",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                pointerEvents: "none",
+              }}
+            />
+          </div>
+
+          {/* Prev / Next */}
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={lightboxPrev}
+                style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: "50%", width: 44, height: 44, fontSize: "1.4rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={lightboxNext}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: "50%", width: 44, height: 44, fontSize: "1.4rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Thumbnail strip at bottom */}
+          {photos.length > 1 && (
+            <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 8, padding: "0 16px", zIndex: 2 }}>
+              {photos.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setLightboxIdx(i); setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  style={{
+                    padding: 0,
+                    border: i === lightboxIdx ? "2px solid #fff" : "2px solid rgba(255,255,255,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    opacity: i === lightboxIdx ? 1 : 0.55,
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.photo_url} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

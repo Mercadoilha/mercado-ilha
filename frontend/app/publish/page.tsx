@@ -89,14 +89,14 @@ export default function PublishPage() {
   const locationType = selectedCategory?.location_type ?? "";
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = Array.from(e.target.files ?? []).slice(0, 6 - photos.length);
+    const raw = Array.from(e.target.files ?? []).slice(0, 4 - photos.length);
     if (!raw.length) return;
     e.target.value = "";
     const files = await Promise.all(raw.map(normalizeFile));
-    setPhotos((prev) => [...prev, ...files].slice(0, 6));
+    setPhotos((prev) => [...prev, ...files].slice(0, 4));
     files.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (ev) => setPhotoPreviews((prev) => [...prev, ev.target?.result as string].slice(0, 6));
+      reader.onload = (ev) => setPhotoPreviews((prev) => [...prev, ev.target?.result as string].slice(0, 4));
       reader.readAsDataURL(file);
     });
   };
@@ -248,7 +248,7 @@ export default function PublishPage() {
         {/* Fotos */}
         <div className="card" style={{ padding: "0.875rem" }}>
           <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", marginBottom: 10 }}>
-            Fotos <span className="text-muted">(até 6)</span>
+            Fotos <span className="text-muted">(até 4)</span>
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {photoPreviews.map((src, i) => (
@@ -264,7 +264,7 @@ export default function PublishPage() {
                 </button>
               </div>
             ))}
-            {photos.length < 6 && (
+            {photos.length < 4 && (
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}

@@ -31,7 +31,7 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("listings").select("id, title, price, price_text, locality_id, subzone_id, category_id, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(10),
+      supabase.from("listings").select("id, title, price, price_text, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
       supabase.from("categories").select("id,name,slug,icon").eq("is_active", true).order("sort_order"),
       getAdminSettings(),
     ]).then(([{ data: listData }, { data: catData }, settings]) => {
@@ -244,6 +244,11 @@ function RecentListingRow({ listing }: { listing: any }) {
     ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
     : listing.price_text ?? "Consulte";
 
+  const sortedPhotos = [...(listing.listing_photos ?? [])].sort(
+    (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  );
+  const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
+
   return (
     <Link
       href={`/listings/${listing.id}`}
@@ -272,9 +277,20 @@ function RecentListingRow({ listing }: { listing: any }) {
           alignItems: "center",
           justifyContent: "center",
           fontSize: "1.75rem",
+          overflow: "hidden",
+          flexShrink: 0,
         }}
       >
-        🛍️
+        {firstPhoto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={firstPhoto}
+            alt={listing.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          "🛍️"
+        )}
       </div>
 
       {/* Info */}
