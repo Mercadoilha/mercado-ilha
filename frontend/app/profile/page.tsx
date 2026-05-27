@@ -269,7 +269,7 @@ export default function ProfilePage() {
 
           {/* Leyenda de validez */}
           <div style={{ background: "#fff8e1", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.7rem 0.875rem", fontSize: "0.78rem", color: "#92400e", marginBottom: "0.5rem", lineHeight: 1.5 }}>
-            Os anúncios ficam ativos por <strong>30 dias</strong> e depois são desativados automaticamente. Anúncios inativos por mais de <strong>15 dias</strong> são excluídos permanentemente.
+            Os anúncios ficam ativos por <strong>30 dias</strong> e depois são desativados automaticamente. Você pode reativá-los a qualquer momento — anúncios inativos por mais de <strong>15 dias</strong> são excluídos permanentemente.
           </div>
 
           {myListings.length === 0 ? (
