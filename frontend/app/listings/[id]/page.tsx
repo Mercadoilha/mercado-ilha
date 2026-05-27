@@ -314,23 +314,6 @@ export default function ListingDetailPage() {
               onClick={() => openLightbox(photoIdx)}
               style={{ width: "100%", height: 260, objectFit: "cover", display: "block", cursor: "zoom-in" }}
             />
-            {/* Zoom hint */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: 10,
-                left: 12,
-                background: "rgba(0,0,0,0.45)",
-                color: "#fff",
-                fontSize: "0.68rem",
-                fontWeight: 600,
-                borderRadius: 999,
-                padding: "3px 8px",
-                pointerEvents: "none",
-              }}
-            >
-              🔍 Toque para ampliar
-            </div>
             {/* Counter */}
             <div
               style={{
