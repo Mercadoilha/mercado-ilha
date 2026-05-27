@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { Resend } from "resend";
 
 export const dynamic = "force-dynamic";
+
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
 
 export async function GET(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY!);
@@ -29,8 +39,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, expired: 0 });
   }
 
-  // Mark all as expired
   const ids = expired.map((l) => l.id);
+
+  // ── Delete photos from R2 ──────────────────────────────────────────────────
+  const { data: photos } = await supabase
+    .from("listing_photos")
+    .select("id, photo_url")
+    .in("listing_id", ids);
+
+  const publicUrl = process.env.R2_PUBLIC_URL ?? "";
+  let photosDeleted = 0;
+
+  if (photos?.length) {
+    await Promise.allSettled(
+      photos.map(async (p) => {
+        if (!p.photo_url.startsWith(publicUrl)) return; // skip legacy URLs
+        const key = p.photo_url.slice(publicUrl.length + 1);
+        await r2.send(new DeleteObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME!,
+          Key: key,
+        }));
+        photosDeleted++;
+      }),
+    );
+
+    // Remove listing_photos records from DB
+    await supabase
+      .from("listing_photos")
+      .delete()
+      .in("listing_id", ids);
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // Mark all as expired
   await supabase.from("listings").update({ status: "expired" }).in("id", ids);
 
   // Fetch user emails from auth.users via admin
@@ -99,5 +140,5 @@ export async function GET(req: NextRequest) {
     else console.error(`[cron] Email error for ${email}:`, mailErr);
   }
 
-  return NextResponse.json({ ok: true, expired: ids.length, emails_sent: sent });
+  return NextResponse.json({ ok: true, expired: ids.length, photos_deleted: photosDeleted, emails_sent: sent });
 }
