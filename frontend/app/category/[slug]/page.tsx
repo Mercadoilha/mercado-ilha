@@ -12,7 +12,7 @@ export default function CategoryPage() {
   const [category, setCategory] = useState<any>(null);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -23,20 +23,27 @@ export default function CategoryPage() {
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
-    setNotFound(false);
+    setDbError(null);
 
     async function load() {
-      const { data: cat } = await supabase
+      const { data: cat, error: catError } = await supabase
         .from("categories")
         .select("id,name,slug,icon,description")
         .eq("slug", slug)
+        .eq("is_active", true)
         .maybeSingle();
 
       if (!mountedRef.current) return;
 
-      if (!cat) {
-        setNotFound(true);
+      if (catError) {
+        setDbError(catError.message);
         setLoading(false);
+        return;
+      }
+
+      if (!cat) {
+        // Fallback: go straight to listings
+        window.location.href = `/listings?category=${slug}`;
         return;
       }
       setCategory(cat);
@@ -63,17 +70,22 @@ export default function CategoryPage() {
     );
   }
 
-  if (notFound) {
+  if (dbError) {
     return (
       <div className="page-body">
         <header className="page-header">
           <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
-          <h1>Categoria</h1>
+          <h1>Erro</h1>
         </header>
-        <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-muted)" }}>
-          <p style={{ marginBottom: 16 }}>Categoria não encontrada.</p>
-          <Link href="/listings" className="btn btn-primary" style={{ display: "inline-flex" }}>
-            Ver todos os anúncios
+        <div style={{ padding: "1.5rem 1rem" }}>
+          <p style={{ color: "#dc2626", fontSize: "0.85rem", marginBottom: 12, fontWeight: 600 }}>
+            Erro ao carregar categoria:
+          </p>
+          <p style={{ color: "#64748b", fontSize: "0.8rem", background: "#f8fafc", padding: "0.75rem", borderRadius: 8, marginBottom: 16 }}>
+            {dbError}
+          </p>
+          <Link href={`/listings?category=${slug}`} className="btn btn-primary" style={{ display: "inline-flex" }}>
+            Ver anúncios desta categoria →
           </Link>
         </div>
       </div>
