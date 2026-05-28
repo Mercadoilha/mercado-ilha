@@ -841,8 +841,6 @@ function Categories() {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
               <input className="form-input" type="text" placeholder="Nome da categoria *" value={newCatName}
                 onChange={(e) => { setNewCatName(e.target.value); setNewCatSlug(toSlug(e.target.value)); }} />
-              <input className="form-input" type="text" placeholder="slug (auto)" value={newCatSlug}
-                onChange={(e) => setNewCatSlug(e.target.value)} />
             </div>
           </div>
           {pickingNewCatIcon && (
@@ -906,8 +904,6 @@ function Categories() {
                     <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--blue-main)", marginBottom: 2 }}>✏️ Editar categoria</div>
                     <input className="form-input" type="text" placeholder="Nome *" value={editingCat.name}
                       onChange={(e) => { const n = e.target.value; setEditingCat((p) => p ? { ...p, name: n, slug: toSlug(n) } : p); }} />
-                    <input className="form-input" type="text" placeholder="Slug *" value={editingCat.slug}
-                      onChange={(e) => setEditingCat((p) => p ? { ...p, slug: e.target.value } : p)} />
                     <input className="form-input" type="text" placeholder="Descrição (aparece na home)" value={editingCat.description}
                       onChange={(e) => setEditingCat((p) => p ? { ...p, description: e.target.value } : p)} />
                     <div style={{ display: "flex", gap: 6 }}>
