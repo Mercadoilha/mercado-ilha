@@ -48,15 +48,29 @@ export default function CategoryPage() {
       }
       setCategory(cat);
 
-      const { data: subs } = await supabase
+      let subsData: any[] = [];
+      const { data: subs, error: subsErr } = await supabase
         .from("subcategories")
         .select("id,name,icon")
         .eq("category_id", cat.id)
         .eq("is_active", true)
         .order("sort_order");
 
+      if (subsErr) {
+        // icon column might not exist — retry without it
+        const { data: subsNoIcon } = await supabase
+          .from("subcategories")
+          .select("id,name")
+          .eq("category_id", cat.id)
+          .eq("is_active", true)
+          .order("sort_order");
+        subsData = subsNoIcon ?? [];
+      } else {
+        subsData = subs ?? [];
+      }
+
       if (!mountedRef.current) return;
-      setSubcategories(subs ?? []);
+      setSubcategories(subsData);
       setLoading(false);
     }
     load();
