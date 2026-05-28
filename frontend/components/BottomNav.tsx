@@ -4,19 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-
-type CustomNav = { icon: string; label: string; category_slug: string };
+import { getAdminSettings, type NavCustom1 } from "../lib/adminSettings";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [hasSession, setHasSession] = useState(false);
-  const [customNav, setCustomNav] = useState<CustomNav>({ icon: "🍽️", label: "Comida", category_slug: "gastronomia" });
+  const [customNav, setCustomNav] = useState<NavCustom1>({ icon: "🍽️", label: "Comida", category_slug: "gastronomia" });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setHasSession(!!data?.session));
     const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
-    supabase.from("admin_settings").select("value").eq("key", "nav_custom_1").single()
-      .then(({ data }) => { if (data?.value) setCustomNav(data.value); });
+    getAdminSettings().then((s) => setCustomNav(s.navCustom1));
     return () => l?.subscription.unsubscribe();
   }, []);
 

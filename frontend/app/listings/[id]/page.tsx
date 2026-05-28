@@ -55,38 +55,41 @@ export default function ListingDetailPage() {
       setLoading(true);
       setError(null);
 
-      const { data: l, error: le } = await supabase
+      // Single query: listing + all related data via PostgREST joins
+      // Note: subzones join excluded (no FK constraint on subzone_id)
+      const { data: full, error: le } = await supabase
         .from("listings")
-        .select("*")
+        .select(`
+          *,
+          listing_photos(*),
+          profiles(id, full_name, whatsapp),
+          categories(id, name, slug, contact_button_text, whatsapp_message),
+          subcategories(id, name),
+          localities(id, name)
+        `)
         .eq("id", listingId)
         .single();
 
       if (!mounted) return;
-      if (le || !l) {
+      if (le || !full) {
         setError("Anúncio não encontrado.");
         setLoading(false);
         return;
       }
-      setListing(l);
 
-      // Load related data in parallel
-      const [photosRes, sellerRes, catRes, subCatRes, locRes, subzoneRes] = await Promise.all([
-        supabase.from("listing_photos").select("*").eq("listing_id", l.id).order("sort_order"),
-        supabase.from("profiles").select("id,full_name,whatsapp").eq("id", l.user_id).single(),
-        l.category_id ? supabase.from("categories").select("id,name,slug,contact_button_text,whatsapp_message").eq("id", l.category_id).single() : Promise.resolve({ data: null }),
-        l.subcategory_id ? supabase.from("subcategories").select("id,name").eq("id", l.subcategory_id).single() : Promise.resolve({ data: null }),
-        l.locality_id ? supabase.from("localities").select("id,name").eq("id", l.locality_id).single() : Promise.resolve({ data: null }),
-        l.subzone_id ? supabase.from("subzones").select("id,name").eq("id", l.subzone_id).single() : Promise.resolve({ data: null }),
-      ]);
-
-      if (!mounted) return;
-      setPhotos(photosRes.data ?? []);
-      setSeller(sellerRes.data ?? null);
-      setCategory(catRes.data ?? null);
-      setSubcategory(subCatRes.data ?? null);
-      setLocality(locRes.data ?? null);
-      setSubzone(subzoneRes.data ?? null);
+      setListing(full);
+      setPhotos([...(full.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
+      setSeller(full.profiles ?? null);
+      setCategory(full.categories ?? null);
+      setSubcategory(full.subcategories ?? null);
+      setLocality(full.localities ?? null);
       setLoading(false);
+
+      // Fetch subzone separately (subzone_id has no FK, so PostgREST join not available)
+      if (full.subzone_id) {
+        supabase.from("subzones").select("id,name").eq("id", full.subzone_id).single()
+          .then(({ data }) => { if (mounted) setSubzone(data ?? null); });
+      }
     }
 
     load();
@@ -360,7 +363,7 @@ export default function ListingDetailPage() {
                     style={{ padding: 0, border: i === photoIdx ? "2px solid var(--blue-main)" : "2px solid transparent", borderRadius: 6, cursor: "pointer", flexShrink: 0 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.photo_url} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                    <img src={p.photo_url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, display: "block" }} />
                   </button>
                 ))}
               </div>

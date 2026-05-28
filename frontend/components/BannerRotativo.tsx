@@ -16,9 +16,9 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [adminWa, setAdminWa] = useState("5571999999999");
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const [intervalMs, setIntervalMs] = useState(4000);
+  const [resetKey, setResetKey] = useState(0);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -40,14 +40,11 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [banners.length, intervalMs]);
+  }, [banners.length, intervalMs, resetKey]);
 
   const goTo = (i: number) => {
     setIdx(i);
-    if (timer.current) clearInterval(timer.current);
-    if (banners.length > 1) {
-      timer.current = setInterval(() => setIdx((prev) => (prev + 1) % banners.length), intervalMs);
-    }
+    setResetKey((k) => k + 1);
   };
 
   // ── No banners ──

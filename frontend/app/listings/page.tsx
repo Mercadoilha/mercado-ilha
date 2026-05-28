@@ -1,10 +1,23 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import ListingCard from "../../components/ListingCard";
+
+const SORT_OPTIONS = [
+  { key: "recent", label: "🕐 Recentes" },
+  { key: "price_asc", label: "💲 Menor preço" },
+  { key: "price_desc", label: "💰 Maior preço" },
+] as const;
+
+const CONDITION_OPTIONS = [
+  { key: "", label: "Todos" },
+  { key: "Novo", label: "✨ Novo" },
+  { key: "Seminovo", label: "👍 Seminovo" },
+  { key: "Usado", label: "♻️ Usado" },
+] as const;
 
 const SLUG_ICON_FALLBACK: Record<string, string> = {
   "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
@@ -27,7 +40,7 @@ function ListingsContent() {
   const subcategoryIdParam = searchParams.get("subcategory_id") ?? "";
 
   const [listings, setListings] = useState<any[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +107,7 @@ function ListingsContent() {
     async function load() {
       let query = supabase
         .from("listings")
-        .select("*, listing_photos(photo_url, sort_order), localities(name)")
+        .select("id, title, price, price_text, condition, locality_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)")
         .eq("status", "active")
         .limit(60);
 
@@ -125,7 +138,7 @@ function ListingsContent() {
       }
 
       if (favResult?.data) {
-        setFavoriteIds((favResult.data as any[]).map((f) => f.listing_id));
+        setFavoriteIds(new Set((favResult.data as any[]).map((f) => f.listing_id)));
       }
 
       setLoading(false);
@@ -138,9 +151,9 @@ function ListingsContent() {
     return () => { mounted = false; };
   }, [session, categoryId, categorySlug, subcategoryIdParam, searchQuery, sortBy, conditionFilter, zoneFilter]);
 
-  const toggleFavorite = async (listingId: number) => {
+  const toggleFavorite = useCallback(async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }
-    const isFav = favoriteIds.includes(listingId);
+    const isFav = favoriteIds.has(listingId);
     setBusyIds((c) => [...c, listingId]);
     setError(null);
     if (isFav) {
@@ -150,16 +163,16 @@ function ListingsContent() {
         .eq("listing_id", listingId)
         .eq("profile_id", session.user.id);
       if (e) setError(e.message);
-      else setFavoriteIds((c) => c.filter((id) => id !== listingId));
+      else setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; });
     } else {
       const { error: e } = await supabase
         .from("favorites")
         .insert({ listing_id: listingId, profile_id: session.user.id });
       if (e) setError(e.message);
-      else setFavoriteIds((c) => [...c, listingId]);
+      else setFavoriteIds((c) => new Set([...c, listingId]));
     }
     setBusyIds((c) => c.filter((id) => id !== listingId));
-  };
+  }, [session, favoriteIds]);
 
   const pageTitle = categorySlug
     ? categoryLabel || "Anúncios"
@@ -214,11 +227,7 @@ function ListingsContent() {
       <div style={{ borderBottom: "1px solid var(--border)", background: "#fff" }}>
         {/* Ordenar */}
         <div style={{ display: "flex", gap: 6, padding: "0.5rem 1rem 0", overflowX: "auto" }}>
-          {[
-            { key: "recent", label: "🕐 Recentes" },
-            { key: "price_asc", label: "💲 Menor preço" },
-            { key: "price_desc", label: "💰 Maior preço" },
-          ].map((opt) => (
+          {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               type="button"
@@ -242,12 +251,7 @@ function ListingsContent() {
         {/* Condição — solo para Produtos */}
         {categorySlug === "produtos" && (
           <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0", overflowX: "auto" }}>
-            {[
-              { key: "", label: "Todos" },
-              { key: "Novo", label: "✨ Novo" },
-              { key: "Seminovo", label: "👍 Seminovo" },
-              { key: "Usado", label: "♻️ Usado" },
-            ].map((opt) => (
+            {CONDITION_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
@@ -356,7 +360,7 @@ function ListingsContent() {
               key={l.id}
               listing={l}
               sessionExists={!!session}
-              isFavorite={favoriteIds.includes(l.id)}
+              isFavorite={favoriteIds.has(l.id)}
               busy={busyIds.includes(l.id)}
               onToggleFavorite={toggleFavorite}
             />

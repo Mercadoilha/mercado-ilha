@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
@@ -261,7 +261,7 @@ export default function Home() {
   );
 }
 
-function RecentListingRow({ listing }: { listing: any }) {
+const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: any }) {
   const price = listing.price != null
     ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
     : listing.price_text ?? "Consulte";
@@ -310,6 +310,7 @@ function RecentListingRow({ listing }: { listing: any }) {
           <img
             src={firstPhoto}
             alt={listing.title}
+            loading="lazy"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
@@ -349,4 +350,4 @@ function RecentListingRow({ listing }: { listing: any }) {
       <span style={{ fontSize: "1rem", color: "#cbd5e1", flexShrink: 0 }}>›</span>
     </Link>
   );
-}
+});

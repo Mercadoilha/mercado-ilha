@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 
 type ListingCardProps = {
@@ -10,7 +11,7 @@ type ListingCardProps = {
   busy: boolean;
 };
 
-export default function ListingCard({
+export default memo(function ListingCard({
   listing,
   isFavorite,
   onToggleFavorite,
@@ -65,6 +66,7 @@ export default function ListingCard({
             <img
               src={firstPhoto}
               alt={listing.title}
+              loading="lazy"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
@@ -129,4 +131,4 @@ export default function ListingCard({
       </button>
     </article>
   );
-}
+});
