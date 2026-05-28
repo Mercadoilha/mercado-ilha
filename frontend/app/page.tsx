@@ -32,7 +32,7 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       supabase.from("listings").select("id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name)").eq("status", "active").order("created_at", { ascending: false }).limit(10),
-      supabase.from("categories").select("id,name,slug,icon").eq("is_active", true).order("sort_order"),
+      supabase.from("categories").select("id,name,slug,icon,description").eq("is_active", true).order("sort_order"),
       getAdminSettings(),
     ]).then(([{ data: listData }, { data: catData }, settings]) => {
       setListings(listData ?? []);
@@ -165,7 +165,7 @@ export default function Home() {
           {categories.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/listings?category=${cat.slug}`}
+              href={`/category/${cat.slug}`}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -184,6 +184,11 @@ export default function Home() {
               <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
                 {cat.name}
               </span>
+              {cat.description && (
+                <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textAlign: "center", lineHeight: 1.2, marginTop: -2 }}>
+                  {cat.description}
+                </span>
+              )}
             </Link>
           ))}
         </div>

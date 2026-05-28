@@ -24,6 +24,7 @@ function ListingsContent() {
   const searchParams = useSearchParams();
   const categorySlug = searchParams.get("category") ?? "";
   const searchQuery = searchParams.get("q") ?? "";
+  const subcategoryIdParam = searchParams.get("subcategory_id") ?? "";
 
   const [listings, setListings] = useState<any[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
@@ -33,6 +34,7 @@ function ListingsContent() {
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [categoryLabel, setCategoryLabel] = useState("");
+  const [subcategoryLabel, setSubcategoryLabel] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [conditionFilter, setConditionFilter] = useState("");
   const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
@@ -60,6 +62,13 @@ function ListingsContent() {
 
   // Reset zone filter when category/search changes
   useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
+
+  // Resolve subcategory id → label
+  useEffect(() => {
+    if (!subcategoryIdParam) { setSubcategoryLabel(""); return; }
+    supabase.from("subcategories").select("name").eq("id", Number(subcategoryIdParam)).single()
+      .then(({ data }) => setSubcategoryLabel(data?.name ?? ""));
+  }, [subcategoryIdParam]);
 
   // Resolve category slug → id
   useEffect(() => {
@@ -90,6 +99,7 @@ function ListingsContent() {
         .limit(60);
 
       if (categoryId) query = query.eq("category_id", categoryId);
+      if (subcategoryIdParam) query = query.eq("subcategory_id", Number(subcategoryIdParam));
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       if (conditionFilter) query = query.eq("condition", conditionFilter);
       if (zoneFilter) query = query.eq("locality_id", zoneFilter);
@@ -126,7 +136,7 @@ function ListingsContent() {
     load();
 
     return () => { mounted = false; };
-  }, [session, categoryId, categorySlug, searchQuery, sortBy, conditionFilter, zoneFilter]);
+  }, [session, categoryId, categorySlug, subcategoryIdParam, searchQuery, sortBy, conditionFilter, zoneFilter]);
 
   const toggleFavorite = async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }
@@ -177,6 +187,15 @@ function ListingsContent() {
               style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
             >
               {categoryLabel || categorySlug} ✕
+            </Link>
+          )}
+          {subcategoryIdParam && subcategoryLabel && (
+            <Link
+              href={`/listings?category=${categorySlug}`}
+              className="badge badge-blue"
+              style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              {subcategoryLabel} ✕
             </Link>
           )}
           {searchQuery && (

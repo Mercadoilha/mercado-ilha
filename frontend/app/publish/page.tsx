@@ -112,7 +112,8 @@ export default function PublishPage() {
     setSubmitting(true);
     setError(null);
 
-    if (!categoryId || !subcategoryId || !localityId || !title.trim() || !description.trim()) {
+    const missingSubcat = subcategories.length > 0 && !subcategoryId;
+    if (!categoryId || missingSubcat || !localityId || !title.trim() || !description.trim()) {
       setError("Preencha todos os campos obrigatórios.");
       setSubmitting(false);
       return;
@@ -135,7 +136,7 @@ export default function PublishPage() {
       .insert({
         user_id: session.user.id,
         category_id: Number(categoryId),
-        subcategory_id: Number(subcategoryId),
+        subcategory_id: subcategoryId ? Number(subcategoryId) : null,
         island_id: islandId,
         locality_id: Number(localityId),
         subzone_id: subzoneId ? Number(subzoneId) : null,

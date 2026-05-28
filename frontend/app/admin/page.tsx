@@ -675,7 +675,7 @@ function Categories() {
   const [pickingNewCatIcon, setPickingNewCatIcon] = useState(false);
 
   // Edit category
-  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string } | null>(null);
+  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string; description: string } | null>(null);
   const [editingCatSaving, setEditingCatSaving] = useState(false);
 
   // New subcategory form
@@ -690,7 +690,7 @@ function Categories() {
   const [editingSubSaving, setEditingSubSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text").order("sort_order")
+    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description").order("sort_order")
       .then(({ data }) => { setCategories(data ?? []); setLoading(false); });
   }, []);
 
@@ -793,9 +793,10 @@ function Categories() {
       slug: editingCat.slug.trim(),
       location_type: editingCat.type,
       contact_button_text: editingCat.btn || "Contatar",
+      description: editingCat.description.trim() || null,
     }).eq("id", editingCat.id);
     if (!error) {
-      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim() } : c));
+      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim(), description: editingCat.description.trim() || null } : c));
       setEditingCat(null);
       flash("Categoria atualizada.");
     } else flash("Erro: " + error.message);
@@ -907,6 +908,8 @@ function Categories() {
                       onChange={(e) => { const n = e.target.value; setEditingCat((p) => p ? { ...p, name: n, slug: toSlug(n) } : p); }} />
                     <input className="form-input" type="text" placeholder="Slug *" value={editingCat.slug}
                       onChange={(e) => setEditingCat((p) => p ? { ...p, slug: e.target.value } : p)} />
+                    <input className="form-input" type="text" placeholder="Descrição (aparece na home)" value={editingCat.description}
+                      onChange={(e) => setEditingCat((p) => p ? { ...p, description: e.target.value } : p)} />
                     <div style={{ display: "flex", gap: 6 }}>
                       <select className="form-select" value={editingCat.type} onChange={(e) => setEditingCat((p) => p ? { ...p, type: e.target.value } : p)} style={{ flex: 1 }}>
                         <option value="fija">Localização fixa</option>
@@ -925,7 +928,7 @@ function Categories() {
                   </div>
                 ) : (
                   <button type="button"
-                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar" })}
+                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar", description: cat.description ?? "" })}
                     style={{ width: "100%", padding: "0.5rem 0.75rem", background: "none", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600, textAlign: "left" }}>
                     ✏️ Editar categoria
                   </button>
