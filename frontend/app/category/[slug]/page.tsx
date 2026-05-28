@@ -119,40 +119,37 @@ export default function CategoryPage() {
         </p>
       )}
 
-      <div style={{ padding: "0.875rem 1rem" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem" }}>
+      <div style={{ padding: "0.875rem 1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
 
+        <Link
+          href={`/listings?category=${slug}`}
+          style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "0.875rem 1rem", background: "var(--blue-main)", borderRadius: 12,
+            textDecoration: "none", color: "#fff",
+          }}
+        >
+          <span style={{ fontSize: "1.4rem", lineHeight: 1, flexShrink: 0 }}>🔍</span>
+          <span style={{ fontWeight: 700, fontSize: "0.95rem", flex: 1 }}>Todas as publicações</span>
+          <span style={{ fontSize: "1rem", opacity: 0.7 }}>›</span>
+        </Link>
+
+        {subcategories.map((sub) => (
           <Link
-            href={`/listings?category=${slug}`}
+            key={sub.id}
+            href={`/listings?category=${slug}&subcategory_id=${sub.id}`}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-              padding: "0.75rem 0.5rem", background: "var(--blue-main)", borderRadius: 12,
-              textDecoration: "none", color: "#fff",
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "0.875rem 1rem", background: "#fff", borderRadius: 12,
+              border: "1px solid var(--border)", textDecoration: "none", color: "#1e293b",
             }}
           >
-            <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>🔍</span>
-            <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
-              Todas as publicações
-            </span>
+            <span style={{ fontSize: "1.4rem", lineHeight: 1, flexShrink: 0 }}>{sub.icon || "•"}</span>
+            <span style={{ fontWeight: 600, fontSize: "0.9rem", flex: 1 }}>{sub.name}</span>
+            <span style={{ fontSize: "1rem", color: "#cbd5e1" }}>›</span>
           </Link>
+        ))}
 
-          {subcategories.map((sub) => (
-            <Link
-              key={sub.id}
-              href={`/listings?category=${slug}&subcategory_id=${sub.id}`}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                padding: "0.75rem 0.5rem", background: "#fff", borderRadius: 12,
-                border: "1px solid var(--border)", textDecoration: "none", color: "#1e293b",
-              }}
-            >
-              <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>{sub.icon || "•"}</span>
-              <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
-                {sub.name}
-              </span>
-            </Link>
-          ))}
-        </div>
       </div>
     </div>
   );
