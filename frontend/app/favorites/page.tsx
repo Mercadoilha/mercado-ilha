@@ -4,28 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import { useSession } from "../../contexts/SessionContext";
 
 export default function FavoritesPage() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
+  const { session, sessionLoading } = useSession();
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data?.session ?? null);
-    });
-    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (mounted) setSession(s ?? null);
-    });
-    return () => { mounted = false; l?.subscription.unsubscribe(); };
-  }, []);
-
-  useEffect(() => {
-    if (session === null) { setLoading(false); return; }
-    if (!session) return;
+    if (sessionLoading) return;
+    if (!session) { setLoading(false); return; }
 
     let mounted = true;
     setLoading(true);
@@ -42,7 +32,7 @@ export default function FavoritesPage() {
       });
 
     return () => { mounted = false; };
-  }, [session]);
+  }, [session, sessionLoading]);
 
   const removeFavorite = async (favId: number, listingId: number) => {
     setRemovingId(listingId);

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import ListingCard from "../../components/ListingCard";
+import { useSession } from "../../contexts/SessionContext";
 
 const SORT_OPTIONS = [
   { key: "recent", label: "🕐 Recentes" },
@@ -39,13 +40,12 @@ function ListingsContent() {
   const searchQuery = searchParams.get("q") ?? "";
   const subcategoryIdParam = searchParams.get("subcategory_id") ?? "";
 
+  const { session } = useSession();
   const [listings, setListings] = useState<any[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<number[]>([]);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [categoryLabel, setCategoryLabel] = useState("");
   const [subcategoryLabel, setSubcategoryLabel] = useState("");
   const [sortBy, setSortBy] = useState("recent");
@@ -53,28 +53,18 @@ function ListingsContent() {
   const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
   const [zoneFilter, setZoneFilter] = useState<number | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data?.session ?? null);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (mounted) setSession(s ?? null);
-    });
-    return () => {
-      mounted = false;
-      listener?.subscription.unsubscribe();
-    };
-  }, []);
-
-  // Load localities for zone filter
+  // Load localities for zone filter (once)
   useEffect(() => {
     supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
       .then(({ data }) => setLocalities(data ?? []));
   }, []);
 
-  // Reset zone filter when category/search changes
+  // Reset filters when category/search changes
   useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
+  useEffect(() => {
+    if (!categorySlug) { setCategoryLabel(""); setConditionFilter(""); return; }
+    if (categorySlug !== "produtos") setConditionFilter("");
+  }, [categorySlug]);
 
   // Resolve subcategory id → label
   useEffect(() => {
@@ -83,35 +73,23 @@ function ListingsContent() {
       .then(({ data }) => setSubcategoryLabel(data?.name ?? ""));
   }, [subcategoryIdParam]);
 
-  // Resolve category slug → id
-  useEffect(() => {
-    if (!categorySlug) { setCategoryId(null); setCategoryLabel(""); setConditionFilter(""); return; }
-    if (categorySlug !== "produtos") setConditionFilter("");
-    supabase
-      .from("categories")
-      .select("id,name,icon")
-      .eq("slug", categorySlug)
-      .single()
-      .then(({ data }) => {
-        setCategoryId(data?.id ?? null);
-        const icon = data?.icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
-        setCategoryLabel(data?.name ? `${icon} ${data.name}` : categorySlug);
-      });
-  }, [categorySlug]);
-
   useEffect(() => {
     let mounted = true;
     setLoading(true);
     setError(null);
 
     async function load() {
+      // When categorySlug is present, filter via PostgREST join (no slug→id resolution round-trip)
+      const selectBase = "id, title, price, price_text, condition, locality_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
+      const selectWithCat = selectBase + ", categories!inner(id, name, icon)";
+
       let query = supabase
         .from("listings")
-        .select("id, title, price, price_text, condition, locality_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)")
+        .select(categorySlug ? selectWithCat : selectBase)
         .eq("status", "active")
         .limit(60);
 
-      if (categoryId) query = query.eq("category_id", categoryId);
+      if (categorySlug) query = (query as any).eq("categories.slug", categorySlug);
       if (subcategoryIdParam) query = query.eq("subcategory_id", Number(subcategoryIdParam));
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       if (conditionFilter) query = query.eq("condition", conditionFilter);
@@ -135,6 +113,23 @@ function ListingsContent() {
         setListings([]);
       } else {
         setListings(listingsResult.data ?? []);
+
+        // Extract category label from joined data (no extra round-trip needed)
+        if (categorySlug) {
+          const firstCat = (listingsResult.data as any[])[0]?.categories;
+          if (firstCat) {
+            const icon = firstCat.icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
+            setCategoryLabel(`${icon} ${firstCat.name}`);
+          } else if (listingsResult.data.length === 0) {
+            // Empty category: fetch label separately (rare case)
+            supabase.from("categories").select("name,icon").eq("slug", categorySlug).maybeSingle()
+              .then(({ data: cat }) => {
+                if (!mounted || !cat) return;
+                const icon = (cat as any).icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
+                setCategoryLabel(`${icon} ${(cat as any).name}`);
+              });
+          }
+        }
       }
 
       if (favResult?.data) {
@@ -144,12 +139,10 @@ function ListingsContent() {
       setLoading(false);
     }
 
-    // Wait for category resolution if slug is given
-    if (categorySlug && categoryId === null && categorySlug !== "") return;
     load();
 
     return () => { mounted = false; };
-  }, [session, categoryId, categorySlug, subcategoryIdParam, searchQuery, sortBy, conditionFilter, zoneFilter]);
+  }, [session, categorySlug, subcategoryIdParam, searchQuery, sortBy, conditionFilter, zoneFilter]);
 
   const toggleFavorite = useCallback(async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }

@@ -26,9 +26,10 @@ export default function CategoryPage() {
     setDbError(null);
 
     async function load() {
-      const { data: cat, error: catError } = await supabase
+      // Single query: fetch category + its subcategories via embedded join (1 round-trip)
+      const { data: catWithSubs, error: catError } = await supabase
         .from("categories")
-        .select("id,name,slug,icon,description")
+        .select("id, name, slug, icon, description, subcategories(id, name, icon, is_active, sort_order)")
         .eq("slug", slug)
         .eq("is_active", true)
         .maybeSingle();
@@ -41,36 +42,18 @@ export default function CategoryPage() {
         return;
       }
 
-      if (!cat) {
-        // Fallback: go straight to listings
+      if (!catWithSubs) {
         window.location.href = `/listings?category=${slug}`;
         return;
       }
-      setCategory(cat);
 
-      let subsData: any[] = [];
-      const { data: subs, error: subsErr } = await supabase
-        .from("subcategories")
-        .select("id,name,icon")
-        .eq("category_id", cat.id)
-        .eq("is_active", true)
-        .order("sort_order");
+      setCategory(catWithSubs);
 
-      if (subsErr) {
-        // icon column might not exist — retry without it
-        const { data: subsNoIcon } = await supabase
-          .from("subcategories")
-          .select("id,name")
-          .eq("category_id", cat.id)
-          .eq("is_active", true)
-          .order("sort_order");
-        subsData = subsNoIcon ?? [];
-      } else {
-        subsData = subs ?? [];
-      }
+      const subs = ((catWithSubs as any).subcategories ?? [])
+        .filter((s: any) => s.is_active)
+        .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-      if (!mountedRef.current) return;
-      setSubcategories(subsData);
+      setSubcategories(subs);
       setLoading(false);
     }
     load();

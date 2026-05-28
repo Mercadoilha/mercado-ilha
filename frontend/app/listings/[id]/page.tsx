@@ -5,10 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl } from "../../../lib/whatsappUrl";
+import { useSession } from "../../../contexts/SessionContext";
 
 export default function ListingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { session } = useSession();
   const listingId = Number(params?.id);
 
   const [listing, setListing] = useState<any>(null);
@@ -18,7 +20,6 @@ export default function ListingDetailPage() {
   const [subcategory, setSubcategory] = useState<any>(null);
   const [locality, setLocality] = useState<any>(null);
   const [subzone, setSubzone] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -35,12 +36,6 @@ export default function ListingDetailPage() {
   const [reportSent, setReportSent] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
-    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setSession(s ?? null));
-    return () => l?.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!listingId || Number.isNaN(listingId)) {

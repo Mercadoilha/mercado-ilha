@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
+import { SessionProvider } from "../contexts/SessionContext";
 
 export const viewport: Viewport = {
   themeColor: "#185FA5",
@@ -47,10 +48,19 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
+      <head>
+        {/* Pre-establish connections to external services before JS executes */}
+        <link rel="preconnect" href="https://ywminblmiwjsxbntszbc.supabase.co" />
+        <link rel="dns-prefetch" href="https://ywminblmiwjsxbntszbc.supabase.co" />
+        <link rel="preconnect" href="https://pub-d6279f6f1d8b4352953818cd9e119e87.r2.dev" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://pub-d6279f6f1d8b4352953818cd9e119e87.r2.dev" />
+      </head>
       <body>
-        {children}
-        <BottomNav />
-        <RegisterSW />
+        <SessionProvider>
+          {children}
+          <BottomNav />
+          <RegisterSW />
+        </SessionProvider>
       </body>
     </html>
   );

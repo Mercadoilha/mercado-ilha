@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import BannerRotativo from "../components/BannerRotativo";
 import { getAdminSettings, whatsappUrl } from "../lib/adminSettings";
+import { useSession } from "../contexts/SessionContext";
 
 // Fallback icons por slug cuando la DB no tiene icon configurado
 const SLUG_ICON: Record<string, string> = {
@@ -16,18 +17,12 @@ const SLUG_ICON: Record<string, string> = {
 
 export default function Home() {
   const router = useRouter();
+  const { session } = useSession();
   const [search, setSearch] = useState("");
   const [listings, setListings] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
   const [adminWa, setAdminWa] = useState("5571999999999");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => listener?.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     Promise.all([

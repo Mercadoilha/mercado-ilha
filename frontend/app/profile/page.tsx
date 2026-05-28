@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import AvatarUpload from "../../components/AvatarUpload";
+import { useSession } from "../../contexts/SessionContext";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { session, sessionLoading } = useSession();
 
-  const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [myListings, setMyListings] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -25,23 +26,14 @@ export default function ProfilePage() {
   const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data?.session ?? null);
-    });
-    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (mounted) setSession(s ?? null);
-    });
-    return () => { mounted = false; l?.subscription.unsubscribe(); };
-  }, []);
-
-  useEffect(() => {
+    if (sessionLoading) return;
     if (!session) { setLoading(false); return; }
+    const activeSession = session;
     let mounted = true;
     setLoading(true);
     setError(null);
 
-    const uid = session.user.id;
+    const uid = activeSession.user.id;
 
     async function load() {
       // Load or create profile
@@ -49,7 +41,7 @@ export default function ProfilePage() {
       if (!p && pe?.code === "PGRST116") {
         const { data: np } = await supabase
           .from("profiles")
-          .insert({ id: uid, full_name: session.user.email ?? "Usuário", whatsapp: "", role: "user" })
+          .insert({ id: uid, full_name: activeSession.user.email ?? "Usuário", whatsapp: "", role: "user" })
           .select("*")
           .single();
         p = np;
@@ -75,7 +67,7 @@ export default function ProfilePage() {
 
     load();
     return () => { mounted = false; };
-  }, [session]);
+  }, [session, sessionLoading]);
 
   const saveProfile = async () => {
     if (!session) return;
@@ -186,7 +178,7 @@ export default function ProfilePage() {
           className="card"
           style={{ padding: "1rem" }}
         >
-          {profile != null && (
+          {profile != null && session != null && (
             <AvatarUpload
               userId={session.user.id}
               currentAvatarUrl={profile.avatar_url ?? null}

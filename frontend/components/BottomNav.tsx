@@ -3,19 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
 import { getAdminSettings, type NavCustom1 } from "../lib/adminSettings";
+import { useSession } from "../contexts/SessionContext";
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const [hasSession, setHasSession] = useState(false);
+  const { session } = useSession();
   const [customNav, setCustomNav] = useState<NavCustom1>({ icon: "🍽️", label: "Comida", category_slug: "gastronomia" });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setHasSession(!!data?.session));
-    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
     getAdminSettings().then((s) => setCustomNav(s.navCustom1));
-    return () => l?.subscription.unsubscribe();
   }, []);
 
   const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
@@ -83,7 +80,7 @@ export default function BottomNav() {
         +
       </Link>
 
-      {hasSession ? (
+      {session ? (
         <Link href="/favorites" style={link("/favorites")}>
           <span style={{ fontSize: "1.3rem" }}>❤️</span>
           Favoritos
@@ -95,7 +92,7 @@ export default function BottomNav() {
         </Link>
       )}
 
-      {hasSession ? (
+      {session ? (
         <Link href="/profile" style={link("/profile")}>
           <span style={{ fontSize: "1.3rem" }}>👤</span>
           Perfil
