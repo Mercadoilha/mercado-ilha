@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { supabase } from "../lib/supabaseClient";
-import { getAdminSettings, whatsappUrl } from "../lib/adminSettings";
+import { useEffect, useRef, useState } from "react";
+import { whatsappUrl } from "../lib/adminSettings";
 
 type Banner = {
   id: number;
@@ -11,36 +10,27 @@ type Banner = {
   link_url: string | null;
 };
 
-export default function BannerRotativo({ position = "home" }: { position?: "home" | "listado" }) {
-  const [banners, setBanners] = useState<Banner[]>([]);
+type Props = {
+  position?: "home" | "listado";
+  banners: Banner[];
+  adminWa: string;
+  bannerInterval: number;
+};
+
+export default function BannerRotativo({ banners, adminWa, bannerInterval }: Props) {
   const [idx, setIdx] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [adminWa, setAdminWa] = useState("5571999999999");
-  const [intervalMs, setIntervalMs] = useState(4000);
   const [resetKey, setResetKey] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    Promise.all([
-      supabase.from("banners").select("id,title,image_url,link_url").eq("position", position).eq("active", true).order("sort_order"),
-      getAdminSettings(),
-    ]).then(([{ data }, settings]) => {
-      setBanners(data ?? []);
-      setAdminWa(settings.whatsapp);
-      setIntervalMs(settings.bannerInterval);
-      setLoading(false);
-    });
-  }, [position]);
 
   useEffect(() => {
     if (banners.length <= 1) return;
     timer.current = setInterval(() => {
       setIdx((i) => (i + 1) % banners.length);
-    }, intervalMs);
+    }, bannerInterval);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [banners.length, intervalMs, resetKey]);
+  }, [banners.length, bannerInterval, resetKey]);
 
   const goTo = (i: number) => {
     setIdx(i);
@@ -48,7 +38,7 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
   };
 
   // ── No banners ──
-  if (!loading && banners.length === 0) {
+  if (banners.length === 0) {
     return (
       <div style={{ margin: "0.875rem 1rem" }}>
         <div
@@ -87,8 +77,6 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
     );
   }
 
-  if (loading) return <div style={{ margin: "0.875rem 1rem", height: 130, borderRadius: 12, background: "var(--blue-xlight)", animation: "pulse 1.5s ease-in-out infinite" }} />;
-
   const current = banners[idx];
 
   const content = (
@@ -101,12 +89,10 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
         background: "var(--blue-xlight)",
       }}
     >
-      {/* Etiqueta */}
       <span style={{ position: "absolute", top: 8, right: 10, fontSize: "0.6rem", color: "#fff", background: "rgba(0,0,0,0.45)", borderRadius: 4, padding: "2px 6px", fontWeight: 700, letterSpacing: "0.05em", zIndex: 2 }}>
         PUBLICIDADE
       </span>
 
-      {/* Imagen */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={current.id}
@@ -115,7 +101,6 @@ export default function BannerRotativo({ position = "home" }: { position?: "home
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.4s" }}
       />
 
-      {/* Dots de navegación */}
       {banners.length > 1 && (
         <div
           style={{

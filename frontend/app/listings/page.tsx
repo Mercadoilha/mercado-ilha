@@ -53,12 +53,6 @@ function ListingsContent() {
   const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
   const [zoneFilter, setZoneFilter] = useState<number | null>(null);
 
-  // Load localities for zone filter (once)
-  useEffect(() => {
-    supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
-      .then(({ data }) => setLocalities(data ?? []));
-  }, []);
-
   // Reset filters when category/search changes
   useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
   useEffect(() => {
@@ -99,14 +93,19 @@ function ListingsContent() {
       else if (sortBy === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
       else query = query.order("created_at", { ascending: false });
 
-      const [listingsResult, favResult] = await Promise.all([
+      const [listingsResult, favResult, localitiesResult] = await Promise.all([
         query,
         session
           ? supabase.from("favorites").select("listing_id").eq("profile_id", session.user.id)
           : Promise.resolve({ data: [], error: null }),
+        localities.length === 0
+          ? supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
+          : Promise.resolve({ data: null, error: null }),
       ] as const);
 
       if (!mounted) return;
+
+      if (localitiesResult.data) setLocalities(localitiesResult.data as { id: number; name: string }[]);
 
       if (listingsResult.error) {
         setError(listingsResult.error.message);
