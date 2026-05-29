@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildWaUrl } from "../../../lib/whatsappUrl";
+import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 
 export default function StorePage() {
   const params = useParams();
@@ -135,7 +135,7 @@ export default function StorePage() {
             type="button"
             onClick={() => {
               if (!session) { router.push("/signin?msg=contact"); return; }
-              window.open(buildWaUrl(seller.whatsapp, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`), "_blank", "noreferrer");
+              openWhatsApp(buildWaUrl(seller.whatsapp, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
             }}
             style={{
               display: "inline-flex",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
+import { openWhatsApp } from "../lib/whatsappUrl";
 import { useSession } from "../contexts/SessionContext";
 
 const SLUG_ICON: Record<string, string> = {
@@ -230,15 +231,14 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
             Sugestões ou problemas? Fala com a gente!
           </p>
-          <a
-            href={whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha")}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => openWhatsApp(whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha"))}
             className="btn btn-whatsapp"
-            style={{ width: "100%", display: "flex", justifyContent: "center" }}
+            style={{ width: "100%", display: "flex", justifyContent: "center", cursor: "pointer" }}
           >
             💬 Fale conosco pelo WhatsApp
-          </a>
+          </button>
         </div>
       </section>
     </div>

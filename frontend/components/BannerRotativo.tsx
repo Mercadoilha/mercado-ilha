@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { whatsappUrl } from "../lib/adminSettings";
+import { openWhatsApp } from "../lib/whatsappUrl";
 
 type Banner = {
   id: number;
@@ -64,14 +65,13 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
         </div>
         <p style={{ textAlign: "center", padding: "0.4rem 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
           Quer anunciar aqui?{" "}
-          <a
-            href={whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none" }}
+          <button
+            type="button"
+            onClick={() => openWhatsApp(whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha"))}
+            style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
           >
             Fale conosco
-          </a>
+          </button>
         </p>
       </div>
     );

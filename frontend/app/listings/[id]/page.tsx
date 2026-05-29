@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildWaUrl } from "../../../lib/whatsappUrl";
+import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { useSession } from "../../../contexts/SessionContext";
 
 export default function ListingDetailPage() {
@@ -470,7 +470,7 @@ export default function ListingDetailPage() {
               type="button"
               onClick={() => {
                 if (!session) { router.push("/signin?msg=contact"); return; }
-                window.open(buildWhatsAppUrl(), "_blank", "noreferrer");
+                openWhatsApp(buildWhatsAppUrl());
               }}
               className="btn btn-whatsapp btn-block"
               style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}

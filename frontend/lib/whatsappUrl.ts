@@ -33,3 +33,9 @@ export function buildWaUrl(whatsapp: string, message: string): string {
   const number = buildWaNumber(whatsapp);
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
+
+// Opens WhatsApp in a new tab and closes the blank tab after the app has launched.
+export function openWhatsApp(url: string): void {
+  const tab = window.open(url, "_blank", "noreferrer");
+  if (tab) setTimeout(() => { try { tab.close(); } catch (_) {} }, 1500);
+}
