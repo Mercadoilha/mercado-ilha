@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     description: "Marketplace de Tinharé — Morro de São Paulo",
     type: "website",
     locale: "pt_BR",
-    images: [{ url: "/icon-512.png", width: 512, height: 512, type: "image/png" }],
+    images: [{ url: "/icon-192.png", width: 192, height: 192, type: "image/png" }],
   },
 };
 
