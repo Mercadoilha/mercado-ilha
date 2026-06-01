@@ -85,11 +85,24 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 - **Variables CSS:** definidas en `globals.css` como `--blue-main`, `--sand`, etc.
 - **Layout anuncios:** LISTA vertical de cards horizontales (miniatura 80x80px
   izquierda + título, precio, descripción, favorito derecha). NO grilla.
-- **Home:** header azul → búsqueda → BannerRotativo → 10 categorías (3 por fila)
-  → anuncios recientes → Fale conosco.
+- **Home:** header azul → búsqueda autocomplete (`BuscaAutocomplete`) → BannerRotativo
+  → 10 categorías (3 por fila) → anuncios recientes → Fale conosco.
+- **Búsqueda autocomplete:** Componente `BuscaAutocomplete.tsx`. Debounce 300ms,
+  AbortController para cancelar requests en vuelo, cache en memoria por query,
+  consultas paralelas (listings + categories + subcategories), skeleton loading,
+  navegación ↑↓ Enter Esc, ARIA completo. Sugerencias: máx 5 anuncios + máx 3 categorías.
+- **Botón compartir:** Web Share API con fallback a WhatsApp. Ícono centralizado en
+  `frontend/components/ShareIcon.tsx` (SVG inline). Presente en 4 lugares:
+  - Header azul global (home y listados)
+  - Detalle del anuncio `/listings/[id]` — botón outline azul "📤 Compartilhar anúncio"
+    (visible siempre, también para el dueño; el botón de WhatsApp solo aparece para visitantes)
+  - Tienda del vendedor `/store/[id]` — botón outline blanco "📤 Compartilhar loja"
+  - Perfil propio `/profile` — botón outline azul "📤 Compartilhar minha loja"
+    (URL generada: `window.location.origin + '/store/' + userId`)
 - **Bottom nav fijo:** Início | Anúncios | ➕ (arena, circular) | 🍽️ Comida | Perfil/Entrar
-- **Logo actual:** 🏝️ + texto "Mercado Ilha" (placeholder; el logo SVG definitivo
-  pendiente de diseño: bolsa de compras con montículo de arena y faro).
+- **Logo actual:** SVG en `/public/logo.svg` (ya implementado).
+- **OG image:** `/icon-192.png` usado para preview compacto en WhatsApp (`og:image`).
+- **Favoritos:** sección eliminada del perfil (`/profile`). Ya no existe en la UI.
 
 ---
 
@@ -129,7 +142,8 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
 | 5 | Cuenta y perfil-tienda del vendedor | ✅ /profile + /store/[id] |
 | 6 | Panel de administrador completo | ✅ /admin con 5 tabs |
 | 7 | Banners rotativos + PWA instalable | ✅ BannerRotativo + manifest + SW + íconos |
-| 8 | Pulido, GitHub, Vercel, lanzamiento | ✅ Pulido completo. Deploy pendiente. |
+| 8 | Pulido, GitHub, Vercel, lanzamiento | ✅ En producción. Repo: `Mercadoilha/mercado-ilha`. |
+| — | Búsqueda autocomplete (post-lanzamiento) | ✅ `BuscaAutocomplete.tsx` — commit `ce58f37` |
 
 ---
 
@@ -160,22 +174,28 @@ frontend/
 │   ├── page.tsx             ← home completa
 │   ├── not-found.tsx        ← página 404 con diseño de marca
 │   ├── signin/page.tsx      ← login + registro (tabs)
+│   ├── termos/page.tsx      ← Termos e Condições de Uso pública
 │   ├── profile/page.tsx     ← perfil editable + mis anuncios + favoritos
-│   ├── publish/page.tsx     ← formulario publicar anuncio
 │   ├── listings/
 │   │   ├── page.tsx         ← listados + filtros
 │   │   └── [id]/page.tsx    ← detalle del anuncio
 │   ├── store/[id]/page.tsx  ← tienda pública del vendedor
 │   └── admin/page.tsx       ← panel de administración (5 tabs)
 ├── components/
-│   ├── BottomNav.tsx        ← nav inferior session-aware
-│   ├── BannerRotativo.tsx   ← banners de Supabase con auto-rotación
-│   ├── ListingCard.tsx      ← card horizontal con foto, precio, favorito
-│   └── RegisterSW.tsx       ← registra el service worker PWA
+│   ├── BottomNav.tsx          ← nav inferior session-aware
+│   ├── BannerRotativo.tsx     ← banners de Supabase con auto-rotación
+│   ├── BuscaAutocomplete.tsx  ← búsqueda predictiva del home (debounce+cache+ARIA)
+│   ├── HomeClient.tsx         ← cliente del home; usa BuscaAutocomplete
+│   ├── InstallAppBanner.tsx   ← banner de instalación PWA (integrado en /signin)
+│   ├── ListingCard.tsx        ← card horizontal con foto, precio, favorito
+│   ├── RegisterSW.tsx         ← registra el service worker PWA
+│   └── ShareIcon.tsx          ← ícono SVG de compartir, reutilizado en todo el sitio
 ├── lib/
-│   ├── supabaseClient.ts    ← cliente Supabase (NEXT_PUBLIC vars)
+│   ├── supabaseClient.ts    ← cliente Supabase (NEXT_PUBLIC vars, anon key)
 │   ├── supabaseAdmin.ts     ← cliente Supabase service role (server-only)
-│   └── adminSettings.ts    ← fetch cacheado de admin_settings (WhatsApp admin)
+│   ├── adminSettings.ts     ← fetch cacheado de admin_settings (WhatsApp admin)
+│   ├── share.ts             ← función compartilhar() — Web Share API + fallback WhatsApp
+│   └── whatsappUrl.ts       ← buildWaUrl() y openWhatsApp()
 └── public/
     ├── manifest.json        ← PWA manifest
     ├── sw.js                ← service worker (cache-first assets, network-first HTML)
@@ -212,14 +232,13 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...   ← solo server-side, nunca al cliente
 
 ## PENDIENTES / IDEAS PARA PRÓXIMAS SESIONES
 
-- Logo SVG definitivo (bolsa + montículo de arena + faro)
-- Íconos PWA con el logo real (reemplazar los placeholders "MI" azules)
-- Botón "Instalar app" in-app para Android (evento `beforeinstallprompt`)
+- Íconos PWA con el logo real (reemplazar los placeholders actuales)
 - Republicar anuncio vencido con un clic desde el perfil
 - Botón "Marcar como vendido" desde el perfil del vendedor
 - Filtros adicionales en listados: precio, sub-zona
 - Panel admin: gestión de localidades y sub-zonas
 - Panel admin: edición de categorías y sus atributos
+- Búsqueda autocomplete: extender cache a `sessionStorage` para persistir entre navegaciones
 
 ---
 
