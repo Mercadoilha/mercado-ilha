@@ -77,61 +77,27 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "40px", width: "auto", display: "block" }} />
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              onClick={handleShare}
-              title="Compartilhar Mercado Ilha"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                background: "rgba(255,255,255,0.18)",
-                color: "#fff",
-                border: "1px solid rgba(255,255,255,0.35)",
-                borderRadius: 999,
-                padding: "0.55rem 0.85rem",
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <ShareIcon />
-              Compartilhar
-            </button>
-
-            {session ? (
-              <Link
-                href="/profile"
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                  color: "#fff",
-                  borderRadius: 999,
-                  padding: "0.4rem 0.9rem",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                }}
-              >
-                👤 Perfil
-              </Link>
-            ) : (
-              <Link
-                href="/signin"
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                  color: "#fff",
-                  borderRadius: 999,
-                  padding: "0.4rem 0.9rem",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                }}
-              >
-                Entrar
-              </Link>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleShare}
+            title="Compartilhar Mercado Ilha"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(255,255,255,0.18)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.35)",
+              borderRadius: 999,
+              padding: "0.55rem 0.85rem",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <ShareIcon />
+            Compartilhar
+          </button>
         </div>
 
         {/* ── Barra de búsqueda ── */}
@@ -383,10 +349,12 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
 
 function ShareIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
-      <polyline points="16 6 12 2 8 6" />
-      <line x1="12" y1="2" x2="12" y2="15" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   );
 }
