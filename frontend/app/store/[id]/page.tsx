@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { compartilhar } from "../../../lib/share";
 
 export default function StorePage() {
   const params = useParams();
@@ -155,6 +156,33 @@ export default function StorePage() {
             💬 Falar com o vendedor
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() =>
+            compartilhar({
+              title: "Loja de " + seller.full_name + " — Mercado Ilha",
+              text: "Confira a loja de " + seller.full_name + " no Mercado Ilha!",
+              url: window.location.href,
+            })
+          }
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 8,
+            background: "transparent",
+            color: "#fff",
+            padding: "0.5rem 1.25rem",
+            borderRadius: 999,
+            fontWeight: 700,
+            fontSize: "0.875rem",
+            border: "2px solid rgba(255,255,255,0.7)",
+            cursor: "pointer",
+          }}
+        >
+          📤 Compartilhar loja
+        </button>
       </div>
 
       {/* Anúncios */}

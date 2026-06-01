@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import AvatarUpload from "../../components/AvatarUpload";
 import { useSession } from "../../contexts/SessionContext";
+import { compartilhar } from "../../lib/share";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -240,6 +241,37 @@ export default function ProfilePage() {
                 {saving ? "Salvando..." : "Salvar"}
               </button>
             </div>
+          )}
+
+          {!editMode && session && (
+            <button
+              type="button"
+              onClick={() =>
+                compartilhar({
+                  title: "Minha loja no Mercado Ilha",
+                  text: "Confira minha loja no Mercado Ilha!",
+                  url: window.location.origin + "/store/" + session.user.id,
+                })
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                width: "100%",
+                padding: "0.6rem",
+                marginTop: 12,
+                background: "#fff",
+                border: "2px solid var(--blue-main)",
+                borderRadius: 10,
+                color: "var(--blue-main)",
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                cursor: "pointer",
+              }}
+            >
+              📤 Compartilhar minha loja
+            </button>
           )}
         </div>
 

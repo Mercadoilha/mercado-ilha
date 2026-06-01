@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
 
 export default function ListingDetailPage() {
@@ -511,6 +512,36 @@ export default function ListingDetailPage() {
             ✏️ Este é o seu anúncio
           </div>
         )}
+
+        {/* Compartilhar anúncio */}
+        <button
+          type="button"
+          onClick={() =>
+            compartilhar({
+              title: listing.title,
+              text: "Vi este anúncio no Mercado Ilha: " + listing.title,
+              url: window.location.href,
+            })
+          }
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            width: "100%",
+            padding: "0.75rem",
+            marginBottom: 12,
+            background: "#fff",
+            border: "2px solid var(--blue-main)",
+            borderRadius: 12,
+            color: "var(--blue-main)",
+            fontWeight: 700,
+            fontSize: "0.95rem",
+            cursor: "pointer",
+          }}
+        >
+          📤 Compartilhar anúncio
+        </button>
 
         {/* Denunciar */}
         {!isOwner && !reportSent && (
