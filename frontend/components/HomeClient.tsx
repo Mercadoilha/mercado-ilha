@@ -34,6 +34,30 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
   const { session } = useSession();
   const [search, setSearch] = useState("");
 
+  const shareText = "Compra e vende na ilha de Tinharé! Veja anúncios de produtos, serviços, gastronomia e muito mais no Mercado Ilha 🏝️";
+
+  const handleShare = async () => {
+    const shareData = {
+      title: "Mercado Ilha",
+      text: shareText,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        // Usuário pode ter cancelado. No fallback, abrimos WhatsApp.
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${window.location.href}`)}`;
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${window.location.href}`)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) router.push(`/listings?q=${encodeURIComponent(search.trim())}`);
@@ -49,41 +73,65 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           color: "#fff",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "40px", width: "auto", display: "block" }} />
 
-          {session ? (
-            <Link
-              href="/profile"
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleShare}
+              title="Compartilhar Mercado Ilha"
               style={{
-                background: "rgba(255,255,255,0.2)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "rgba(255,255,255,0.18)",
                 color: "#fff",
+                border: "1px solid rgba(255,255,255,0.35)",
                 borderRadius: 999,
-                padding: "0.4rem 0.9rem",
-                fontSize: "0.8rem",
+                padding: "0.55rem 0.85rem",
+                fontSize: "0.85rem",
                 fontWeight: 700,
-                textDecoration: "none",
+                cursor: "pointer",
               }}
             >
-              👤 Perfil
-            </Link>
-          ) : (
-            <Link
-              href="/signin"
-              style={{
-                background: "rgba(255,255,255,0.2)",
-                color: "#fff",
-                borderRadius: 999,
-                padding: "0.4rem 0.9rem",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                textDecoration: "none",
-              }}
-            >
-              Entrar
-            </Link>
-          )}
+              <ShareIcon />
+              Compartilhar
+            </button>
+
+            {session ? (
+              <Link
+                href="/profile"
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  color: "#fff",
+                  borderRadius: 999,
+                  padding: "0.4rem 0.9rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                👤 Perfil
+              </Link>
+            ) : (
+              <Link
+                href="/signin"
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  color: "#fff",
+                  borderRadius: 999,
+                  padding: "0.4rem 0.9rem",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                Entrar
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* ── Barra de búsqueda ── */}
@@ -332,3 +380,13 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
     </Link>
   );
 });
+
+function ShareIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  );
+}

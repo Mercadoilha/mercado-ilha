@@ -21,8 +21,9 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 - **Plataforma:** Web responsive mobile-first (max-width 480px) + PWA instalable.
 - **Idioma de la interfaz:** Portugués brasileño.
 - **Autenticación:** Email + contraseña (signUpWithPassword / signInWithPassword).
-  Registro captura nombre, WhatsApp, email y contraseña. Navegar y contactar es
-  libre sin registro. Publicar requiere cuenta.
+  Registro captura nombre, WhatsApp, email y contraseña. Registro también debe
+  aceitar termos e salvar `terms_accepted_at` no perfil. Navegar y contactar é
+  livre sem registro. Publicar requiere cuenta.
 - **Contacto:** Botón WhatsApp con mensaje pre-armado por categoría. Sin chat
   interno.
 - **Moderación:** Publicación instantánea. Admin puede ocultar/bloquear/eliminar.
@@ -143,6 +144,7 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
 | `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios, favoritos, cerrar sesión |
 | `/signin` | Tabs: login y registro completo |
 | `/store/[id]` | Tienda pública del vendedor con banner azul y sus anuncios |
+| `/termos` | Página pública de Termos e Condições de Uso |
 | `/admin` | Panel de administración (requiere rol admin) |
 | `/api/admin` | Endpoint server-side con Supabase service role |
 

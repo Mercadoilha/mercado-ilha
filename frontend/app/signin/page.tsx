@@ -31,6 +31,7 @@ function SignInContent() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
+  const [regTermsAccepted, setRegTermsAccepted] = useState(false);
 
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showRegPw, setShowRegPw] = useState(false);
@@ -65,6 +66,7 @@ function SignInContent() {
 
     if (!regName.trim()) { setError("Informe seu nome."); return; }
     if (!regWhatsapp.trim()) { setError("Informe seu WhatsApp."); return; }
+    if (!regTermsAccepted) { setError("Você precisa aceitar os Termos e Condições para se cadastrar."); return; }
     if (regPassword.length < 6) { setError("A senha deve ter ao menos 6 caracteres."); return; }
     if (regPassword !== regConfirm) { setError("As senhas não coincidem."); return; }
 
@@ -311,7 +313,20 @@ function SignInContent() {
                 </button>
               </div>
             </div>
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem", marginTop: 4 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: "0.5rem" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1, fontSize: "0.95rem", color: "#334155", lineHeight: 1.4 }}>
+                <input
+                  type="checkbox"
+                  checked={regTermsAccepted}
+                  onChange={(e) => setRegTermsAccepted(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: "var(--blue-main)", marginTop: 3 }}
+                />
+                <span>
+                  Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" style={{ color: "var(--blue-main)", textDecoration: "underline" }}>Termos e Condições de Uso</a> do Mercado Ilha.
+                </span>
+              </label>
+            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading || !regTermsAccepted} style={{ padding: "0.875rem", fontSize: "1rem", marginTop: 4 }}>
               {loading ? "Criando conta..." : "Criar conta grátis"}
             </button>
             <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>

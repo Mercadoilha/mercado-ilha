@@ -88,6 +88,7 @@ create table if not exists public.profiles (
   role text not null default 'user' check (role in ('user','admin')),
   avatar_url text,
   is_active boolean not null default true,
+  terms_accepted_at timestamptz default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
