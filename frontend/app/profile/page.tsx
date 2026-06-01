@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import AvatarUpload from "../../components/AvatarUpload";
 import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
+import ShareIcon from "../../components/ShareIcon";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -270,7 +271,7 @@ export default function ProfilePage() {
                 cursor: "pointer",
               }}
             >
-              📤 Compartilhar minha loja
+              <ShareIcon /> Compartilhar minha loja
             </button>
           )}
         </div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { compartilhar } from "../../../lib/share";
+import ShareIcon from "../../../components/ShareIcon";
 
 export default function StorePage() {
   const params = useParams();
@@ -181,7 +182,7 @@ export default function StorePage() {
             cursor: "pointer",
           }}
         >
-          📤 Compartilhar loja
+          <ShareIcon /> Compartilhar loja
         </button>
       </div>
 

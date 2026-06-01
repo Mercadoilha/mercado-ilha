@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
+import ShareIcon from "../../../components/ShareIcon";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -540,7 +541,7 @@ export default function ListingDetailPage() {
             cursor: "pointer",
           }}
         >
-          📤 Compartilhar anúncio
+          <ShareIcon /> Compartilhar anúncio
         </button>
 
         {/* Denunciar */}
