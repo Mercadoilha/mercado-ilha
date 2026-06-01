@@ -4,14 +4,18 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import InstallAppBanner from "../../components/InstallAppBanner";
 
 type Tab = "login" | "register";
 
 export default function SignInPage() {
   return (
-    <Suspense>
-      <SignInContent />
-    </Suspense>
+    <>
+      <InstallAppBanner />
+      <Suspense>
+        <SignInContent />
+      </Suspense>
+    </>
   );
 }
 
