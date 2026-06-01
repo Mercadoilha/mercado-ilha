@@ -1,13 +1,13 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
 import { openWhatsApp } from "../lib/whatsappUrl";
 import { useSession } from "../contexts/SessionContext";
 import ShareIcon from "./ShareIcon";
+import BuscaAutocomplete from "./BuscaAutocomplete";
 
 const SLUG_ICON: Record<string, string> = {
   "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
@@ -31,9 +31,7 @@ type Props = {
 };
 
 export default function HomeClient({ listings, categories, adminWa, banners, bannerInterval }: Props) {
-  const router = useRouter();
   const { session } = useSession();
-  const [search, setSearch] = useState("");
 
   const shareText = "Compra e vende na ilha de Tinharé! Veja anúncios de produtos, serviços, gastronomia e muito mais no Mercado Ilha 🏝️";
 
@@ -57,11 +55,6 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
     const waUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${window.location.href}`)}`;
     window.open(waUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (search.trim()) router.push(`/listings?q=${encodeURIComponent(search.trim())}`);
   };
 
   return (
@@ -102,55 +95,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
         </div>
 
         {/* ── Barra de búsqueda ── */}
-        <form onSubmit={handleSearch} style={{ marginTop: "0.875rem", display: "flex", gap: 8 }}>
-          <div style={{ position: "relative", flex: 1 }}>
-            <span
-              style={{
-                position: "absolute",
-                left: "0.875rem",
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontSize: "1rem",
-                pointerEvents: "none",
-              }}
-            >
-              🔍
-            </span>
-            <input
-              type="text"
-              placeholder="O que você procura?"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.7rem 0.875rem 0.7rem 2.5rem",
-                borderRadius: 12,
-                border: "none",
-                fontSize: "0.95rem",
-                background: "rgba(255,255,255,0.95)",
-                color: "#0f172a",
-                outline: "none",
-              }}
-            />
-          </div>
-          <button
-            type="submit"
-            style={{
-              padding: "0 1rem",
-              borderRadius: 12,
-              border: "none",
-              background: "rgba(255,255,255,0.25)",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            Buscar
-          </button>
-        </form>
+        <BuscaAutocomplete />
       </header>
 
       {/* ── Banner publicitário ── */}
