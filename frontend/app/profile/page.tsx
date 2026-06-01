@@ -13,7 +13,6 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [myListings, setMyListings] = useState<any[]>([]);
-  const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<number | null>(null);
@@ -53,15 +52,11 @@ export default function ProfilePage() {
         setEditWhatsapp(p.whatsapp ?? "");
       }
 
-      const [listRes, favRes] = await Promise.all([
-        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false }),
-        supabase.from("favorites").select("id,listing_id,listings(id,title,price,price_text,status)").eq("profile_id", uid).order("created_at", { ascending: false }),
-      ]);
+      const listRes = await supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false });
 
       if (!mounted) return;
       if (listRes.error) setError(listRes.error.message);
       else setMyListings(listRes.data ?? []);
-      setFavorites(favRes.data ?? []);
       setLoading(false);
     }
 
@@ -152,7 +147,7 @@ export default function ProfilePage() {
       <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
         <div style={{ fontSize: "3rem", marginBottom: 16 }}>👤</div>
         <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1e293b", marginBottom: 8 }}>Bem-vindo ao Mercado Ilha</p>
-        <p className="text-muted" style={{ marginBottom: 24 }}>Entre para publicar anúncios e gerenciar seus favoritos.</p>
+        <p className="text-muted" style={{ marginBottom: 24 }}>Entre para publicar e gerenciar seus anúncios.</p>
         <Link href="/signin" className="btn btn-primary btn-block">Entrar / Cadastrar</Link>
       </div>
     </div>
@@ -341,54 +336,6 @@ export default function ProfilePage() {
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-        </section>
-
-        {/* ── Favoritos ── */}
-        <section>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.625rem" }}>
-            Favoritos ({favorites.length})
-          </h2>
-
-          {favorites.length === 0 ? (
-            <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.875rem" }}>
-              Você não tem favoritos ainda.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {favorites.map((fav) => {
-                const l = fav.listings as any;
-                if (!l) return null;
-                return (
-                  <Link
-                    key={fav.id}
-                    href={`/listings/${l.id}`}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      background: "#fff",
-                      border: "1px solid var(--border)",
-                      borderRadius: 10,
-                      padding: "0.75rem",
-                      textDecoration: "none",
-                      color: "inherit",
-                      gap: 8,
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        ❤️ {l.title}
-                      </div>
-                      <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
-                        {listingPrice(l)}
-                      </div>
-                    </div>
-                    <span style={{ color: "#cbd5e1", flexShrink: 0 }}>›</span>
-                  </Link>
-                );
-              })}
             </div>
           )}
         </section>
