@@ -127,7 +127,11 @@ export default function CategoryPage() {
               border: "1px solid var(--border)", textDecoration: "none", color: "#1e293b",
             }}
           >
-            <span style={{ fontSize: "1.4rem", lineHeight: 1, flexShrink: 0 }}>{sub.icon || "•"}</span>
+            {sub.icon ? (
+              <span style={{ fontSize: "1.4rem", lineHeight: 1, flexShrink: 0 }}>{sub.icon}</span>
+            ) : (
+              <img src="/coco.svg" alt="" aria-hidden="true" style={{ width: 28, height: 28, flexShrink: 0 }} />
+            )}
             <span style={{ fontWeight: 600, fontSize: "0.9rem", flex: 1 }}>{sub.name}</span>
             <span style={{ fontSize: "1rem", color: "#cbd5e1" }}>›</span>
           </Link>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Coconut half (cross-section view) -->
+  <!-- Outer shell -->
+  <ellipse cx="16" cy="18" rx="13" ry="11" fill="#7B4F2E"/>
+  <!-- Inner shell -->
+  <ellipse cx="16" cy="18" rx="10.5" ry="8.5" fill="#A0692B"/>
+  <!-- White flesh -->
+  <ellipse cx="16" cy="18" rx="8" ry="6.5" fill="#FFF8F0"/>
+  <!-- Coconut water / center -->
+  <ellipse cx="16" cy="19" rx="5" ry="4" fill="#E8F4F8"/>
+  <!-- Three eyes at top of coconut -->
+  <circle cx="12.5" cy="8.5" r="1.8" fill="#3D2007"/>
+  <circle cx="16" cy="7.5" r="1.8" fill="#3D2007"/>
+  <circle cx="19.5" cy="8.5" r="1.8" fill="#3D2007"/>
+  <!-- Small highlight on shell -->
+  <ellipse cx="10" cy="14" rx="2" ry="1.2" fill="#9B6235" opacity="0.5"/>
+</svg>
