@@ -41,11 +41,11 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
   // ── No banners ──
   if (banners.length === 0) {
     return (
-      <div style={{ margin: "0.875rem 1rem" }}>
+      <div style={{ margin: 0 }}>
         <div
           style={{
             background: "linear-gradient(135deg, var(--blue-xlight), var(--green-sea))",
-            borderRadius: 12,
+            borderRadius: 0,
             height: 130,
             display: "flex",
             flexDirection: "column",
@@ -55,15 +55,12 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
             position: "relative",
           }}
         >
-          <span style={{ position: "absolute", top: 8, right: 10, fontSize: "0.6rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.8)", borderRadius: 4, padding: "2px 6px", fontWeight: 700, letterSpacing: "0.05em" }}>
-            PUBLICIDADE
-          </span>
           <span style={{ fontSize: "2.5rem" }}>🏝️</span>
           <span style={{ fontWeight: 700, color: "var(--blue-main)", fontSize: "0.95rem" }}>
             Seu negócio aqui!
           </span>
         </div>
-        <p style={{ textAlign: "center", padding: "0.4rem 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+        <p style={{ textAlign: "center", padding: "0.4rem 1rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
           Quer anunciar aqui?{" "}
           <button
             type="button"
@@ -83,15 +80,12 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
     <div
       style={{
         position: "relative",
-        borderRadius: 12,
+        borderRadius: 0,
         overflow: "hidden",
         height: 130,
         background: "var(--blue-xlight)",
       }}
     >
-      <span style={{ position: "absolute", top: 8, right: 10, fontSize: "0.6rem", color: "#fff", background: "rgba(0,0,0,0.45)", borderRadius: 4, padding: "2px 6px", fontWeight: 700, letterSpacing: "0.05em", zIndex: 2 }}>
-        PUBLICIDADE
-      </span>
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -137,7 +131,7 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
   );
 
   return (
-    <div style={{ margin: "0.875rem 1rem" }}>
+    <div style={{ margin: 0 }}>
       {current.link_url ? (
         <a href={current.link_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", display: "block" }}>
           {content}
@@ -145,7 +139,7 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
       ) : (
         content
       )}
-      <p style={{ textAlign: "center", padding: "0.4rem 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+      <p style={{ textAlign: "center", padding: "0.4rem 1rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
         Quer anunciar aqui?{" "}
         <a
           href={whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")}

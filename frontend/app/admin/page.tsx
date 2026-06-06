@@ -681,7 +681,7 @@ function Categories() {
   // New subcategory form
   const [addingSubFor, setAddingSubFor] = useState<number | null>(null);
   const [newSubName, setNewSubName] = useState("");
-  const [newSubIcon, setNewSubIcon] = useState("");
+  const [newSubIcon, setNewSubIcon] = useState("🌊");
   const [newSubSaving, setNewSubSaving] = useState(false);
   const [pickingNewSubIcon, setPickingNewSubIcon] = useState(false);
 
@@ -774,12 +774,12 @@ function Categories() {
     if (!newSubName.trim()) { flash("Informe o nome."); return; }
     setNewSubSaving(true);
     const { data, error } = await supabase.from("subcategories").insert({
-      category_id: catId, name: newSubName.trim(), icon: newSubIcon || null,
-      is_active: true, sort_order: (subcats[catId] ?? []).length,
+      category_id: catId, name: newSubName.trim(), slug: toSlug(newSubName.trim()),
+      icon: newSubIcon || null, is_active: true, sort_order: (subcats[catId] ?? []).length,
     }).select().single();
     if (!error && data) {
       setSubcats((p) => ({ ...p, [catId]: [...(p[catId] ?? []), data] }));
-      setAddingSubFor(null); setNewSubName(""); setNewSubIcon("");
+      setAddingSubFor(null); setNewSubName(""); setNewSubIcon("🌊");
       flash("Subcategoria criada.");
     } else flash("Erro: " + error?.message);
     setNewSubSaving(false);
