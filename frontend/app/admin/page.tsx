@@ -191,12 +191,12 @@ export default function AdminPage() {
       {/* Tab bar */}
       <div style={{ display: "flex", justifyContent: "space-around", padding: "0.5rem 0.5rem 0", background: "#fff", borderBottom: "1px solid var(--border)" }}>
         {tabBtn("dashboard", "Dashboard", "📊")}
-        {tabBtn("listings", "Anúncios", "🛍️")}
-        {tabBtn("reports", "Denúncias", "🚨")}
-        {tabBtn("banners", "Banners", "🖼️")}
-        {tabBtn("users", "Usuários", "👥")}
         {tabBtn("categorias", "Categorias", "🏷️")}
+        {tabBtn("users", "Usuários", "👥")}
+        {tabBtn("listings", "Anúncios", "🛍️")}
+        {tabBtn("banners", "Banners", "🖼️")}
         {tabBtn("settings", "Config", "⚙️")}
+        {tabBtn("reports", "Denúncias", "🚨")}
       </div>
 
       <div style={{ padding: "1rem" }}>
