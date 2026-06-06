@@ -690,7 +690,7 @@ function Categories() {
   const [editingSubSaving, setEditingSubSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description").order("sort_order")
+    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description,sort_order").order("sort_order")
       .then(({ data }) => { setCategories(data ?? []); setLoading(false); });
   }, []);
 
@@ -701,9 +701,48 @@ function Categories() {
   const loadSubcats = async (catId: number) => {
     if (subcats[catId] !== undefined) return;
     setLoadingSubcats((p) => ({ ...p, [catId]: true }));
-    const { data } = await supabase.from("subcategories").select("id,name,icon,is_active").eq("category_id", catId).order("sort_order");
+    const { data } = await supabase.from("subcategories").select("id,name,icon,is_active,sort_order").eq("category_id", catId).order("sort_order");
     setSubcats((p) => ({ ...p, [catId]: data ?? [] }));
     setLoadingSubcats((p) => ({ ...p, [catId]: false }));
+  };
+
+  const moveCat = async (idx: number, dir: -1 | 1) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= categories.length) return;
+    const a = categories[idx];
+    const b = categories[newIdx];
+    const aOrder = a.sort_order ?? idx;
+    const bOrder = b.sort_order ?? newIdx;
+    await Promise.all([
+      supabase.from("categories").update({ sort_order: bOrder }).eq("id", a.id),
+      supabase.from("categories").update({ sort_order: aOrder }).eq("id", b.id),
+    ]);
+    setCategories((prev) => {
+      const next = [...prev];
+      next[idx] = { ...a, sort_order: bOrder };
+      next[newIdx] = { ...b, sort_order: aOrder };
+      return next;
+    });
+  };
+
+  const moveSubcat = async (catId: number, idx: number, dir: -1 | 1) => {
+    const list = subcats[catId] ?? [];
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    const a = list[idx];
+    const b = list[newIdx];
+    const aOrder = a.sort_order ?? idx;
+    const bOrder = b.sort_order ?? newIdx;
+    await Promise.all([
+      supabase.from("subcategories").update({ sort_order: bOrder }).eq("id", a.id),
+      supabase.from("subcategories").update({ sort_order: aOrder }).eq("id", b.id),
+    ]);
+    setSubcats((prev) => {
+      const next = [...(prev[catId] ?? [])];
+      next[idx] = { ...a, sort_order: bOrder };
+      next[newIdx] = { ...b, sort_order: aOrder };
+      return { ...prev, [catId]: next };
+    });
   };
 
   const handleExpand = (catId: number) => {
@@ -861,7 +900,7 @@ function Categories() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {categories.map((cat) => (
+        {categories.map((cat, catIdx) => (
           <div key={cat.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
             {/* Category row */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.75rem" }}>
@@ -875,6 +914,19 @@ function Categories() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.875rem", color: cat.is_active ? "#1e293b" : "#94a3b8" }}>{cat.name}</div>
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</div>
+              </div>
+              {/* Order buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                <button type="button" title="Mover para cima" disabled={catIdx === 0}
+                  onClick={() => moveCat(catIdx, -1)}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: catIdx === 0 ? "default" : "pointer", fontSize: "0.65rem", color: catIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                  ↑
+                </button>
+                <button type="button" title="Mover para baixo" disabled={catIdx === categories.length - 1}
+                  onClick={() => moveCat(catIdx, 1)}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: catIdx === categories.length - 1 ? "default" : "pointer", fontSize: "0.65rem", color: catIdx === categories.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                  ↓
+                </button>
               </div>
               <button type="button" onClick={() => toggleCat(cat.id, cat.is_active)} title={cat.is_active ? "Desativar" : "Ativar"}
                 style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0 }}>
@@ -934,7 +986,7 @@ function Categories() {
                   <div style={{ textAlign: "center", padding: "0.75rem" }}><div className="spinner" /></div>
                 ) : (
                   <>
-                    {(subcats[cat.id] ?? []).map((sub) => (
+                    {(subcats[cat.id] ?? []).map((sub, subIdx) => (
                       <div key={sub.id}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.625rem 0.75rem", borderBottom: "1px solid var(--border)" }}>
                           <button type="button" title="Alterar ícone"
@@ -951,6 +1003,19 @@ function Categories() {
                               {sub.name} ✏️
                             </div>
                           </button>
+                          {/* Subcat order buttons */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                            <button type="button" title="Mover para cima" disabled={subIdx === 0}
+                              onClick={() => moveSubcat(cat.id, subIdx, -1)}
+                              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 5, padding: "0px 5px", cursor: subIdx === 0 ? "default" : "pointer", fontSize: "0.6rem", color: subIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "15px" }}>
+                              ↑
+                            </button>
+                            <button type="button" title="Mover para baixo" disabled={subIdx === (subcats[cat.id] ?? []).length - 1}
+                              onClick={() => moveSubcat(cat.id, subIdx, 1)}
+                              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 5, padding: "0px 5px", cursor: subIdx === (subcats[cat.id] ?? []).length - 1 ? "default" : "pointer", fontSize: "0.6rem", color: subIdx === (subcats[cat.id] ?? []).length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "15px" }}>
+                              ↓
+                            </button>
+                          </div>
                           <button type="button" onClick={() => toggleSubcat(sub.id, cat.id, sub.is_active)}
                             style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
                             {sub.is_active ? "✅" : "⏸️"}
