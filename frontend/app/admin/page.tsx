@@ -719,8 +719,8 @@ function Categories() {
     ]);
     setCategories((prev) => {
       const next = [...prev];
-      next[idx] = { ...a, sort_order: bOrder };
-      next[newIdx] = { ...b, sort_order: aOrder };
+      next[idx] = { ...b, sort_order: aOrder };
+      next[newIdx] = { ...a, sort_order: bOrder };
       return next;
     });
   };
@@ -739,8 +739,8 @@ function Categories() {
     ]);
     setSubcats((prev) => {
       const next = [...(prev[catId] ?? [])];
-      next[idx] = { ...a, sort_order: bOrder };
-      next[newIdx] = { ...b, sort_order: aOrder };
+      next[idx] = { ...b, sort_order: aOrder };
+      next[newIdx] = { ...a, sort_order: bOrder };
       return { ...prev, [catId]: next };
     });
   };
