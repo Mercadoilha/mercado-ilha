@@ -12,6 +12,12 @@ WhatsApp (botón con mensaje pre-armado por categoría). Sin chat interno.
   y definición de cada fase. Consultarlo antes de construir cualquier fase.
 - `GUIA_PASO_A_PASO.md` — guía para el dueño del proyecto (no técnico). No es
   para Claude Code, es para el usuario.
+- `ORCHESTRADOR.md` — sistema multiagente de optimización y desarrollo.
+  Leerlo cuando el usuario pida: optimizar rendimiento, analizar navegación,
+  agregar features, arreglar queries, mejorar PWA, o cualquier tarea de código.
+- `PROMPT_MAESTRO_PARA_CLAUDE_CODE.md` - prompt completo del Orchestrador con
+  los 6 subagentes embebidos y sus skills. Cargarlo inmediatamente cuando se
+  activa el ORCHESTRADOR.md.
 
 ## Stack
 Next.js (App Router) + TypeScript + Tailwind CSS / Supabase (DB + Auth + Storage)

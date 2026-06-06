@@ -50,6 +50,7 @@ create table if not exists public.categories (
   name text not null,
   slug text not null unique,
   icon text,
+  description text,
   sort_order int not null default 0,
   expires_in_days int,
   whatsapp_message text,

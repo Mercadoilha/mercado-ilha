@@ -56,6 +56,9 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 
 ## CATEGORÍAS (10, todas en Supabase)
 
+Tabla `categories` tiene columna `description text` (nullable) — se muestra debajo del
+ícono en la home. Se gestiona desde el tab Categorias del admin.
+
 | # | Categoría | Slug | Ubicación | Botón | Expiración |
 |---|-----------|------|-----------|-------|------------|
 | 1 | Produtos | `produtos` | Fija | Contatar vendedor | 20 días |
@@ -122,12 +125,15 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 Ruta: `/admin` — protegida por rol `admin` en tabla `profiles`.
 Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para admins.
 
-5 tabs implementados:
+6 tabs implementados:
 - **Dashboard:** contadores (anúncios activos, total, denúncias nuevas, usuarios, banners)
 - **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
 - **Denúncias:** lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic
 - **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
 - **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
+- **Categorias:** CRUD completo. Editar nombre, ícono (EmojiPicker), slug, tipo de ubicación,
+  texto del botón de contacto, descripción (aparece bajo el ícono en la home), y orden
+  (flechas ↑↓). Subcategorías: agregar, editar nombre, cambiar ícono, reordenar, eliminar.
 
 ---
 
@@ -237,7 +243,6 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...   ← solo server-side, nunca al cliente
 - Botón "Marcar como vendido" desde el perfil del vendedor
 - Filtros adicionales en listados: precio, sub-zona
 - Panel admin: gestión de localidades y sub-zonas
-- Panel admin: edición de categorías y sus atributos
 - Búsqueda autocomplete: extender cache a `sessionStorage` para persistir entre navegaciones
 
 ---
