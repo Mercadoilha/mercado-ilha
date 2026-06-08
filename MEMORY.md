@@ -125,15 +125,17 @@ Tabla `categories` tiene columna `description text` (nullable) — se muestra de
 Ruta: `/admin` — protegida por rol `admin` en tabla `profiles`.
 Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para admins.
 
-6 tabs implementados:
+7 tabs implementados (orden actual de la barra):
 - **Dashboard:** contadores (anúncios activos, total, denúncias nuevas, usuarios, banners)
-- **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
-- **Denúncias:** lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic
-- **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
-- **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
 - **Categorias:** CRUD completo. Editar nombre, ícono (EmojiPicker), slug, tipo de ubicación,
   texto del botón de contacto, descripción (aparece bajo el ícono en la home), y orden
-  (flechas ↑↓). Subcategorías: agregar, editar nombre, cambiar ícono, reordenar, eliminar.
+  (flechas ↑↓ que hacen swap en `sort_order` en Supabase y actualizan el estado local).
+  Subcategorías: agregar, editar nombre, cambiar ícono, reordenar ↑↓, eliminar.
+- **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
+- **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
+- **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
+- **Config:** WhatsApp de contacto del admin + atalho personalizable de la barra inferior
+- **Denúncias:** lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic
 
 ---
 
