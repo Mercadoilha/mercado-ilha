@@ -998,7 +998,7 @@ function Categories() {
                             style={{ fontSize: "1.2rem", width: 36, height: 36, borderRadius: 8, flexShrink: 0, cursor: "pointer",
                               border: isPicking("subcat", sub.id) ? "2px solid var(--blue-main)" : "1px solid var(--border)",
                               background: isPicking("subcat", sub.id) ? "var(--blue-xlight)" : "#fff" }}>
-                            {sub.icon || "•"}
+                            •
                           </button>
                           <button type="button"
                             onClick={() => setEditingSub(editingSub != null && editingSub.id === sub.id ? null : { id: sub.id, catId: cat.id, name: sub.name })}
