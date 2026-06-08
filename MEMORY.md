@@ -146,7 +146,7 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
 | 3 | Publicar y ver anuncios (formulario, home, listado, detalle) | ✅ Completo |
 | 4 | Búsqueda y filtros | ✅ Por categoría (?category=slug) y texto (?q=texto) |
 | 5 | Cuenta y perfil-tienda del vendedor | ✅ /profile + /store/[id] |
-| 6 | Panel de administrador completo | ✅ /admin con 5 tabs |
+| 6 | Panel de administrador completo | ✅ /admin con 6 tabs |
 | 7 | Banners rotativos + PWA instalable | ✅ BannerRotativo + manifest + SW + íconos |
 | 8 | Pulido, GitHub, Vercel, lanzamiento | ✅ En producción. Repo: `Mercadoilha/mercado-ilha`. |
 | — | Búsqueda autocomplete (post-lanzamiento) | ✅ `BuscaAutocomplete.tsx` — commit `ce58f37` |
@@ -186,7 +186,7 @@ frontend/
 │   │   ├── page.tsx         ← listados + filtros
 │   │   └── [id]/page.tsx    ← detalle del anuncio
 │   ├── store/[id]/page.tsx  ← tienda pública del vendedor
-│   └── admin/page.tsx       ← panel de administración (5 tabs)
+│   └── admin/page.tsx       ← panel de administración (6 tabs)
 ├── components/
 │   ├── BottomNav.tsx          ← nav inferior session-aware
 │   ├── BannerRotativo.tsx     ← banners de Supabase con auto-rotación
@@ -230,6 +230,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...   ← solo server-side, nunca al cliente
 3. En Supabase → Auth → habilitar **Email/Password**
 4. En Supabase → Storage → crear bucket público **`listing-photos`**
 5. En Supabase → SQL Editor → ejecutar `supabase/fase-1.sql` a `fase-5.sql`
+   ⚠️ Si la DB ya existía antes del 2026-06-08: también ejecutar
+   `ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS description text;`
+   (ya aplicado en producción, solo necesario para instancias anteriores)
 6. En Supabase → Table Editor → tabla `admin_settings` → actualizar el número
    real de WhatsApp del admin (key = `admin_whatsapp`, campo `value.value`)
 7. En Supabase → tabla `profiles` → asignar `role = 'admin'` al primer usuario
