@@ -83,6 +83,10 @@ const ICON_GROUPS: { group: string; icons: { e: string; l: string }[] }[] = [
     { e: "🐾", l: "Pets" }, { e: "🐕", l: "Cães" }, { e: "🐈", l: "Gatos" },
     { e: "🐦", l: "Aves" }, { e: "💉", l: "Veterinário" },
   ]},
+  { group: "Esportes", icons: [
+    { e: "🏄", l: "Surf" }, { e: "🤿", l: "Mergulho" }, { e: "💪", l: "Academia / Musculação" },
+    { e: "🎾", l: "Tênis / Raquete" },
+  ]},
 ];
 
 function IconPicker({ selected, onSelect }: { selected: string; onSelect: (e: string) => void }) {

@@ -117,6 +117,9 @@ Tabla `categories` tiene columna `description text` (nullable) — se muestra de
   dots de navegación.
 - Sin banners activos = muestra placeholder "Seu negócio aqui! + Fale conosco".
 - Número de WhatsApp del admin leído desde `admin_settings` en Supabase.
+- **Layout del banner:** ancho completo (sin márgenes laterales ni superior),
+  sin border-radius, sin etiqueta "PUBLICIDADE". Arranca pegado al header azul.
+  Componente: `BannerRotativo.tsx` — commit `054c64a`.
 
 ---
 
@@ -131,6 +134,8 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
   texto del botón de contacto, descripción (aparece bajo el ícono en la home), y orden
   (flechas ↑↓ que hacen swap en `sort_order` en Supabase y actualizan el estado local).
   Subcategorías: agregar, editar nombre, cambiar ícono, reordenar ↑↓, eliminar.
+  ⚠️ Al crear subcategoría se requiere enviar campo `slug` (generado con `toSlug(nombre)`)
+  además del nombre — sin él el insert falla. Ícono default al crear: 🌊. Fix en commit `054c64a`.
 - **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
 - **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
 - **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
