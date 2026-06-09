@@ -8,6 +8,7 @@ import { openWhatsApp } from "../lib/whatsappUrl";
 import { useSession } from "../contexts/SessionContext";
 import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
+import MaresWidget from "./MaresWidget";
 
 const SLUG_ICON: Record<string, string> = {
   "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
@@ -176,6 +177,9 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           ))}
         </div>
       </section>
+
+      {/* ── Marés do dia ── */}
+      <MaresWidget />
 
       {/* ── Fale conosco ── */}
       <section style={{ margin: "1.5rem 1rem 1rem" }}>
