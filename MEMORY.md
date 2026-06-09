@@ -136,6 +136,10 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
   Subcategorías: agregar, editar nombre, cambiar ícono, reordenar ↑↓, eliminar.
   ⚠️ Al crear subcategoría se requiere enviar campo `slug` (generado con `toSlug(nombre)`)
   además del nombre — sin él el insert falla. Ícono default al crear: 🌊. Fix en commit `054c64a`.
+  **Visualización de subcategorías:** tanto en la página pública `/category/[slug]` como en el
+  panel admin, las subcategorías muestran siempre una viñeta `•` azul (`#185FA5`) en lugar del
+  ícono guardado en la DB. El campo `icon` en la DB sigue existiendo pero no se usa para mostrar.
+  El icon picker del admin tiene un grupo "Esportes" con 🏄 🤿 💪 🎾 (agregado en commit `61ca6c4`).
 - **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
 - **Anúncios:** lista todos, filtro por estado, botones Ativar / Ocultar / Bloquear / Deletar
 - **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
