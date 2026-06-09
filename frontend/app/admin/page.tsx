@@ -715,10 +715,14 @@ function Categories() {
     if (newIdx < 0 || newIdx >= categories.length) return;
     const next = [...categories];
     [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-    // Reassign sequential sort_order for all categories to keep DB consistent
-    await Promise.all(
+    const results = await Promise.all(
       next.map((cat, i) => supabase.from("categories").update({ sort_order: i }).eq("id", cat.id))
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      alert("Erro ao salvar ordem: " + failed.error.message);
+      return;
+    }
     setCategories(next.map((cat, i) => ({ ...cat, sort_order: i })));
   };
 
@@ -728,9 +732,14 @@ function Categories() {
     if (newIdx < 0 || newIdx >= list.length) return;
     const next = [...list];
     [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-    await Promise.all(
+    const results = await Promise.all(
       next.map((sub, i) => supabase.from("subcategories").update({ sort_order: i }).eq("id", sub.id))
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      alert("Erro ao salvar ordem: " + failed.error.message);
+      return;
+    }
     setSubcats((prev) => ({ ...prev, [catId]: next.map((sub, i) => ({ ...sub, sort_order: i })) }));
   };
 
