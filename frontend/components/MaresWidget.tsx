@@ -45,15 +45,22 @@ export default function MaresWidget() {
     >
       <p
         style={{
-          margin: "0 0 6px",
-          fontSize: 11,
-          fontWeight: 600,
+          margin: "0 0 2px",
+          fontSize: 15,
+          fontWeight: 700,
           color: "#185FA5",
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
         }}
       >
-        〰 Marés de hoje — {hoje}
+        〰 Tabela de Marés
+      </p>
+      <p
+        style={{
+          margin: "0 0 8px",
+          fontSize: 11,
+          color: "#5a7ea8",
+        }}
+      >
+        {hoje}
       </p>
       <div
         style={{
