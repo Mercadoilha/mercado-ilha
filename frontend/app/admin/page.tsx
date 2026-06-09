@@ -713,40 +713,25 @@ function Categories() {
   const moveCat = async (idx: number, dir: -1 | 1) => {
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= categories.length) return;
-    const a = categories[idx];
-    const b = categories[newIdx];
-    const aOrder = a.sort_order ?? idx;
-    const bOrder = b.sort_order ?? newIdx;
-    await Promise.all([
-      supabase.from("categories").update({ sort_order: bOrder }).eq("id", a.id),
-      supabase.from("categories").update({ sort_order: aOrder }).eq("id", b.id),
-    ]);
-    setCategories((prev) => {
-      const next = [...prev];
-      next[idx] = { ...b, sort_order: aOrder };
-      next[newIdx] = { ...a, sort_order: bOrder };
-      return next;
-    });
+    const next = [...categories];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    // Reassign sequential sort_order for all categories to keep DB consistent
+    await Promise.all(
+      next.map((cat, i) => supabase.from("categories").update({ sort_order: i }).eq("id", cat.id))
+    );
+    setCategories(next.map((cat, i) => ({ ...cat, sort_order: i })));
   };
 
   const moveSubcat = async (catId: number, idx: number, dir: -1 | 1) => {
     const list = subcats[catId] ?? [];
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= list.length) return;
-    const a = list[idx];
-    const b = list[newIdx];
-    const aOrder = a.sort_order ?? idx;
-    const bOrder = b.sort_order ?? newIdx;
-    await Promise.all([
-      supabase.from("subcategories").update({ sort_order: bOrder }).eq("id", a.id),
-      supabase.from("subcategories").update({ sort_order: aOrder }).eq("id", b.id),
-    ]);
-    setSubcats((prev) => {
-      const next = [...(prev[catId] ?? [])];
-      next[idx] = { ...b, sort_order: aOrder };
-      next[newIdx] = { ...a, sort_order: bOrder };
-      return { ...prev, [catId]: next };
-    });
+    const next = [...list];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    await Promise.all(
+      next.map((sub, i) => supabase.from("subcategories").update({ sort_order: i }).eq("id", sub.id))
+    );
+    setSubcats((prev) => ({ ...prev, [catId]: next.map((sub, i) => ({ ...sub, sort_order: i })) }));
   };
 
   const handleExpand = (catId: number) => {
