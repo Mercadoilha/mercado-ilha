@@ -1,5 +1,5 @@
-# SKILL — Banner Generator
-## Nombre del comando: /banner
+# SKILL — Banner Institucional
+## Nombre del comando: /banner-institucional
 ## Proyecto: Mercado Ilha (Next.js 14 + TypeScript)
 
 ---
