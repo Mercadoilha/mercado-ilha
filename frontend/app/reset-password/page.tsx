@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setState((prev) => prev === "loading" ? "invalid" : prev);
-    }, 5000);
+    }, 8000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
@@ -28,6 +28,18 @@ export default function ResetPasswordPage() {
         setState("form");
       }
     });
+
+    // PKCE flow: the email link arrives as ?code=XXXX — exchange it for a session
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          clearTimeout(timeout);
+          setState("invalid");
+        }
+        // onAuthStateChange fires PASSWORD_RECOVERY after the exchange
+      });
+    }
 
     return () => {
       subscription.unsubscribe();
