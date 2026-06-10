@@ -75,7 +75,11 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
       form.append("file", file);
       form.append("folder", "profiles");
 
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: form });
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok || !uploadData.url) throw new Error(uploadData.error ?? "Erro no upload");
 

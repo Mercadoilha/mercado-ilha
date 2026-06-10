@@ -171,7 +171,11 @@ export default function PublishPage() {
           form.append("file", compressed);
           form.append("folder", "listings");
 
-          const res = await fetch("/api/upload", { method: "POST", body: form });
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            body: form,
+          });
           const data = await res.json();
 
           if (res.ok && data.url) {

@@ -1240,6 +1240,9 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     supabase.from("profiles").select("id,full_name,whatsapp,role,created_at,is_active").order("created_at", { ascending: false }).then(({ data }) => {
@@ -1264,6 +1267,28 @@ function Users() {
     setBusy(null);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    setDeleteError("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token ?? "";
+    const res = await fetch("/api/admin", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId: deleteConfirm.id }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setDeleteError(json.error ?? "Erro ao deletar usuário.");
+      setDeleting(false);
+      return;
+    }
+    setUsers((prev) => prev.filter((u) => u.id !== deleteConfirm.id));
+    setDeleteConfirm(null);
+    setDeleting(false);
+  };
+
   const filtered = search
     ? users.filter((u) => u.full_name?.toLowerCase().includes(search.toLowerCase()) || u.whatsapp?.includes(search))
     : users;
@@ -1272,6 +1297,51 @@ function Users() {
 
   return (
     <div>
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+        }}>
+          <div className="card" style={{ padding: "1.5rem", maxWidth: 340, width: "100%", display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ fontSize: "2rem", textAlign: "center" }}>⚠️</div>
+            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", textAlign: "center" }}>
+              Deletar usuário?
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", textAlign: "center", margin: 0, lineHeight: 1.5 }}>
+              Esta ação é <strong style={{ color: "#dc2626" }}>irreversível</strong>. O usuário{" "}
+              <strong style={{ color: "#1e293b" }}>{deleteConfirm.name}</strong> e todos os seus anúncios,
+              fotos e registros serão permanentemente excluídos.
+            </p>
+            {deleteError && (
+              <p style={{ fontSize: "0.8rem", color: "#dc2626", fontWeight: 600, margin: 0, textAlign: "center" }}>
+                {deleteError}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setDeleteConfirm(null); setDeleteError(""); }}
+                disabled={deleting}
+                className="btn btn-outline"
+                style={{ flex: 1, padding: "0.6rem", fontSize: "0.875rem" }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="btn"
+                style={{ flex: 1, padding: "0.6rem", fontSize: "0.875rem", background: "#dc2626", color: "#fff", border: "none", fontWeight: 700 }}
+              >
+                {deleting ? "Deletando..." : "Sim, deletar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: "0.875rem" }}>
         <input className="form-input" type="text" placeholder="Buscar por nome ou WhatsApp..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
@@ -1303,6 +1373,15 @@ function Users() {
               <button type="button" disabled={busy === u.id} onClick={() => toggleActive(u.id, u.is_active)}
                 className="btn" style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", background: u.is_active ? "#fef2f2" : "#f0fdf4", color: u.is_active ? "#dc2626" : "#059669", border: `1px solid ${u.is_active ? "#fca5a5" : "#86efac"}` }}>
                 {u.is_active ? "🚫 Bloquear" : "✅ Desbloquear"}
+              </button>
+              <button
+                type="button"
+                disabled={busy === u.id}
+                onClick={() => { setDeleteError(""); setDeleteConfirm({ id: u.id, name: u.full_name ?? "este usuário" }); }}
+                className="btn"
+                style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem", background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", marginLeft: "auto" }}
+              >
+                🗑️ Deletar
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 
 const r2 = new S3Client({
@@ -16,6 +17,18 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "im
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB (after compression files will be small, but guard server-side too)
 
 export async function POST(req: NextRequest) {
+  // Require a valid Supabase session — prevents unauthorized uploads
+  const token = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+  if (!token) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+  if (authErr || !user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

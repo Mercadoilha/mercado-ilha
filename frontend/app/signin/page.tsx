@@ -36,8 +36,10 @@ function SignInContent() {
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
   const [regTermsAccepted, setRegTermsAccepted] = useState(false);
-  const [regSecretQuestion, setRegSecretQuestion] = useState("");
-  const [regSecretAnswer, setRegSecretAnswer] = useState("");
+
+  // Login attempt counter
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showRegPw, setShowRegPw] = useState(false);
@@ -59,7 +61,17 @@ function SignInContent() {
 
     setLoading(false);
     if (authErr) {
-      setError("Email ou senha incorretos. Tente novamente.");
+      const newAttempts = loginAttempts + 1;
+      setLoginAttempts(newAttempts);
+      if (newAttempts >= 3) {
+        await supabase.auth.resetPasswordForEmail(loginEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        setShowRecoveryModal(true);
+        setError(null);
+      } else {
+        setError("Email ou senha incorretos. Tente novamente.");
+      }
       return;
     }
     router.push("/");
@@ -72,8 +84,6 @@ function SignInContent() {
 
     if (!regName.trim()) { setError("Informe seu nome."); return; }
     if (!regWhatsapp.trim()) { setError("Informe seu WhatsApp."); return; }
-    if (!regSecretQuestion) { setError("Selecione uma pergunta secreta."); return; }
-    if (!regSecretAnswer.trim()) { setError("Informe a resposta da pergunta secreta."); return; }
     if (!regTermsAccepted) { setError("Você precisa aceitar os Termos e Condições para se cadastrar."); return; }
     if (regPassword.length < 6) { setError("A senha deve ter ao menos 6 caracteres."); return; }
     if (regPassword !== regConfirm) { setError("As senhas não coincidem."); return; }
@@ -100,15 +110,12 @@ function SignInContent() {
     // Espera breve para que el trigger de Supabase cree el perfil primero
     await new Promise((r) => setTimeout(r, 600));
 
-    // Upsert explícito con onConflict para garantizar que se actualiza si ya existe
     await supabase.from("profiles").upsert({
       id: data.user.id,
       full_name: regName.trim(),
       whatsapp: regWhatsapp.trim(),
       role: "user",
       is_active: true,
-      secret_question: regSecretQuestion,
-      secret_answer: regSecretAnswer.trim().toLowerCase(),
     }, { onConflict: "id" });
 
     setLoading(false);
@@ -137,6 +144,29 @@ function SignInContent() {
 
   return (
     <div className="page-body">
+
+      {/* Modal: recovery email sent after 3 failed attempts */}
+      {showRecoveryModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "1.75rem 1.5rem", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📧</div>
+            <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 8 }}>E-mail de recuperação enviado</p>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 20 }}>
+              Enviamos um link para <strong>{loginEmail}</strong> para você criar uma nova senha.<br />
+              Verifique sua caixa de entrada e o spam.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={() => { setShowRecoveryModal(false); setLoginAttempts(0); }}
+              style={{ padding: "0.75rem", fontSize: "1rem" }}
+            >
+              Aceitar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="page-header">
         <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
@@ -326,43 +356,6 @@ function SignInContent() {
                 >
                   {showRegConfirm ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
-              </div>
-            </div>
-
-            {/* Pergunta secreta */}
-            <div className="card" style={{ padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              <p style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b", marginBottom: 4 }}>
-                🔐 Pergunta secreta <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(para recuperar senha sem e-mail)</span>
-              </p>
-              <div className="form-group">
-                <label className="form-label">Pergunta *</label>
-                <select className="form-select" value={regSecretQuestion} onChange={(e) => setRegSecretQuestion(e.target.value)} required>
-                  <option value="">Selecione uma pergunta...</option>
-                  <option value="Qual era o nome do seu animal de estimação favorito na infância?">Qual era o nome do seu animal de estimação favorito na infância?</option>
-                  <option value="Em que cidade seus pais se conheceram?">Em que cidade seus pais se conheceram?</option>
-                  <option value="Qual é o nome do seu time de futebol favorito?">Qual é o nome do seu time de futebol favorito?</option>
-                  <option value="Qual era o nome da sua primeira escola?">Qual era o nome da sua primeira escola?</option>
-                  <option value="Qual é o apelido do seu melhor amigo de infância?">Qual é o apelido do seu melhor amigo de infância?</option>
-                  <option value="Qual é o nome da sua rua de infância?">Qual é o nome da sua rua de infância?</option>
-                  <option value="Qual era a marca do seu primeiro carro?">Qual era a marca do seu primeiro carro?</option>
-                  <option value="Qual é a data de aniversário da sua mãe (dia/mês)?">Qual é a data de aniversário da sua mãe (dia/mês)?</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Resposta *</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  placeholder="Sua resposta (não diferencia maiúsculas)"
-                  value={regSecretAnswer}
-                  onChange={(e) => setRegSecretAnswer(e.target.value)}
-                  maxLength={100}
-                  required
-                  autoComplete="off"
-                />
-                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4, display: "block" }}>
-                  Lembre bem desta resposta — ela é usada para recuperar sua senha.
-                </span>
               </div>
             </div>
 

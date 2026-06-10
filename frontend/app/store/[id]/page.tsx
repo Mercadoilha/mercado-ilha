@@ -31,7 +31,7 @@ export default function StorePage() {
 
     async function load() {
       const [sellerRes, listingsRes] = await Promise.all([
-        supabase.from("profiles").select("id,full_name,whatsapp,avatar_url,created_at").eq("id", sellerId).single(),
+        supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
           .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order)")
@@ -132,12 +132,13 @@ export default function StorePage() {
           Membro desde {memberSince} · {listings.length} anúncio{listings.length !== 1 ? "s" : ""} ativo{listings.length !== 1 ? "s" : ""}
         </div>
 
-        {seller.whatsapp && (
+        {seller && (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (!session) { router.push("/signin?msg=contact"); return; }
-              openWhatsApp(buildWaUrl(seller.whatsapp, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
+              const { data: phone } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller.id });
+              if (phone) openWhatsApp(buildWaUrl(phone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
             }}
             style={{
               display: "inline-flex",
