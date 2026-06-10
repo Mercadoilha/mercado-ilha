@@ -33,11 +33,14 @@ export default function ResetPasswordPage() {
     const code = new URLSearchParams(window.location.search).get("code");
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        clearTimeout(timeout);
         if (error) {
-          clearTimeout(timeout);
           setState("invalid");
+        } else {
+          // Some SDK versions fire SIGNED_IN instead of PASSWORD_RECOVERY after
+          // code exchange, so we transition directly rather than waiting for the event.
+          setState("form");
         }
-        // onAuthStateChange fires PASSWORD_RECOVERY after the exchange
       });
     }
 
