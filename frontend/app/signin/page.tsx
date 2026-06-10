@@ -19,6 +19,16 @@ export default function SignInPage() {
   );
 }
 
+function isValidWhatsapp(raw: string): boolean {
+  const digits = raw.replace(/\D/g, "");
+  if (raw.trim().startsWith("+")) {
+    // Internacional: entre 7 y 15 dígitos después del +
+    return digits.length >= 7 && digits.length <= 15;
+  }
+  // Brasil: DDD (2) + número (8 ou 9) = 10 ou 11 dígitos
+  return digits.length === 10 || digits.length === 11;
+}
+
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +94,7 @@ function SignInContent() {
 
     if (!regName.trim()) { setError("Informe seu nome."); return; }
     if (!regWhatsapp.trim()) { setError("Informe seu WhatsApp."); return; }
+    if (!isValidWhatsapp(regWhatsapp)) { setError("Número de WhatsApp inválido. Brasil: DDD + número (ex: 75 99999-9999). Outro país: com + e código (ex: +54 11 99999-9999)."); return; }
     if (!regTermsAccepted) { setError("Você precisa aceitar os Termos e Condições para se cadastrar."); return; }
     if (regPassword.length < 6) { setError("A senha deve ter ao menos 6 caracteres."); return; }
     if (regPassword !== regConfirm) { setError("As senhas não coincidem."); return; }
