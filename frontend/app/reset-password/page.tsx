@@ -18,27 +18,21 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase fires PASSWORD_RECOVERY when the user arrives from the reset email link
+    const timeout = setTimeout(() => {
+      setState((prev) => prev === "loading" ? "invalid" : prev);
+    }, 5000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
+        clearTimeout(timeout);
         setState("form");
       }
     });
 
-    // If the session is already established (e.g. page reload), check it
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setState("form");
-      } else {
-        // Wait a bit for the auth state change event before showing invalid
-        const timeout = setTimeout(() => {
-          setState((prev) => prev === "loading" ? "invalid" : prev);
-        }, 3000);
-        return () => clearTimeout(timeout);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
