@@ -54,6 +54,12 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (err) {
+      const isSessionGone = err.name === "AuthSessionMissingError"
+        || err.message?.toLowerCase().includes("auth session missing");
+      if (isSessionGone) {
+        setState("success");
+        return;
+      }
       setError("Erro ao atualizar senha. O link pode ter expirado. Solicite um novo.");
       return;
     }
