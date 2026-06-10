@@ -54,12 +54,12 @@ export default function ListingDetailPage() {
 
       // Single query: listing + all related data via PostgREST joins
       // Note: subzones join excluded (no FK constraint on subzone_id)
+      // Note: profiles NOT joined here — whatsapp is fetched lazily on contact click
       const { data: full, error: le } = await supabase
         .from("listings")
         .select(`
           *,
           listing_photos(*),
-          profiles(id, full_name, whatsapp),
           categories(id, name, slug, contact_button_text, whatsapp_message),
           subcategories(id, name),
           localities(id, name)
@@ -76,11 +76,20 @@ export default function ListingDetailPage() {
 
       setListing(full);
       setPhotos([...(full.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
-      setSeller(full.profiles ?? null);
       setCategory(full.categories ?? null);
       setSubcategory(full.subcategories ?? null);
       setLocality(full.localities ?? null);
       setLoading(false);
+
+      // Fetch seller public info (name + avatar only, no phone number)
+      if (full.user_id) {
+        supabase
+          .from("profiles_public")
+          .select("id,full_name,avatar_url")
+          .eq("id", full.user_id)
+          .single()
+          .then(({ data }) => { if (mounted) setSeller(data ?? null); });
+      }
 
       // Fetch subzone separately (subzone_id has no FK, so PostgREST join not available)
       if (full.subzone_id) {
@@ -223,11 +232,13 @@ export default function ListingDetailPage() {
     setFavBusy(false);
   };
 
-  const buildWhatsAppUrl = () => {
-    if (!seller?.whatsapp) return "#";
+  const handleContact = async () => {
+    if (!session) { router.push("/signin?msg=contact"); return; }
+    const { data: phone } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller?.id });
+    if (!phone) return;
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
     const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
-    return buildWaUrl(seller.whatsapp, message);
+    openWhatsApp(buildWaUrl(phone, message));
   };
 
   const sendReport = async () => {
@@ -466,34 +477,15 @@ export default function ListingDetailPage() {
         )}
 
         {/* Botão WhatsApp */}
-        {!isOwner && (
-          seller?.whatsapp ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (!session) { router.push("/signin?msg=contact"); return; }
-                openWhatsApp(buildWhatsAppUrl());
-              }}
-              className="btn btn-whatsapp btn-block"
-              style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}
-            >
-              💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
-            </button>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "0.875rem",
-                background: "#f1f5f9",
-                borderRadius: 12,
-                color: "var(--text-muted)",
-                fontSize: "0.875rem",
-                marginBottom: 12,
-              }}
-            >
-              Contato não disponível
-            </div>
-          )
+        {!isOwner && seller && (
+          <button
+            type="button"
+            onClick={handleContact}
+            className="btn btn-whatsapp btn-block"
+            style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}
+          >
+            💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
+          </button>
         )}
 
         {/* Se é o dono, mostrar opções */}
@@ -504,13 +496,30 @@ export default function ListingDetailPage() {
               borderRadius: 12,
               padding: "0.875rem",
               marginBottom: 12,
-              textAlign: "center",
-              fontSize: "0.875rem",
-              color: "var(--blue-main)",
-              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
             }}
           >
-            ✏️ Este é o seu anúncio
+            <span style={{ fontSize: "0.875rem", color: "var(--blue-main)", fontWeight: 700 }}>
+              ✏️ Este é o seu anúncio
+            </span>
+            <Link
+              href={`/listings/${listingId}/edit`}
+              style={{
+                background: "var(--blue-main)",
+                color: "#fff",
+                borderRadius: 10,
+                padding: "0.4rem 0.9rem",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                textDecoration: "none",
+                flexShrink: 0,
+              }}
+            >
+              Editar anúncio
+            </Link>
           </div>
         )}
 

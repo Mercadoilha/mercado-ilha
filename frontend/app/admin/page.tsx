@@ -599,7 +599,7 @@ function Banners() {
           </div>
           <div className="form-group">
             <label className="form-label">WhatsApp do anunciante *</label>
-            <input className="form-input" type="tel" placeholder="+55 75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
+            <input className="form-input" type="tel" placeholder="75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
             <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
               Ao clicar no banner, o usuário será redirecionado a este número.
             </p>
