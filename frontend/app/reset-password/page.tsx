@@ -23,25 +23,26 @@ export default function ResetPasswordPage() {
     }, 8000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         clearTimeout(timeout);
         setState("form");
       }
     });
 
-    // PKCE flow: the email link arrives as ?code=XXXX — exchange it for a session
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        clearTimeout(timeout);
-        if (error) {
-          setState("invalid");
-        } else {
-          // Some SDK versions fire SIGNED_IN instead of PASSWORD_RECOVERY after
-          // code exchange, so we transition directly rather than waiting for the event.
-          setState("form");
-        }
-      });
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get("token_hash");
+    const type = params.get("type");
+
+    if (tokenHash) {
+      // Stateless recovery: the link carries a one-time token_hash. Verifying it
+      // needs no locally-stored code_verifier, so it works even when the email
+      // link opens in a different browser than the installed PWA.
+      supabase.auth
+        .verifyOtp({ token_hash: tokenHash, type: (type as "recovery") || "recovery" })
+        .then(({ error }) => {
+          clearTimeout(timeout);
+          setState(error ? "invalid" : "form");
+        });
     }
 
     return () => {
