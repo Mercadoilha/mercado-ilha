@@ -43,6 +43,7 @@ export default function StorePage() {
       if (!mounted) return;
 
       if (sellerRes.error || !sellerRes.data) {
+        console.error("[StorePage] sellerRes error:", sellerRes.error);
         setError("Vendedor não encontrado.");
         setLoading(false);
         return;

@@ -23,20 +23,20 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const res = await fetch("/api/auth/send-recovery", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim() }),
-    });
+
+    // Método específico para recuperação de senha. Gera o código {{ .Token }}
+    // (template "Reset Password"). Não revela se o e-mail existe — por segurança
+    // sempre retorna sucesso; se a conta não existir, simplesmente nenhum e-mail chega.
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
+
     setLoading(false);
-    if (res.status === 404) {
-      setError("E-mail não encontrado. Verifique e tente novamente.");
+
+    if (err) {
+      // DEBUG TEMPORÁRIO — remover depois
+      setError(`DEBUG: ${err.message} | status: ${(err as any).status}`);
       return;
     }
-    if (!res.ok) {
-      setError("Erro ao enviar e-mail. Tente novamente em alguns minutos.");
-      return;
-    }
+
     setState("code");
   };
 
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token: code.trim(),
-      type: "email",
+      type: "recovery",
     });
     setLoading(false);
     if (err) {
