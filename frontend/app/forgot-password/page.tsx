@@ -23,9 +23,17 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const res = await fetch("/api/auth/send-recovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    });
     setLoading(false);
-    if (err) {
+    if (res.status === 404) {
+      setError("E-mail não encontrado. Verifique e tente novamente.");
+      return;
+    }
+    if (!res.ok) {
       setError("Erro ao enviar e-mail. Tente novamente em alguns minutos.");
       return;
     }
@@ -35,7 +43,7 @@ export default function ForgotPasswordPage() {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (code.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
+    if (code.length !== 4) { setError("O código deve ter 4 dígitos."); return; }
     setLoading(true);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
@@ -130,9 +138,9 @@ export default function ForgotPasswordPage() {
                 className="form-input"
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
+                pattern="[0-9]{4}"
+                maxLength={4}
+                placeholder="0000"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 required
