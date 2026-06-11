@@ -17,16 +17,14 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
 
-    let { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    // redirectTo is omitted — the destination URL is hardcoded in the Supabase
+    // email template using {{ .SiteURL }}/reset-password?token_hash=...
+    let { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
 
-    // Retry once on transient failures (known Supabase SDK timing issue)
+    // Retry once on transient network failures
     if (err) {
       await new Promise((r) => setTimeout(r, 600));
-      ({ error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      }));
+      ({ error: err } = await supabase.auth.resetPasswordForEmail(email.trim()));
     }
 
     setLoading(false);
