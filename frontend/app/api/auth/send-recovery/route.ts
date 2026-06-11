@@ -19,8 +19,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
   }
 
-  // Send the 4-digit OTP recovery email
-  const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim());
+  // Send 6-digit OTP via magic link flow (resetPasswordForEmail uses long tokens)
+  const { error: resetError } = await supabase.auth.signInWithOtp({
+    email: email.trim(),
+    options: { shouldCreateUser: false },
+  });
   if (resetError) {
     return NextResponse.json({ error: 'send_failed' }, { status: 500 });
   }
