@@ -2,39 +2,68 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-type State = "form" | "sent";
+type State = "email" | "code" | "password" | "success";
 
 export default function ForgotPasswordPage() {
-  const [state, setState] = useState<State>("form");
+  const router = useRouter();
+  const [state, setState] = useState<State>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
-
-    // redirectTo is omitted — the destination URL is hardcoded in the Supabase
-    // email template using {{ .SiteURL }}/reset-password?token_hash=...
-    let { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
-
-    // Retry once on transient network failures
-    if (err) {
-      await new Promise((r) => setTimeout(r, 600));
-      ({ error: err } = await supabase.auth.resetPasswordForEmail(email.trim()));
-    }
-
+    setLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
     setLoading(false);
-
     if (err) {
-      setError("Erro ao enviar e-mail. Tente novamente.");
+      setError("Erro ao enviar e-mail. Tente novamente em alguns minutos.");
       return;
     }
+    setState("code");
+  };
 
-    setState("sent");
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (code.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "recovery",
+    });
+    setLoading(false);
+    if (err) {
+      setError("Código inválido ou expirado. Verifique e tente novamente.");
+      return;
+    }
+    setState("password");
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (newPassword.length < 6) { setError("A senha deve ter ao menos 6 caracteres."); return; }
+    if (newPassword !== confirmPassword) { setError("As senhas não coincidem."); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (err) {
+      setError("Erro ao salvar senha. Tente novamente.");
+      return;
+    }
+    setState("success");
+    setTimeout(() => router.push("/signin"), 3000);
   };
 
   return (
@@ -45,20 +74,19 @@ export default function ForgotPasswordPage() {
       </header>
 
       <div style={{ padding: "1.5rem 1rem" }}>
-
         {error && (
           <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "0.75rem", marginBottom: "1rem", fontSize: "0.875rem", color: "#dc2626" }}>
             {error}
           </div>
         )}
 
-        {state === "form" && (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {state === "email" && (
+          <form onSubmit={handleSendCode} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🔑</div>
               <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Esqueceu sua senha?</p>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-                Informe seu e-mail e enviaremos um link para você criar uma nova senha.
+                Informe seu e-mail e enviaremos um código de 6 dígitos para você criar uma nova senha.
               </p>
             </div>
             <div className="form-group">
@@ -75,7 +103,7 @@ export default function ForgotPasswordPage() {
               />
             </div>
             <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem" }}>
-              {loading ? "Enviando..." : "Enviar e-mail de recuperação"}
+              {loading ? "Enviando..." : "Enviar código"}
             </button>
             <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)" }}>
               Lembrou a senha?{" "}
@@ -86,22 +114,132 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        {state === "sent" && (
+        {state === "code" && (
+          <form onSubmit={handleVerifyCode} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>📧</div>
+              <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Código enviado!</p>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
+                Enviamos um código de 6 dígitos para <strong>{email}</strong>.<br />
+                Verifique sua caixa de entrada e o spam.
+              </p>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Código de recuperação *</label>
+              <input
+                className="form-input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                required
+                autoFocus
+                style={{ fontSize: "1.5rem", letterSpacing: "0.4rem", textAlign: "center" }}
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem" }}>
+              {loading ? "Verificando..." : "Confirmar código"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setError(null); setState("email"); }}
+              style={{ background: "none", border: "none", color: "var(--blue-main)", fontSize: "0.85rem", cursor: "pointer", textAlign: "center" }}
+            >
+              Não recebi o código — tentar novamente
+            </button>
+          </form>
+        )}
+
+        {state === "password" && (
+          <form onSubmit={handleSetPassword} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🔒</div>
+              <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Crie sua nova senha</p>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Escolha uma senha segura com no mínimo 6 caracteres.</p>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Nova senha *</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  className="form-input"
+                  type={showPw ? "text" : "password"}
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  style={{ paddingRight: "2.75rem" }}
+                  autoFocus
+                />
+                <button type="button" onClick={() => setShowPw((v) => !v)}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0 }}>
+                  <EyeToggle show={showPw} />
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Confirmar nova senha *</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  className="form-input"
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Repita a senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  style={{ paddingRight: "2.75rem" }}
+                />
+                <button type="button" onClick={() => setShowConfirm((v) => !v)}
+                  style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0 }}>
+                  <EyeToggle show={showConfirm} />
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem" }}>
+              {loading ? "Salvando..." : "Salvar nova senha"}
+            </button>
+          </form>
+        )}
+
+        {state === "success" && (
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-            <div style={{ fontSize: "3rem" }}>📧</div>
-            <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>E-mail enviado!</p>
+            <div style={{ fontSize: "3rem" }}>✅</div>
+            <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>Senha atualizada com sucesso!</p>
             <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Enviamos um link de recuperação para <strong>{email}</strong>.<br />
-              Verifique sua caixa de entrada e também o spam.
+              Você será redirecionado ao login em instantes...
             </p>
-            <Link href="/signin" style={{ marginTop: 8 }}>
-              <button type="button" className="btn btn-primary" style={{ padding: "0.75rem 2rem" }}>
-                Voltar ao login
+            <Link href="/signin">
+              <button type="button" className="btn btn-primary" style={{ marginTop: 8, padding: "0.75rem 2rem" }}>
+                Ir para o login
               </button>
             </Link>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function EyeToggle({ show }: { show: boolean }) {
+  return show ? (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ) : (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }
