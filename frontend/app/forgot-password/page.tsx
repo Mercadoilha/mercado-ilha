@@ -27,9 +27,7 @@ export default function ForgotPasswordPage() {
     // Método específico para recuperação de senha. Gera o código {{ .Token }}
     // (template "Reset Password"). Não revela se o e-mail existe — por segurança
     // sempre retorna sucesso; se a conta não existir, simplesmente nenhum e-mail chega.
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/forgot-password`,
-    });
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
 
     setLoading(false);
 
@@ -38,7 +36,7 @@ export default function ForgotPasswordPage() {
       if (m.includes("rate") || m.includes("limit") || m.includes("too many")) {
         setError("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
       } else {
-        setError("Erro ao enviar o código. Tente novamente em instantes.");
+        setError(`Erro ao enviar o código: ${err.message}`);
       }
       return;
     }
