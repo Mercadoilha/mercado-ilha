@@ -34,8 +34,12 @@ export default function ForgotPasswordPage() {
     setLoading(false);
 
     if (err) {
-      // DEBUG TEMPORÁRIO — remover depois
-      setError(`DEBUG: ${err.message} | status: ${(err as any).status}`);
+      const m = (err.message || "").toLowerCase();
+      if (m.includes("rate") || m.includes("limit") || m.includes("too many")) {
+        setError("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
+      } else {
+        setError("Erro ao enviar o código. Tente novamente em instantes.");
+      }
       return;
     }
 
@@ -45,7 +49,7 @@ export default function ForgotPasswordPage() {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (code.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
+    if (code.length < 6) { setError("O código deve ter 6 a 8 dígitos."); return; }
     setLoading(true);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
@@ -96,7 +100,7 @@ export default function ForgotPasswordPage() {
               <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🔑</div>
               <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Esqueceu sua senha?</p>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-                Informe seu e-mail e enviaremos um código de 6 dígitos para você criar uma nova senha. Não é necessário clicar em nenhum link.
+                Informe seu e-mail e enviaremos um código para você criar uma nova senha. Não é necessário clicar em nenhum link.
               </p>
             </div>
             <div className="form-group">
@@ -130,7 +134,7 @@ export default function ForgotPasswordPage() {
               <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>📧</div>
               <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Código enviado!</p>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-                Enviamos um código de 6 dígitos para <strong>{email}</strong>.<br />
+                Enviamos um código para <strong>{email}</strong>.<br />
                 Verifique sua caixa de entrada e o spam.
               </p>
             </div>
@@ -140,9 +144,9 @@ export default function ForgotPasswordPage() {
                 className="form-input"
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
+                pattern="[0-9]{6,8}"
+                maxLength={8}
+                placeholder="00000000"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 required
