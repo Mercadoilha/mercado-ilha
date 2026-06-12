@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (code.length < 6) { setError("O código deve ter 6 a 8 dígitos."); return; }
+    if (code.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
     setLoading(true);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
@@ -144,9 +144,9 @@ export default function ForgotPasswordPage() {
                 className="form-input"
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]{6,8}"
-                maxLength={8}
-                placeholder="00000000"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                placeholder="000000"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 required
