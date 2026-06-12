@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (code.length !== 6) { setError("O código deve ter 6 dígitos."); return; }
+    if (code.length !== 8) { setError("O código deve ter 8 dígitos."); return; }
     setLoading(true);
     const { error: err } = await supabase.auth.verifyOtp({
       email: email.trim(),
@@ -134,7 +134,7 @@ export default function ForgotPasswordPage() {
               <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>📧</div>
               <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 4 }}>Código enviado!</p>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-                Enviamos um código para <strong>{email}</strong>.<br />
+                Enviamos um código de 8 dígitos para <strong>{email}</strong>.<br />
                 Verifique sua caixa de entrada e o spam.
               </p>
             </div>
@@ -144,9 +144,9 @@ export default function ForgotPasswordPage() {
                 className="form-input"
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
+                pattern="[0-9]{8}"
+                maxLength={8}
+                placeholder="00000000"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 required
