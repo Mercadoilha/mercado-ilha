@@ -27,7 +27,9 @@ export default function ForgotPasswordPage() {
     // Método específico para recuperação de senha. Gera o código {{ .Token }}
     // (template "Reset Password"). Não revela se o e-mail existe — por segurança
     // sempre retorna sucesso; se a conta não existir, simplesmente nenhum e-mail chega.
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/forgot-password`,
+    });
 
     setLoading(false);
 
