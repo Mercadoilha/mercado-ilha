@@ -81,21 +81,20 @@ export default function ListingDetailPage() {
       setLocality(full.localities ?? null);
       setLoading(false);
 
-      // Fetch seller public info (name + avatar only, no phone number)
-      if (full.user_id) {
-        supabase
-          .from("profiles_public")
-          .select("id,full_name,avatar_url")
-          .eq("id", full.user_id)
-          .single()
-          .then(({ data }) => { if (mounted) setSeller(data ?? null); });
-      }
-
-      // Fetch subzone separately (subzone_id has no FK, so PostgREST join not available)
-      if (full.subzone_id) {
-        supabase.from("subzones").select("id,name").eq("id", full.subzone_id).single()
-          .then(({ data }) => { if (mounted) setSubzone(data ?? null); });
-      }
+      // Datos secundarios en paralelo (dependen de la query principal):
+      // - seller público (nombre + avatar, sin teléfono)
+      // - subzone aparte (subzone_id no tiene FK → join PostgREST no disponible)
+      const [sellerRes, subzoneRes] = await Promise.all([
+        full.user_id
+          ? supabase.from("profiles_public").select("id,full_name,avatar_url").eq("id", full.user_id).single()
+          : Promise.resolve({ data: null }),
+        full.subzone_id
+          ? supabase.from("subzones").select("id,name").eq("id", full.subzone_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (!mounted) return;
+      setSeller(sellerRes.data ?? null);
+      setSubzone(subzoneRes.data ?? null);
     }
 
     load();

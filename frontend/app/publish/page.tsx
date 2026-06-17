@@ -62,11 +62,20 @@ export default function PublishPage() {
     return () => listener?.subscription.unsubscribe();
   }, []);
 
-  // Load static data
+  // Load static data — en paralelo, una sola actualización de estado
   useEffect(() => {
-    supabase.from("categories").select("id,name,slug,location_type,contact_button_text,whatsapp_message,expires_in_days").eq("is_active", true).order("sort_order").then(({ data }) => setCategories(data ?? []));
-    supabase.from("islands").select("id").eq("slug", "tinhare").single().then(({ data }) => setIslandId(data?.id ?? null));
-    supabase.from("localities").select("id,name").eq("is_active", true).order("sort_order").then(({ data }) => setLocalities(data ?? []));
+    let mounted = true;
+    Promise.all([
+      supabase.from("categories").select("id,name,slug,location_type,contact_button_text,whatsapp_message,expires_in_days").eq("is_active", true).order("sort_order"),
+      supabase.from("islands").select("id").eq("slug", "tinhare").single(),
+      supabase.from("localities").select("id,name").eq("is_active", true).order("sort_order"),
+    ]).then(([catRes, islandRes, locRes]) => {
+      if (!mounted) return;
+      setCategories(catRes.data ?? []);
+      setIslandId(islandRes.data?.id ?? null);
+      setLocalities(locRes.data ?? []);
+    });
+    return () => { mounted = false; };
   }, []);
 
   // Load subcategories on category change

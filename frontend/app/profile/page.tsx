@@ -37,8 +37,15 @@ export default function ProfilePage() {
     const uid = activeSession.user.id;
 
     async function load() {
+      // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
+      const [profileRes, listRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", uid).single(),
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false }),
+      ]);
+
       // Load or create profile
-      let { data: p, error: pe } = await supabase.from("profiles").select("*").eq("id", uid).single();
+      let p = profileRes.data;
+      const pe = profileRes.error;
       if (!p && pe?.code === "PGRST116") {
         const { data: np } = await supabase
           .from("profiles")
@@ -53,8 +60,6 @@ export default function ProfilePage() {
         setEditName(p.full_name);
         setEditWhatsapp(p.whatsapp ?? "");
       }
-
-      const listRes = await supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false });
 
       if (!mounted) return;
       if (listRes.error) setError(listRes.error.message);
