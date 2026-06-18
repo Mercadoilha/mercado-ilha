@@ -368,7 +368,7 @@ features de cobro se posponen hasta tener tracción. Ver `comisiones.md` para el
   - Home: botón "Fale conosco"
 - Admin: nueva pestaña **📈 Métricas** (solo lectura) — totales + top anuncios por contactos
 - Perfil del vendedor (`/profile`): muestra 👁️ vistas + 💬 contatos por anuncio via RPC `get_my_listings_stats` (filtra por `auth.uid()`). Es enganche de retención → deseo del plan Pro futuro.
-  - Banner azul explicativo agregado en `/profile` (entre aviso de validez y lista de anuncios): "O que significam os números? 👁️ Visualizações — quantas pessoas abriram seu anúncio. 💬 Contatos — quantas pessoas clicaram no WhatsApp para te contatar." — necesario porque en móvil los `title` HTML no funcionan al tocar.
+  - Debajo de la lista de anuncios hay dos banners informativos (en ese orden): 1) banner amarillo con aviso de validez 30 días + eliminación tras 15 días inactivo; 2) banner azul "O que significam os números?" que explica 👁️ Visualizações y 💬 Contatos — necesario porque en móvil los `title` HTML no funcionan al tocar.
 
 ### Panel Admin — 8 tabs (antes eran 7)
 Dashboard | Categorias | Usuários | Anúncios | Banners | Config | Denúncias | **📈 Métricas**
