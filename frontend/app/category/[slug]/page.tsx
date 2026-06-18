@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
+// ISR: categorías/subcategorías casi nunca cambian → cache de 300s desde el edge.
+export const revalidate = 300;
 
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const { slug } = params;

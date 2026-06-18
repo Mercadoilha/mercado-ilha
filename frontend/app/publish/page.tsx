@@ -201,6 +201,13 @@ export default function PublishPage() {
       }
     }
 
+    // Revalida la home (ISR) para que el anúncio aparezca al instante.
+    // Fire-and-forget: si falla, igual aparece dentro de la ventana de 60s.
+    fetch("/api/revalidate", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    }).catch(() => {});
+
     setSuccess(true);
     setTimeout(() => router.push(`/listings/${listing.id}`), 1500);
   };

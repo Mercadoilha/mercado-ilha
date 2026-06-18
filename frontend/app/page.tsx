@@ -1,10 +1,13 @@
 import { getSupabaseAdmin } from "../lib/supabaseAdmin";
 import HomeClient from "../components/HomeClient";
 
-export const dynamic = "force-dynamic";
+// ISR: HTML pre-renderizado servido desde el edge (sin cold start ni viaje a la
+// DB en el camino crítico). Se refresca en segundo plano cada 60s → un anuncio
+// nuevo aparece en ≤60s.
+export const revalidate = 60;
 
 export default async function Home() {
-  const admin = getSupabaseAdmin();
+  const admin = getSupabaseAdmin({ revalidate: 60 });
 
   const [
     { data: listData },
