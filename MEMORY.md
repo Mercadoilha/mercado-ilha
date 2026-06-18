@@ -139,7 +139,7 @@ Tabla `categories` tiene columna `description text` (nullable) — se muestra de
 Ruta: `/admin` — protegida por rol `admin` en tabla `profiles`.
 Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para admins.
 
-7 tabs implementados (orden actual de la barra):
+8 tabs implementados (orden actual de la barra):
 - **Dashboard:** contadores (anúncios activos, total, denúncias nuevas, usuarios, banners)
 - **Categorias:** CRUD completo. Editar nombre, ícono (EmojiPicker), slug, tipo de ubicación,
   texto del botón de contacto, descripción (aparece bajo el ícono en la home), y orden
@@ -159,6 +159,7 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
 - **Banners:** CRUD completo (crear con URL + link + posición, activar/pausar, eliminar)
 - **Config:** WhatsApp de contacto del admin + atalho personalizable de la barra inferior
 - **Denúncias:** lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic
+- **📈 Métricas:** solo lectura — totales (vistas, clicks WA, clicks banner) + top anuncios por contactos WA
 
 ---
 
@@ -192,8 +193,13 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
 | `/store/[id]` | Tienda pública del vendedor con banner azul y sus anuncios |
 | `/termos` | Página pública de Termos e Condições de Uso |
 | `/admin` | Panel de administración (requiere rol admin) |
+| `/forgot-password` | Recuperar contraseña: 1 paso, solo email. Llama `resetPasswordForEmail`. |
+| `/reset-password` | Nueva contraseña desde link del email. Flujo PKCE: detecta `?code=XXXX` y llama `exchangeCodeForSession`. |
+| `/listings/[id]/edit` | Editar anuncio (solo dueño). |
+| `/admin` | Panel de administración (requiere rol admin) |
 | `/api/admin` | Endpoint server-side con Supabase service role |
 | `/api/mares` | Scrapea tabuademares.com, devuelve las 4 mareas del día. Cache 6h con `unstable_cache`. |
+| `/api/revalidate` | Revalida la home (ISR) on-demand. POST, requiere Bearer token Supabase. Llamado desde `/publish` al publicar un anuncio. |
 
 ---
 
@@ -226,12 +232,15 @@ frontend/
 │   └── ShareIcon.tsx          ← ícono SVG de compartir, reutilizado en todo el sitio
 ├── lib/
 │   ├── supabaseClient.ts    ← cliente Supabase (NEXT_PUBLIC vars, anon key)
-│   ├── supabaseAdmin.ts     ← cliente Supabase service role (server-only). USA cache:"no-store"
-│   │                           en el fetch global para que Next.js 14 no cachee las queries
-│   │                           y la página principal siempre refleje cambios del admin en tiempo real.
+│   ├── supabaseAdmin.ts     ← cliente Supabase service role (server-only).
+│   │                           Acepta `opts?: { revalidate?: number }`.
+│   │                           Sin opts → `cache:"no-store"` (siempre fresco; default para admin/API).
+│   │                           Con `revalidate:N` → `next:{revalidate:N}` (permite ISR en páginas).
 │   ├── adminSettings.ts     ← fetch cacheado de admin_settings (WhatsApp admin)
 │   ├── share.ts             ← función compartilhar() — Web Share API + fallback WhatsApp
-│   └── whatsappUrl.ts       ← buildWaUrl() y openWhatsApp()
+│   ├── whatsappUrl.ts       ← buildWaUrl() y openWhatsApp()
+│   ├── tracking.ts          ← helpers fire-and-forget: trackListingView, trackWhatsappClick, trackBannerClick
+│   └── visitorId.ts         ← UUID anónimo persistido en localStorage (visitantes no logueados)
 └── public/
     ├── manifest.json        ← PWA manifest
     ├── sw.js                ← service worker (cache-first assets, network-first HTML)
@@ -251,7 +260,12 @@ En `frontend/.env.local` (local) y en Vercel (producción):
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...   ← solo server-side, nunca al cliente
+R2_ACCOUNT_ID=...                  ← Cloudflare R2 (fotos)
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+NEXT_PUBLIC_SITE_URL=https://mercadoilha.vercel.app
 ```
+**Fotos:** se suben a **Cloudflare R2** (no Supabase Storage) via `/api/upload`.
 
 ---
 
@@ -299,9 +313,10 @@ via la REST API de Supabase — violación directa de la LGPD.
    ⚠️ Si la DB ya existía antes del 2026-06-08: también ejecutar
    `ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS description text;`
    (ya aplicado en producción, solo necesario para instancias anteriores)
-   ⚠️ **Caché de Next.js 14:** el cliente admin (`supabaseAdmin.ts`) usa `cache: "no-store"`
-   en el fetch global — si se crea un nuevo cliente Supabase server-side, siempre incluir
-   esa opción o los cambios del admin no se reflejan en la página hasta que expira el caché.
+   ⚠️ **Caché de Next.js 14:** `supabaseAdmin.ts` usa `cache: "no-store"` por defecto.
+   Si se crea un nuevo cliente server-side, usar `getSupabaseAdmin()` sin opts para datos
+   frescos (admin/API), o `getSupabaseAdmin({revalidate:N})` para páginas ISR. La home ya
+   usa `revalidate:60` + `/api/revalidate` on-demand al publicar.
 6. En Supabase → Table Editor → tabla `admin_settings` → actualizar el número
    real de WhatsApp del admin (key = `admin_whatsapp`, campo `value.value`)
 7. En Supabase → tabla `profiles` → asignar `role = 'admin'` al primer usuario
@@ -325,10 +340,38 @@ via la REST API de Supabase — violación directa de la LGPD.
 |------------|----------|--------------|-------|
 | `app/category/[slug]/page.tsx` | Era `"use client"` → spinner visible + `window.location.href` hacía reload completo de página | Convertido a Server Component. Usa `getSupabaseAdmin()` server-side + `redirect()` de Next.js. Carga instantánea sin spinner. | 2026-06-09 |
 | `app/profile/page.tsx` + `contexts/SessionContext.tsx` | Primer toque a Perfil mostraba spinner: chunk JS pesado (arrastraba editor de avatar completo) + fetch a Supabase arrancaba recién al montar la página | 1) `lib/profileCache.ts` (nuevo): cache en memoria con `prewarmProfile()` que dispara las queries en background al resolverse la sesión (mientras el usuario está en home). `getCachedProfile()` → render instantáneo sin spinner. `setCachedProfile()` mantiene cache sincronizado tras mutaciones. 2) `AvatarCropModal` pasa a `dynamic` (`next/dynamic`, `ssr:false`) → sale del chunk inicial, se baja solo al tocar "Trocar foto". | 2026-06-18 |
+| `app/page.tsx` + `app/category/[slug]/page.tsx` | Latencia "primer toque": `force-dynamic` en home y categorías → SSR en cada request → primer visitante con función fría pagaba cold start Vercel + conexión + queries. El `cache:"no-store"` global en `supabaseAdmin.ts` también bloqueaba ISR. | 1) `supabaseAdmin.ts` acepta `opts.revalidate` opcional (default sigue `no-store`). 2) `page.tsx`: `revalidate=60` con `getSupabaseAdmin({revalidate:60})` → build marca `/` como `○ (Static)` con ISR. 3) `category/[slug]`: `revalidate=300`. 4) `app/api/revalidate/route.ts`: revalidación on-demand (POST, auth Supabase) → `publish/page.tsx` lo llama fire-and-forget al publicar, anuncio aparece en home al instante. Red de seguridad: ISR de 60s cubre expiración por cron. | 2026-06-18, commit `0113c44` |
 
 **Patrón de referencia:** Páginas que solo renderizan datos estáticos (listas de links, etc.) deben ser Server Components. El patrón `"use client"` + `useEffect` + spinner es innecesario cuando no hay interactividad.
 
 **Patrón prewarm + stale-while-revalidate:** Para rutas con datos personales (perfil, mis anuncios) que requieren autenticación y son Client Components: precalentar los datos en background al resolverse la sesión (`SessionContext`), servir desde cache en el primer render, revalidar silenciosamente en segundo plano. Sincronizar el cache tras cada mutación local. El editor de avatar (o cualquier modal pesado de uso raro) debe importarse con `next/dynamic` para no inflar el chunk de la ruta.
+
+---
+
+## TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
+
+Estrategia: **lanzar 100% gratis**. Solo se recolectan datos (lo irrecuperable hacia atrás);
+features de cobro se posponen hasta tener tracción. Ver `comisiones.md` para el plan completo.
+
+### DB — `supabase/fase-monetizacion-tracking.sql` (idempotente)
+⚠️ **Pendiente: el usuario debe correrla en Supabase SQL Editor** (aún no ejecutada).
+- Tablas `whatsapp_clicks`, `banner_clicks` (RLS: lectura/borrado solo admin; insert solo via RPC `security definer`)
+- `track_listing_view` ahora es `security definer` — antes fallaba para visitantes (RLS de `listing_statistics` es solo-admin) y el frontend nunca la llamaba → vistas **nunca** se grababan
+- RPCs: `track_whatsapp_click`, `track_banner_click`, `get_tracking_summary`, `get_top_listings_by_whatsapp`, `get_my_listings_stats`
+
+### Frontend
+- `lib/visitorId.ts` — UUID anónimo en localStorage para visitantes no logueados
+- `lib/tracking.ts` — helpers fire-and-forget (no bloquean UI). Enchufados en:
+  - Detalle anuncio `/listings/[id]`: vista al entrar + WA al contactar
+  - Tienda `/store/[id]`: WA al contactar
+  - `BannerRotativo`: click en imagen + CTA WhatsApp
+  - Home: botón "Fale conosco"
+- Admin: nueva pestaña **📈 Métricas** (solo lectura) — totales + top anuncios por contactos
+- Perfil del vendedor (`/profile`): muestra 👁️ vistas + 💬 contatos por anuncio via RPC `get_my_listings_stats` (filtra por `auth.uid()`). Es enganche de retención → deseo del plan Pro futuro.
+  - Banner azul explicativo agregado en `/profile` (entre aviso de validez y lista de anuncios): "O que significam os números? 👁️ Visualizações — quantas pessoas abriram seu anúncio. 💬 Contatos — quantas pessoas clicaram no WhatsApp para te contatar." — necesario porque en móvil los `title` HTML no funcionan al tocar.
+
+### Panel Admin — 8 tabs (antes eran 7)
+Dashboard | Categorias | Usuários | Anúncios | Banners | Config | Denúncias | **📈 Métricas**
 
 ---
 

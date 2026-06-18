@@ -344,6 +344,13 @@ export default function ProfilePage() {
             Os anúncios ficam ativos por <strong>30 dias</strong> e depois são desativados automaticamente. Você pode reativá-los para continuar oferecendo — anúncios inativos por mais de <strong>15 dias</strong> são excluídos permanentemente.
           </div>
 
+          {/* Leyenda de métricas */}
+          <div style={{ background: "#e6f1fb", border: "1px solid #b5d4f4", borderRadius: 10, padding: "0.65rem 0.875rem", fontSize: "0.76rem", color: "#185fa5", marginBottom: "0.5rem", lineHeight: 1.5 }}>
+            <strong>O que significam os números?</strong><br />
+            👁️ <strong>Visualizações</strong> — quantas pessoas abriram seu anúncio.<br />
+            💬 <strong>Contatos</strong> — quantas pessoas clicaram no WhatsApp para te contatar.
+          </div>
+
           {myListings.length === 0 ? (
             <div className="card" style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
               <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
