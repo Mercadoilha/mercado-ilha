@@ -83,6 +83,10 @@ const ICON_GROUPS: { group: string; icons: { e: string; l: string }[] }[] = [
     { e: "🐾", l: "Pets" }, { e: "🐕", l: "Cães" }, { e: "🐈", l: "Gatos" },
     { e: "🐦", l: "Aves" }, { e: "💉", l: "Veterinário" },
   ]},
+  { group: "Cuidados infantis", icons: [
+    { e: "🧸", l: "Babá / Brinquedos" }, { e: "👶", l: "Bebê" }, { e: "🍼", l: "Mamadeira" },
+    { e: "🎠", l: "Recreação infantil" }, { e: "🎒", l: "Mochila / Escola" },
+  ]},
   { group: "Esportes", icons: [
     { e: "🏄", l: "Surf" }, { e: "🤿", l: "Mergulho" }, { e: "💪", l: "Academia / Musculação" },
     { e: "🎾", l: "Tênis / Raquete" },
