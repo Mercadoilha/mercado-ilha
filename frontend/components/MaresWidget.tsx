@@ -36,7 +36,7 @@ export default function MaresWidget() {
   return (
     <div
       style={{
-        margin: "12px 16px 4px",
+        margin: "0 0 4px",
         padding: "10px 14px",
         background: "#E6F1FB",
         borderRadius: 10,

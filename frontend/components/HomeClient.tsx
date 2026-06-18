@@ -15,6 +15,7 @@ const SLUG_ICON: Record<string, string> = {
   "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
   "beleza-e-bem-estar": "💅", "translados": "🚗", "envios": "📫",
   "gastronomia": "🍽️", "terrenos": "🌍", "casas": "🏡", "alugueis": "🔑",
+  "babas": "🧸",
 };
 
 type Banner = {
@@ -179,8 +180,13 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
         </div>
       </section>
 
-      {/* ── Marés do dia ── */}
-      <MaresWidget />
+      {/* ── Informação útil ── */}
+      <section style={{ padding: "1.25rem 1rem 0.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Informação útil</h2>
+        </div>
+        <MaresWidget />
+      </section>
 
       {/* ── Fale conosco ── */}
       <section style={{ margin: "1.5rem 1rem 1rem" }}>
