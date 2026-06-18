@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { whatsappUrl } from "../lib/adminSettings";
 import { openWhatsApp } from "../lib/whatsappUrl";
+import { trackBannerClick, trackWhatsappClick } from "../lib/tracking";
 
 type Banner = {
   id: number;
@@ -18,7 +19,7 @@ type Props = {
   bannerInterval: number;
 };
 
-export default function BannerRotativo({ banners, adminWa, bannerInterval }: Props) {
+export default function BannerRotativo({ position, banners, adminWa, bannerInterval }: Props) {
   const [idx, setIdx] = useState(0);
   const [resetKey, setResetKey] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -64,7 +65,7 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
           Quer anunciar aqui?{" "}
           <button
             type="button"
-            onClick={() => openWhatsApp(whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha"))}
+            onClick={() => { trackWhatsappClick(null, "banner_cta"); openWhatsApp(whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")); }}
             style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
           >
             Fale conosco
@@ -133,7 +134,7 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
   return (
     <div style={{ margin: 0 }}>
       {current.link_url ? (
-        <a href={current.link_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", display: "block" }}>
+        <a href={current.link_url} target="_blank" rel="noreferrer" onClick={() => trackBannerClick(current.id, position ?? null)} style={{ textDecoration: "none", display: "block" }}>
           {content}
         </a>
       ) : (
@@ -145,6 +146,7 @@ export default function BannerRotativo({ banners, adminWa, bannerInterval }: Pro
           href={whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")}
           target="_blank"
           rel="noreferrer"
+          onClick={() => trackWhatsappClick(null, "banner_cta")}
           style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none" }}
         >
           Fale conosco

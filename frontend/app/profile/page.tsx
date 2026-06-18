@@ -16,6 +16,7 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<any>(null);
   const [myListings, setMyListings] = useState<any[]>([]);
+  const [statsMap, setStatsMap] = useState<Record<number, { views: number; wa_clicks: number }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<number | null>(null);
@@ -51,9 +52,10 @@ export default function ProfilePage() {
 
     async function load() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
-      const [profileRes, listRes] = await Promise.all([
+      const [profileRes, listRes, statsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).single(),
         supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false }),
+        supabase.rpc("get_my_listings_stats"),
       ]);
 
       // Load or create profile
@@ -80,6 +82,14 @@ export default function ProfilePage() {
         const listings = listRes.data ?? [];
         setMyListings(listings);
         setCachedProfile(uid, { profile: p, listings });
+      }
+
+      if (mounted && statsRes.data) {
+        const map: Record<number, { views: number; wa_clicks: number }> = {};
+        for (const s of statsRes.data as any[]) {
+          map[s.listing_id] = { views: Number(s.views) || 0, wa_clicks: Number(s.wa_clicks) || 0 };
+        }
+        setStatsMap(map);
       }
       setLoading(false);
     }
@@ -366,6 +376,10 @@ export default function ProfilePage() {
                     </div>
                     <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
                       {listingPrice(l)}
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
+                      <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
                     </div>
                   </Link>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0 }}>

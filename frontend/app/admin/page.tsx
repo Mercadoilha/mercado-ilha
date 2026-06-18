@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-type Tab = "dashboard" | "listings" | "reports" | "banners" | "users" | "settings" | "categorias";
+type Tab = "dashboard" | "metricas" | "listings" | "reports" | "banners" | "users" | "settings" | "categorias";
 
 // ─────────────────────────────────────────────
 // Icon library
@@ -195,6 +195,7 @@ export default function AdminPage() {
       {/* Tab bar */}
       <div style={{ display: "flex", justifyContent: "space-around", padding: "0.5rem 0.5rem 0", background: "#fff", borderBottom: "1px solid var(--border)" }}>
         {tabBtn("dashboard", "Dashboard", "📊")}
+        {tabBtn("metricas", "Métricas", "📈")}
         {tabBtn("categorias", "Categorias", "🏷️")}
         {tabBtn("users", "Usuários", "👥")}
         {tabBtn("listings", "Anúncios", "🛍️")}
@@ -205,6 +206,7 @@ export default function AdminPage() {
 
       <div style={{ padding: "1rem" }}>
         {tab === "dashboard" && <Dashboard />}
+        {tab === "metricas" && <Metrics />}
         {tab === "listings" && <Listings />}
         {tab === "reports" && <Reports />}
         {tab === "banners" && <Banners />}
@@ -266,6 +268,93 @@ function Dashboard() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Métricas (tracking pre-monetización)
+// ─────────────────────────────────────────────
+function Metrics() {
+  const [summary, setSummary] = useState<any>(null);
+  const [top, setTop] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [sumRes, topRes] = await Promise.all([
+        supabase.rpc("get_tracking_summary"),
+        supabase.rpc("get_top_listings_by_whatsapp", { _limit: 10 }),
+      ]);
+      setSummary(sumRes.data ?? null);
+      setTop(topRes.data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
+
+  if (!summary) {
+    return (
+      <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+        Ainda não há dados de métricas. Verifique se a migração de tracking foi executada no Supabase.
+      </div>
+    );
+  }
+
+  const cards = [
+    { label: "Clicks WhatsApp (total)", value: summary.whatsapp_total ?? 0, icon: "💬", color: "#059669" },
+    { label: "Clicks WhatsApp (7 dias)", value: summary.whatsapp_last_7d ?? 0, icon: "🔥", color: "#059669" },
+    { label: "Visualizações (total)", value: summary.views_total ?? 0, icon: "👁️", color: "var(--blue-main)" },
+    { label: "Visualizações (7 dias)", value: summary.views_last_7d ?? 0, icon: "📅", color: "var(--blue-main)" },
+    { label: "Clicks em banners (total)", value: summary.banner_total ?? 0, icon: "🖼️", color: "var(--sand)" },
+    { label: "Clicks em banners (7 dias)", value: summary.banner_last_7d ?? 0, icon: "🖼️", color: "var(--sand)" },
+  ];
+
+  return (
+    <div>
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.875rem" }}>Métricas de engajamento</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem" }}>
+        {cards.map((c) => (
+          <div key={c.label} className="card" style={{ padding: "1rem", textAlign: "center" }}>
+            <div style={{ fontSize: "1.75rem", marginBottom: 4 }}>{c.icon}</div>
+            <div style={{ fontSize: "1.6rem", fontWeight: 900, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "1.25rem 0 0.75rem" }}>
+        Anúncios com mais contatos
+      </h2>
+      {top.length === 0 ? (
+        <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+          Ainda não houve clicks de WhatsApp em anúncios.
+        </div>
+      ) : (
+        <div className="card" style={{ padding: "0.5rem 0.875rem" }}>
+          {top.map((row: any, i: number) => (
+            <div
+              key={row.listing_id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.625rem",
+                padding: "0.55rem 0",
+                borderBottom: i < top.length - 1 ? "1px solid var(--border)" : "none",
+              }}
+            >
+              <span style={{ fontWeight: 900, color: "var(--text-muted)", minWidth: 20, fontSize: "0.85rem" }}>{i + 1}</span>
+              <Link href={`/listings/${row.listing_id}`} style={{ flex: 1, fontSize: "0.85rem", color: "#1e293b", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {row.title}
+              </Link>
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#059669", whiteSpace: "nowrap" }}>💬 {row.wa_clicks}</span>
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--blue-main)", whiteSpace: "nowrap" }}>👁️ {row.views}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

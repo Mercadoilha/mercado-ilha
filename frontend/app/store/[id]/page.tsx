@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import ShareIcon from "../../../components/ShareIcon";
 
@@ -139,7 +140,10 @@ export default function StorePage() {
             onClick={async () => {
               if (!session) { router.push("/signin?msg=contact"); return; }
               const { data: phone } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller.id });
-              if (phone) openWhatsApp(buildWaUrl(phone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
+              if (phone) {
+                trackWhatsappClick(null, "store");
+                openWhatsApp(buildWaUrl(phone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
+              }
             }}
             style={{
               display: "inline-flex",

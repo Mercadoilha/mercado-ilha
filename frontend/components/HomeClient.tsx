@@ -5,6 +5,7 @@ import Link from "next/link";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
 import { openWhatsApp } from "../lib/whatsappUrl";
+import { trackWhatsappClick } from "../lib/tracking";
 import { useSession } from "../contexts/SessionContext";
 import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
@@ -197,7 +198,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           </p>
           <button
             type="button"
-            onClick={() => openWhatsApp(whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha"))}
+            onClick={() => { trackWhatsappClick(null, "suggestion"); openWhatsApp(whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha")); }}
             className="btn btn-whatsapp"
             style={{ width: "100%", display: "flex", justifyContent: "center", cursor: "pointer" }}
           >

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { trackListingView, trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
@@ -38,6 +39,7 @@ export default function ListingDetailPage() {
   const [reportSent, setReportSent] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
+  const viewTracked = useRef<number | null>(null);
 
   useEffect(() => {
     if (!listingId || Number.isNaN(listingId)) {
@@ -75,6 +77,13 @@ export default function ListingDetailPage() {
       }
 
       setListing(full);
+
+      // Tracking de vista (una sola vez por anuncio cargado)
+      if (viewTracked.current !== listingId) {
+        viewTracked.current = listingId;
+        trackListingView(listingId, session?.user?.id ?? null);
+      }
+
       setPhotos([...(full.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
       setCategory(full.categories ?? null);
       setSubcategory(full.subcategories ?? null);
@@ -237,6 +246,7 @@ export default function ListingDetailPage() {
     if (!phone) return;
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
     const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
+    trackWhatsappClick(listingId, "listing");
     openWhatsApp(buildWaUrl(phone, message));
   };
 
