@@ -21,10 +21,16 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+  background: #f4f6fa;
+  overscroll-behavior: none;
+}
+
 body {
   min-height: 100vh;
   padding-bottom: var(--nav-height);
   background: #f4f6fa;
+  overscroll-behavior: none;
 }
 
 /* Bottom nav clearance for all pages */
@@ -126,7 +132,7 @@ body {
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--blue-main);
 }
-.form-textarea { resize: vertical; min-height: 100px; }
+.form-textarea { resize: vertical; min-height: 180px; }
 
 /* Favorite / action button */
 .fav-btn {
