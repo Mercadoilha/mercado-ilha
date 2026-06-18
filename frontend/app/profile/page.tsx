@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import { getCachedProfile, setCachedProfile } from "../../lib/profileCache";
 import AvatarUpload from "../../components/AvatarUpload";
 import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
@@ -31,10 +32,22 @@ export default function ProfilePage() {
     if (!session) { setLoading(false); return; }
     const activeSession = session;
     let mounted = true;
-    setLoading(true);
-    setError(null);
 
     const uid = activeSession.user.id;
+
+    // Render instantáneo desde cache si ya está precargado
+    const cached = getCachedProfile(uid);
+    if (cached?.profile) {
+      setProfile(cached.profile);
+      setEditName((cached.profile.full_name as string) ?? "");
+      setEditWhatsapp((cached.profile.whatsapp as string) ?? "");
+      setMyListings(cached.listings);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    setError(null);
 
     async function load() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
@@ -63,7 +76,11 @@ export default function ProfilePage() {
 
       if (!mounted) return;
       if (listRes.error) setError(listRes.error.message);
-      else setMyListings(listRes.data ?? []);
+      else {
+        const listings = listRes.data ?? [];
+        setMyListings(listings);
+        setCachedProfile(uid, { profile: p, listings });
+      }
       setLoading(false);
     }
 
@@ -81,7 +98,11 @@ export default function ProfilePage() {
       .eq("id", session.user.id);
     if (e) setSaveMsg("Erro: " + e.message);
     else {
-      setProfile((p: any) => ({ ...p, full_name: editName.trim(), whatsapp: editWhatsapp.trim() }));
+      setProfile((p: any) => {
+        const updated = { ...p, full_name: editName.trim(), whatsapp: editWhatsapp.trim() };
+        setCachedProfile(session.user.id, { profile: updated });
+        return updated;
+      });
       setSaveMsg("Salvo com sucesso!");
       setEditMode(false);
     }
@@ -112,7 +133,11 @@ export default function ProfilePage() {
     }
 
     await supabase.from("listings").delete().eq("id", id);
-    setMyListings((prev) => prev.filter((l) => l.id !== id));
+    setMyListings((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      if (session) setCachedProfile(session.user.id, { listings: next });
+      return next;
+    });
   };
 
   const toggleStatus = async (id: number, currentStatus: string) => {
@@ -123,7 +148,13 @@ export default function ProfilePage() {
       ...(goActive && { expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }),
     };
     const { error: e } = await supabase.from("listings").update(update).eq("id", id);
-    if (!e) setMyListings((prev) => prev.map((l) => l.id === id ? { ...l, ...update } : l));
+    if (!e) {
+      setMyListings((prev) => {
+        const next = prev.map((l) => l.id === id ? { ...l, ...update } : l);
+        if (session) setCachedProfile(session.user.id, { listings: next });
+        return next;
+      });
+    }
     setToggling(null);
   };
 
@@ -185,7 +216,13 @@ export default function ProfilePage() {
               userId={session.user.id}
               currentAvatarUrl={profile.avatar_url ?? null}
               fullName={profile.full_name ?? ""}
-              onUpdate={(url) => setProfile((p: any) => ({ ...p, avatar_url: url }))}
+              onUpdate={(url) => {
+                setProfile((p: any) => {
+                  const updated = { ...p, avatar_url: url };
+                  if (session) setCachedProfile(session.user.id, { profile: updated });
+                  return updated;
+                });
+              }}
             />
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, marginTop: 8 }}>

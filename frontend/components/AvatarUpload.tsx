@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "../lib/supabaseClient";
-import AvatarCropModal from "./AvatarCropModal";
+
+const AvatarCropModal = dynamic(() => import("./AvatarCropModal"), { ssr: false });
 
 interface Props {
   userId: string;

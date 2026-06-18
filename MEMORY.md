@@ -308,13 +308,27 @@ via la REST API de Supabase — violación directa de la LGPD.
 
 ---
 
+## BUGS RESUELTOS — LECCIONES IMPORTANTES
+
+### Recuperação de senha (2026-06-12)
+- `resetPasswordForEmail` de Supabase envía tokens de **8 dígitos**, no 6. El setting "OTP length" del dashboard solo afecta `signInWithOtp`, no este flujo. → El campo de código en el frontend debe usar `maxLength={8}` y validar `code.length !== 8`.
+- **No usar `redirectTo`** en `resetPasswordForEmail` salvo que la URL esté en Supabase → Authentication → URL Configuration → Redirect URLs. Si no está en la whitelist, Supabase devuelve error y el email nunca se envía.
+- Flujo correcto: `resetPasswordForEmail(email)` sin redirectTo → `verifyOtp({ email, token, type: "recovery" })` → `updateUser({ password })`.
+- Template del email (Supabase → Authentication → Emails → Reset Password) debe tener `{{ .Token }}` para que aparezca el código numérico.
+- **Skill:** `.claude/skills/recuperacion de senha.md` — tiene el código completo y la configuración de Supabase.
+
+---
+
 ## OPTIMIZACIONES DE RENDIMIENTO APLICADAS
 
 | Componente | Problema | Fix aplicado | Fecha |
 |------------|----------|--------------|-------|
 | `app/category/[slug]/page.tsx` | Era `"use client"` → spinner visible + `window.location.href` hacía reload completo de página | Convertido a Server Component. Usa `getSupabaseAdmin()` server-side + `redirect()` de Next.js. Carga instantánea sin spinner. | 2026-06-09 |
+| `app/profile/page.tsx` + `contexts/SessionContext.tsx` | Primer toque a Perfil mostraba spinner: chunk JS pesado (arrastraba editor de avatar completo) + fetch a Supabase arrancaba recién al montar la página | 1) `lib/profileCache.ts` (nuevo): cache en memoria con `prewarmProfile()` que dispara las queries en background al resolverse la sesión (mientras el usuario está en home). `getCachedProfile()` → render instantáneo sin spinner. `setCachedProfile()` mantiene cache sincronizado tras mutaciones. 2) `AvatarCropModal` pasa a `dynamic` (`next/dynamic`, `ssr:false`) → sale del chunk inicial, se baja solo al tocar "Trocar foto". | 2026-06-18 |
 
 **Patrón de referencia:** Páginas que solo renderizan datos estáticos (listas de links, etc.) deben ser Server Components. El patrón `"use client"` + `useEffect` + spinner es innecesario cuando no hay interactividad.
+
+**Patrón prewarm + stale-while-revalidate:** Para rutas con datos personales (perfil, mis anuncios) que requieren autenticación y son Client Components: precalentar los datos en background al resolverse la sesión (`SessionContext`), servir desde cache en el primer render, revalidar silenciosamente en segundo plano. Sincronizar el cache tras cada mutación local. El editor de avatar (o cualquier modal pesado de uso raro) debe importarse con `next/dynamic` para no inflar el chunk de la ruta.
 
 ---
 
