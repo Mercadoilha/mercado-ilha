@@ -54,26 +54,61 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 
 ---
 
-## CATEGORÍAS (10, todas en Supabase)
+## CATEGORÍAS (28, todas en Supabase)
 
 Tabla `categories` tiene columna `description text` (nullable) — se muestra debajo del
 ícono en la home. Se gestiona desde el tab Categorias del admin.
 
-| # | Categoría | Slug | Ubicación | Botón | Expiración |
-|---|-----------|------|-----------|-------|------------|
-| 1 | Produtos | `produtos` | Fija | Contatar vendedor | 20 días |
-| 2 | Serviços do lar | `servicos-do-lar` | Zonas de atención | Contatar | Sin expiración |
-| 3 | Construção | `construcao` | Zonas de atención | Pedir orçamento | Sin expiración |
-| 4 | Beleza e bem-estar | `beleza-e-bem-estar` | Zonas de atención | Contatar | Sin expiración |
-| 5 | Translados | `translados` | Zonas de atención | Contatar | Sin expiración |
-| 6 | Envios | `envios` | Zonas de atención | Contatar | Sin expiración |
-| 7 | Gastronomia | `gastronomia` | Fija + delivery | Fazer pedido | Sin expiración |
-| 8 | Terrenos | `terrenos` | Fija | Contatar vendedor | 60 días |
-| 9 | Casas | `casas` | Fija | Contatar vendedor | 60 días |
-| 10 | Aluguéis | `alugueis` | Fija | Contatar | 60 días |
-| 11 | Babás | `babas` | — (configurar en admin) | — | — |
+**Fuente de verdad: query directa a Supabase (confirmada 2026-06-18).** El seed original
+`fase-1.sql` solo tenía 10 categorías; las demás se crearon a mano desde el admin y NO
+están en ningún `.sql`. Esta tabla refleja el estado real de la DB en vivo.
 
-**Nota:** Babás (slug `babas`) fue creada manualmente desde el admin. Ícono 🧸 en `SLUG_ICON` de `HomeClient.tsx` como fallback.
+| sort | Categoría | Slug | Ubicación | Expiración | Delivery |
+|---|-----------|------|-----------|------------|----------|
+| 0 | Produtos | `produtos` | Fija | 20 días | — |
+| 1 | Servicios do lar | `servicios-do-lar` | Zonas de atención | — | — |
+| 2 | Transporte de mercadería | `transporte-de-mercaderia` | Zonas de atención | — | — |
+| 3 | Encomendas | `encomendas` | Fija | — | — |
+| 4 | Delivery | `delivery` | Fija | — | ✓ |
+| 5 | Gas | `gas` | Fija | — | — |
+| 6 | Mobilidade e transportes | `mobilidade-e-transportes` | Zonas de atención | — | — |
+| 7 | Aluguéis | `alugueis` | Fija | 60 días | — |
+| 8 | Educação | `educacao` | Fija | — | — |
+| 9 | Babás | `babas` | Fija | — | — |
+| 10 | Esportes | `esportes` | Fija | — | — |
+| 11 | Arte e cultura | `arte-e-cultura` | Fija | — | — |
+| 12 | Beleza e bem-estar | `beleza-e-bem-estar` | Zonas de atención | — | — |
+| 13 | Supermercados | `supermercados` | Fija | — | — |
+| 14 | Restaurantes e bares | `restaurantes-e-bares` | Fija | — | — |
+| 15 | Terrenos | `terrenos` | Fija | 60 días | — |
+| 16 | Casas | `casas` | Fija | 60 días | — |
+| 17 | Fotografía e social media | `fotografia-e-social-media` | Fija | — | — |
+| 18 | Consertos | `consertos` | Fija | — | — |
+| 19 | Veículos | `veiculos` | Fija | — | — |
+| 20 | Construção e Reformas | `construcao-e-reformas` | Fija | — | — |
+| 21 | Bioconstrução | `bioconstrucao` | Fija | — | — |
+| 22 | Saúde | `saude` | Fija | — | — |
+| 23 | Doações | `doacoes` | Fija | — | — |
+| 24 | Empregos e bicos | `empregos-e-bicos` | Fija | — | — |
+| 25 | Serviços Profissionais | `servicos-profissionais` | Fija | — | — |
+| 26 | Experiências turísticas | `experiencias-turisticas` | Fija | — | — |
+| 27 | Copa do mundo 2026 | `copa-do-mundo-2026` | Fija | — | — |
+
+**Botón de contacto:** casi todas usan "Contatar". Excepciones: Produtos/Terrenos/Casas →
+"Contatar vendedor"; Delivery → "Fazer pedido".
+
+**Slugs renombrados respecto del seed `fase-1.sql` original (¡ojo al referenciarlos!):**
+`servicos-do-lar`→`servicios-do-lar` (slug en español), `construcao`→`construcao-e-reformas`,
+`translados`→`mobilidade-e-transportes`, `envios`→`transporte-de-mercaderia`. `gastronomia`
+se dividió en `delivery` + `restaurantes-e-bares`.
+
+**Desactualizado (solo fallback, no crítico):** los mapas `SLUG_ICON` en `HomeClient.tsx` y
+`listings/page.tsx` listan los slugs viejos. Hoy casi no se usan porque la DB guarda el emoji
+en la columna `icon` directamente (solo `babas` lo tiene null).
+
+**Placeholders de publicar/editar:** textos-guía (título, descripción, texto de precio) por
+categoría están hardcodeados en `frontend/lib/categoryPlaceholders.ts` (mapa por slug +
+`DEFAULT_PLACEHOLDERS` de fallback). Si se crea una categoría nueva, agregar su entrada ahí.
 
 **Tipos de ubicación:**
 - `fija`: selector de una sub-zona. Filtro por sub-zona.

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../lib/imageUtils";
+import { getCategoryPlaceholders } from "../../lib/categoryPlaceholders";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -96,6 +97,7 @@ export default function PublishPage() {
 
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
   const locationType = selectedCategory?.location_type ?? "";
+  const ph = getCategoryPlaceholders(selectedCategory?.slug);
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = Array.from(e.target.files ?? []).slice(0, 4 - photos.length);
@@ -326,13 +328,13 @@ export default function PublishPage() {
         {/* Título */}
         <div className="form-group">
           <label className="form-label">Título *</label>
-          <input className="form-input" type="text" placeholder="Ex: iPhone 12 64GB preto" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required />
+          <input className="form-input" type="text" placeholder={ph.title} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required />
         </div>
 
         {/* Descripción */}
         <div className="form-group">
           <label className="form-label">Descrição *</label>
-          <textarea className="form-textarea" placeholder="Descreva o que você está anunciando..." value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
+          <textarea className="form-textarea" placeholder={ph.description} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
         </div>
 
         {/* Precio */}
@@ -345,7 +347,7 @@ export default function PublishPage() {
           {!price && (
             <div className="form-group" style={{ marginTop: 8 }}>
               <label className="form-label">Ou texto de preço</label>
-              <input className="form-input" type="text" placeholder='Ex: "A combinar", "Sob consulta"' value={priceText} onChange={(e) => setPriceText(e.target.value)} maxLength={60} />
+              <input className="form-input" type="text" placeholder={ph.priceText} value={priceText} onChange={(e) => setPriceText(e.target.value)} maxLength={60} />
             </div>
           )}
         </div>

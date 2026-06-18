@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../../../lib/imageUtils";
+import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -121,6 +122,7 @@ export default function EditListingPage() {
 
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
   const locationType = selectedCategory?.location_type ?? "";
+  const ph = getCategoryPlaceholders(selectedCategory?.slug);
   const visibleExisting = existingPhotos.filter((p) => !removedPhotoIds.includes(p.id));
   const totalPhotos = visibleExisting.length + newPhotos.length;
 
@@ -378,13 +380,13 @@ export default function EditListingPage() {
         {/* Título */}
         <div className="form-group">
           <label className="form-label">Título *</label>
-          <input className="form-input" type="text" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required />
+          <input className="form-input" type="text" placeholder={ph.title} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required />
         </div>
 
         {/* Descripción */}
         <div className="form-group">
           <label className="form-label">Descrição *</label>
-          <textarea className="form-textarea" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
+          <textarea className="form-textarea" placeholder={ph.description} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
         </div>
 
         {/* Precio */}
@@ -397,7 +399,7 @@ export default function EditListingPage() {
           {!price && (
             <div className="form-group" style={{ marginTop: 8 }}>
               <label className="form-label">Ou texto de preço</label>
-              <input className="form-input" type="text" placeholder='Ex: "A combinar"' value={priceText} onChange={(e) => setPriceText(e.target.value)} maxLength={60} />
+              <input className="form-input" type="text" placeholder={ph.priceText} value={priceText} onChange={(e) => setPriceText(e.target.value)} maxLength={60} />
             </div>
           )}
         </div>

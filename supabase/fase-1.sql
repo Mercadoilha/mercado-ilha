@@ -339,16 +339,16 @@ insert into public.subzones (locality_id, name, slug, sort_order) values
   on conflict (locality_id, slug) do nothing;
 
 insert into public.categories (name, slug, icon, sort_order, expires_in_days, whatsapp_message, contact_button_text, location_type, has_delivery) values
-  ('Produtos', 'produtos', 'box', 0, 20, 'Olá! Vi seu anúncio de produtos e quero saber mais.', 'Contatar vendedor', 'fija', false),
+  ('Produtos', 'produtos', 'box', 0, null, 'Olá! Vi seu anúncio de produtos e quero saber mais.', 'Contatar vendedor', 'fija', false),
   ('Serviços do lar', 'servicos-do-lar', 'home', 1, null, 'Olá! Vi seu anúncio de serviços do lar e gostaria de mais informações.', 'Contatar', 'zonas_de_atencion', false),
   ('Construção', 'construcao', 'tools', 2, null, 'Olá! Vi seu anúncio de construção: [título]. Gostaria de pedir um orçamento.', 'Pedir orçamento', 'zonas_de_atencion', false),
   ('Beleza e bem-estar', 'beleza-e-bem-estar', 'heart', 3, null, 'Olá! Vi seu anúncio de beleza e bem-estar e gostaria de mais informações.', 'Contatar', 'zonas_de_atencion', false),
   ('Translados', 'translados', 'car', 4, null, 'Olá! Vi seu anúncio de translado e gostaria de saber disponibilidade.', 'Contatar', 'zonas_de_atencion', false),
   ('Envios', 'envios', 'package', 5, null, 'Olá! Vi seu anúncio de envios e preciso de um orçamento.', 'Contatar', 'zonas_de_atencion', false),
   ('Gastronomia', 'gastronomia', 'food', 6, null, 'Olá! Vi seu anúncio de gastronomia e quero fazer um pedido.', 'Fazer pedido', 'fija', true),
-  ('Terrenos', 'terrenos', 'land', 7, 60, 'Olá! Vi seu anúncio de terrenos e quero más información.', 'Contatar vendedor', 'fija', false),
-  ('Casas', 'casas', 'house', 8, 60, 'Olá! Vi seu anúncio de casas e quero saber mais.', 'Contatar vendedor', 'fija', false),
-  ('Aluguéis', 'alugueis', 'rent', 9, 60, 'Olá! Vi seu anúncio de aluguéis e quero mais detalles.', 'Contatar', 'fija', false)
+  ('Terrenos', 'terrenos', 'land', 7, null, 'Olá! Vi seu anúncio de terrenos e quero más información.', 'Contatar vendedor', 'fija', false),
+  ('Casas', 'casas', 'house', 8, null, 'Olá! Vi seu anúncio de casas e quero saber mais.', 'Contatar vendedor', 'fija', false),
+  ('Aluguéis', 'alugueis', 'rent', 9, null, 'Olá! Vi seu anúncio de aluguéis e quero mais detalles.', 'Contatar', 'fija', false)
   on conflict (slug) do nothing;
 
 insert into public.subcategories (category_id, name, slug, sort_order) values
