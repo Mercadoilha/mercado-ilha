@@ -71,6 +71,9 @@ Tabla `categories` tiene columna `description text` (nullable) — se muestra de
 | 8 | Terrenos | `terrenos` | Fija | Contatar vendedor | 60 días |
 | 9 | Casas | `casas` | Fija | Contatar vendedor | 60 días |
 | 10 | Aluguéis | `alugueis` | Fija | Contatar | 60 días |
+| 11 | Babás | `babas` | — (configurar en admin) | — | — |
+
+**Nota:** Babás (slug `babas`) fue creada manualmente desde el admin. Ícono 🧸 en `SLUG_ICON` de `HomeClient.tsx` como fallback.
 
 **Tipos de ubicación:**
 - `fija`: selector de una sub-zona. Filtro por sub-zona.
@@ -151,7 +154,7 @@ Acceso desde perfil: botón "⚙️ Painel de administração" visible solo para
   **Visualización de subcategorías:** tanto en la página pública `/category/[slug]` como en el
   panel admin, las subcategorías muestran siempre una viñeta `•` azul (`#185FA5`) en lugar del
   ícono guardado en la DB. El campo `icon` en la DB sigue existiendo pero no se usa para mostrar.
-  El icon picker del admin tiene un grupo "Esportes" con 🏄 🤿 💪 🎾 (agregado en commit `61ca6c4`).
+  El icon picker del admin tiene un grupo "Esportes" con 🏄 🤿 💪 🎾 (commit `61ca6c4`) y un grupo "Cuidados infantis" con 🧸 👶 🍼 🎠 🎒 (commit `6a1c3f7`).
   **Error handling en reorden:** si el update a Supabase falla (ej. RLS), muestra un `alert`
   con el mensaje de error en lugar de fallar silenciosamente (commit `3e0c5ec`).
 - **Usuários:** búsqueda por nombre/WhatsApp, dar/quitar admin, bloquear/desbloquear
