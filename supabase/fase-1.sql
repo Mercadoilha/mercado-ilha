@@ -1,6 +1,15 @@
 -- FASE 1 — Supabase SQL para Mercado Ilha
 -- Ejecutar este script en Supabase SQL Editor para crear las tablas,
 -- relaciones, políticas RLS y datos iniciales del proyecto.
+--
+-- ⚠️  SEED DESACTUALIZADO — NO ES FUENTE DE VERDAD DE LAS CATEGORÍAS  ⚠️
+-- Este archivo inserta solo 10 categorías. La app tiene 28, creadas a mano
+-- desde el admin y NUNCA volcadas a este .sql. Sus slugs y location_type
+-- difieren de los de aquí (ej. 'envios' → 'transporte-de-mercaderia').
+-- Para conocer categorías, slugs o location_type usar SIEMPRE:
+--   • la DB en vivo (tabla public.categories), o
+--   • MEMORY.md §CATEGORÍAS (tabla sincronizada con la DB).
+-- Cambios de location_type por categoría: ver supabase/fase-10-zonas-atencion.sql.
 
 -- 1) Funciones auxiliares
 create or replace function public.set_updated_at() returns trigger language plpgsql as $$

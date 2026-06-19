@@ -70,11 +70,11 @@ están en ningún `.sql`. Esta tabla refleja el estado real de la DB en vivo.
 | 2 | Transporte de mercadería | `transporte-de-mercaderia` | Zonas de atención | — | — |
 | 3 | Encomendas | `encomendas` | Fija | — | — |
 | 4 | Delivery | `delivery` | Fija | — | ✓ |
-| 5 | Gas | `gas` | Fija | — | — |
+| 5 | Gas | `gas` | Zonas de atención | — | — |
 | 6 | Mobilidade e transportes | `mobilidade-e-transportes` | Zonas de atención | — | — |
 | 7 | Aluguéis | `alugueis` | Fija | 60 días | — |
 | 8 | Educação | `educacao` | Fija | — | — |
-| 9 | Babás | `babas` | Fija | — | — |
+| 9 | Babás | `babas` | Zonas de atención | — | — |
 | 10 | Esportes | `esportes` | Fija | — | — |
 | 11 | Arte e cultura | `arte-e-cultura` | Fija | — | — |
 | 12 | Beleza e bem-estar | `beleza-e-bem-estar` | Zonas de atención | — | — |
@@ -82,12 +82,12 @@ están en ningún `.sql`. Esta tabla refleja el estado real de la DB en vivo.
 | 14 | Restaurantes e bares | `restaurantes-e-bares` | Fija | — | — |
 | 15 | Terrenos | `terrenos` | Fija | 60 días | — |
 | 16 | Casas | `casas` | Fija | 60 días | — |
-| 17 | Fotografía e social media | `fotografia-e-social-media` | Fija | — | — |
-| 18 | Consertos | `consertos` | Fija | — | — |
+| 17 | Fotografía e social media | `fotografia-e-social-media` | Zonas de atención | — | — |
+| 18 | Consertos | `consertos` | Zonas de atención | — | — |
 | 19 | Veículos | `veiculos` | Fija | — | — |
-| 20 | Construção e Reformas | `construcao-e-reformas` | Fija | — | — |
-| 21 | Bioconstrução | `bioconstrucao` | Fija | — | — |
-| 22 | Saúde | `saude` | Fija | — | — |
+| 20 | Construção e Reformas | `construcao-e-reformas` | Zonas de atención | — | — |
+| 21 | Bioconstrução | `bioconstrucao` | Zonas de atención | — | — |
+| 22 | Saúde | `saude` | Zonas de atención | — | — |
 | 23 | Doações | `doacoes` | Fija | — | — |
 | 24 | Empregos e bicos | `empregos-e-bicos` | Fija | — | — |
 | 25 | Serviços Profissionais | `servicos-profissionais` | Fija | — | — |
@@ -110,10 +110,16 @@ en la columna `icon` directamente (solo `babas` lo tiene null).
 categoría están hardcodeados en `frontend/lib/categoryPlaceholders.ts` (mapa por slug +
 `DEFAULT_PLACEHOLDERS` de fallback). Si se crea una categoría nueva, agregar su entrada ahí.
 
-**Tipos de ubicación:**
-- `fija`: selector de una sub-zona. Filtro por sub-zona.
-- `zonas_de_atencion`: el prestador marca sub-zonas donde trabaja + checkbox
-  "Atendo em toda a ilha".
+**Tipos de ubicación (fase-10):**
+- `fija`: una localidad + **una** sub-zona (select único). `locality_id` + `subzone_id` en
+  `listings`. Filtro por localidad.
+- `zonas_de_atencion`: la prestadora se traslada → marca **varias** sub-zonas (checkboxes
+  agrupados por localidad, con "Todas as subzonas de X" por localidad) **o** "Atendo em toda
+  a ilha". Las sub-zonas se persisten en `listing_service_zones` (no en `subzone_id`).
+  `covers_all_island=true` → sin filas en esa tabla; `locality_id` queda null (es nullable
+  desde fase-10). Si elige zonas, `locality_id` guarda la localidad de la 1ª zona (representativa).
+  El filtro por localidad incluye estos anuncios vía join a `listing_service_zones`.
+  11 categorías son de este tipo (ver tabla §CATEGORÍAS).
 - `sin_ubicacion`: sin campo de ubicación.
 
 ---

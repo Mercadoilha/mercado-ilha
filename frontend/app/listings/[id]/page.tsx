@@ -23,6 +23,7 @@ export default function ListingDetailPage() {
   const [subcategory, setSubcategory] = useState<any>(null);
   const [locality, setLocality] = useState<any>(null);
   const [subzone, setSubzone] = useState<any>(null);
+  const [serviceZones, setServiceZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -93,17 +94,22 @@ export default function ListingDetailPage() {
       // Datos secundarios en paralelo (dependen de la query principal):
       // - seller público (nombre + avatar, sin teléfono)
       // - subzone aparte (subzone_id no tiene FK → join PostgREST no disponible)
-      const [sellerRes, subzoneRes] = await Promise.all([
+      const needsZones = full.location_type === "zonas_de_atencion" && !full.covers_all_island;
+      const [sellerRes, subzoneRes, zonesRes] = await Promise.all([
         full.user_id
           ? supabase.from("profiles_public").select("id,full_name,avatar_url").eq("id", full.user_id).single()
           : Promise.resolve({ data: null }),
         full.subzone_id
           ? supabase.from("subzones").select("id,name").eq("id", full.subzone_id).single()
           : Promise.resolve({ data: null }),
+        needsZones
+          ? supabase.from("listing_service_zones").select("subzones(name, locality_id, localities(name))").eq("listing_id", listingId)
+          : Promise.resolve({ data: [] }),
       ]);
       if (!mounted) return;
       setSeller(sellerRes.data ?? null);
       setSubzone(subzoneRes.data ?? null);
+      setServiceZones(zonesRes.data ?? []);
     }
 
     load();
@@ -431,9 +437,27 @@ export default function ListingDetailPage() {
           <span style={{ fontSize: "1.1rem", marginTop: 1 }}>📍</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--blue-main)" }}>
-              {locality?.name ?? "Tinharé"}
-              {subzone && ` · ${subzone.name}`}
-              {listing.covers_all_island && " · Toda a ilha"}
+              {listing.location_type === "zonas_de_atencion"
+                ? listing.covers_all_island
+                  ? "Toda a ilha"
+                  : (() => {
+                      const byLoc = new Map<string, string[]>();
+                      for (const r of serviceZones) {
+                        const lname = r.subzones?.localities?.name ?? "—";
+                        const zname = r.subzones?.name;
+                        if (!zname) continue;
+                        if (!byLoc.has(lname)) byLoc.set(lname, []);
+                        byLoc.get(lname)!.push(zname);
+                      }
+                      const parts = Array.from(byLoc.entries()).map(([l, zs]) => `${l} (${zs.join(", ")})`);
+                      return parts.length ? `Atende: ${parts.join(" · ")}` : "Zonas de atendimento";
+                    })()
+                : (
+                  <>
+                    {locality?.name ?? "Tinharé"}
+                    {subzone && ` · ${subzone.name}`}
+                  </>
+                )}
             </div>
             {listing.other_location_text && (
               <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>

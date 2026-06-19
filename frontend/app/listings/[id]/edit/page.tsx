@@ -10,7 +10,7 @@ import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
 type Locality = { id: number; name: string };
-type Subzone = { id: number; name: string };
+type Subzone = { id: number; name: string; locality_id: number };
 type ExistingPhoto = { id: number; photo_url: string; storage_path: string | null; sort_order: number };
 
 export default function EditListingPage() {
@@ -28,13 +28,14 @@ export default function EditListingPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [localities, setLocalities] = useState<Locality[]>([]);
-  const [subzones, setSubzones] = useState<Subzone[]>([]);
+  const [allSubzones, setAllSubzones] = useState<Subzone[]>([]);
 
   // Form fields
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [localityId, setLocalityId] = useState("");
   const [subzoneId, setSubzoneId] = useState("");
+  const [serviceZoneIds, setServiceZoneIds] = useState<number[]>([]);
   const [otherLocation, setOtherLocation] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -69,6 +70,7 @@ export default function EditListingPage() {
   useEffect(() => {
     supabase.from("categories").select("id,name,slug,location_type,contact_button_text,whatsapp_message,expires_in_days").eq("is_active", true).order("sort_order").then(({ data }) => setCategories(data ?? []));
     supabase.from("localities").select("id,name").eq("is_active", true).order("sort_order").then(({ data }) => setLocalities(data ?? []));
+    supabase.from("subzones").select("id,name,locality_id").eq("is_active", true).order("sort_order").then(({ data }) => setAllSubzones(data ?? []));
   }, []);
 
   // Load listing data once session is ready
@@ -98,6 +100,10 @@ export default function EditListingPage() {
       setCondition(data.condition ?? "");
       setCoversAllIsland(data.covers_all_island ?? false);
 
+      // Precargar zonas de atención (categorías que se trasladan al cliente)
+      const { data: zones } = await supabase.from("listing_service_zones").select("subzone_id").eq("listing_id", listingId);
+      setServiceZoneIds((zones ?? []).map((z: any) => z.subzone_id));
+
       const photos = [...(data.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       setExistingPhotos(photos);
       setDataLoading(false);
@@ -113,16 +119,22 @@ export default function EditListingPage() {
       .then(({ data }) => setSubcategories(data ?? []));
   }, [categoryId]);
 
-  // Load subzones when locality changes
-  useEffect(() => {
-    if (!localityId) { setSubzones([]); setSubzoneId(""); return; }
-    supabase.from("subzones").select("id,name").eq("locality_id", Number(localityId)).eq("is_active", true).order("sort_order")
-      .then(({ data }) => setSubzones(data ?? []));
-  }, [localityId]);
-
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
   const locationType = selectedCategory?.location_type ?? "";
   const ph = getCategoryPlaceholders(selectedCategory?.slug);
+
+  // Sub-zonas de la localidad seleccionada (path "fija")
+  const localitySubzones = localityId ? allSubzones.filter((z) => z.locality_id === Number(localityId)) : [];
+
+  const toggleServiceZone = (id: number) =>
+    setServiceZoneIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleLocalityZones = (localityZoneIds: number[], allSelected: boolean) =>
+    setServiceZoneIds((prev) =>
+      allSelected
+        ? prev.filter((x) => !localityZoneIds.includes(x))
+        : Array.from(new Set([...prev, ...localityZoneIds]))
+    );
   const visibleExisting = existingPhotos.filter((p) => !removedPhotoIds.includes(p.id));
   const totalPhotos = visibleExisting.length + newPhotos.length;
 
@@ -156,17 +168,46 @@ export default function EditListingPage() {
     setSubmitting(true);
     setError(null);
 
-    if (!categoryId || !localityId || !title.trim() || !description.trim()) {
+    if (!categoryId || !title.trim() || !description.trim()) {
       setError("Preencha todos os campos obrigatórios.");
       setSubmitting(false);
       return;
     }
 
-    const needsSubzone = locationType === "fija" && !coversAllIsland;
-    if (needsSubzone && !subzoneId) {
-      setError("Selecione a sub-zona.");
-      setSubmitting(false);
-      return;
+    const isZonas = locationType === "zonas_de_atencion";
+    if (isZonas) {
+      if (!coversAllIsland && serviceZoneIds.length === 0) {
+        setError("Selecione ao menos uma zona de atendimento ou marque \"toda a ilha\".");
+        setSubmitting(false);
+        return;
+      }
+    } else if (locationType === "fija") {
+      if (!localityId) {
+        setError("Selecione a localidade.");
+        setSubmitting(false);
+        return;
+      }
+      if (!subzoneId) {
+        setError("Selecione a sub-zona.");
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Resolver ubicación según el tipo de categoría
+    let localityIdToSave: number | null;
+    let subzoneIdToSave: number | null;
+    let otherText: string | null;
+    if (isZonas) {
+      const firstZone = allSubzones.find((z) => z.id === serviceZoneIds[0]);
+      localityIdToSave = coversAllIsland ? null : firstZone?.locality_id ?? null;
+      subzoneIdToSave = null;
+      otherText = null;
+    } else {
+      localityIdToSave = localityId ? Number(localityId) : null;
+      subzoneIdToSave = subzoneId ? Number(subzoneId) : null;
+      const selZone = localitySubzones.find((z) => z.id === Number(subzoneId));
+      otherText = selZone?.name === "Outros" ? otherLocation.trim() || null : null;
     }
 
     // Update listing
@@ -175,9 +216,9 @@ export default function EditListingPage() {
       .update({
         category_id: Number(categoryId),
         subcategory_id: subcategoryId ? Number(subcategoryId) : null,
-        locality_id: Number(localityId),
-        subzone_id: subzoneId ? Number(subzoneId) : null,
-        other_location_text: subzoneId === "outros" ? otherLocation : null,
+        locality_id: localityIdToSave,
+        subzone_id: subzoneIdToSave,
+        other_location_text: otherText,
         title: title.trim(),
         description: description.trim(),
         price: price ? Number(price.replace(",", ".")) : null,
@@ -185,7 +226,7 @@ export default function EditListingPage() {
         condition: condition || null,
         contact_button_text: selectedCategory?.contact_button_text ?? "Contatar",
         location_type: locationType || "fija",
-        covers_all_island: coversAllIsland,
+        covers_all_island: isZonas ? coversAllIsland : false,
       })
       .eq("id", listingId)
       .eq("user_id", session.user.id);
@@ -194,6 +235,14 @@ export default function EditListingPage() {
       setError(updErr.message ?? "Erro ao salvar. Tente novamente.");
       setSubmitting(false);
       return;
+    }
+
+    // Sincronizar zonas de atención: borrar e reinsertar
+    await supabase.from("listing_service_zones").delete().eq("listing_id", listingId);
+    if (isZonas && !coversAllIsland && serviceZoneIds.length > 0) {
+      await supabase.from("listing_service_zones").insert(
+        serviceZoneIds.map((zid) => ({ listing_id: listingId, subzone_id: zid }))
+      );
     }
 
     // Delete removed photos
@@ -417,45 +466,75 @@ export default function EditListingPage() {
           </div>
         )}
 
-        {/* Localidade */}
-        <div className="form-group">
-          <label className="form-label">Localidade *</label>
-          <select className="form-select" value={localityId} onChange={(e) => setLocalityId(e.target.value)} required>
-            <option value="">Selecione a localidade...</option>
-            {localities.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        </div>
+        {/* ── Ubicación tipo FIJA: una localidad + una sub-zona ── */}
+        {locationType !== "zonas_de_atencion" && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Localidade *</label>
+              <select className="form-select" value={localityId} onChange={(e) => { setLocalityId(e.target.value); setSubzoneId(""); }} required>
+                <option value="">Selecione a localidade...</option>
+                {localities.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
 
-        {/* Toda a ilha */}
+            {localityId && localitySubzones.length > 0 && (
+              <div className="form-group">
+                <label className="form-label">Sub-zona *</label>
+                <select className="form-select" value={subzoneId} onChange={(e) => setSubzoneId(e.target.value)} required>
+                  <option value="">Selecione...</option>
+                  {localitySubzones.map((z) => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {subzoneId && localitySubzones.find((z) => z.id === Number(subzoneId))?.name === "Outros" && (
+              <div className="form-group">
+                <label className="form-label">Referência da localização</label>
+                <input className="form-input" type="text" placeholder='Ex: "Perto da Pousada Sol"' value={otherLocation} onChange={(e) => setOtherLocation(e.target.value)} maxLength={120} />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Ubicación tipo ZONAS DE ATENCIÓN: múltiples sub-zonas o toda a ilha ── */}
         {locationType === "zonas_de_atencion" && (
-          <label style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem" }}>
-            <input type="checkbox" checked={coversAllIsland} onChange={(e) => setCoversAllIsland(e.target.checked)} style={{ width: 18, height: 18 }} />
-            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Atendo em toda a ilha</span>
-          </label>
-        )}
-
-        {/* Subzona */}
-        {localityId && subzones.length > 0 && !coversAllIsland && (
           <div className="form-group">
-            <label className="form-label">
-              {locationType === "zonas_de_atencion" ? "Zonas de atendimento" : "Sub-zona *"}
+            <label className="form-label">Zonas de atendimento *</label>
+            <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: -4, marginBottom: 8 }}>
+              Marque apenas as zonas onde você atende.
+            </p>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", marginBottom: 10 }}>
+              <input type="checkbox" checked={coversAllIsland} onChange={(e) => setCoversAllIsland(e.target.checked)} style={{ width: 18, height: 18 }} />
+              <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Atendo em toda a ilha</span>
             </label>
-            <select className="form-select" value={subzoneId} onChange={(e) => setSubzoneId(e.target.value)} required={locationType === "fija"}>
-              <option value="">Selecione...</option>
-              {subzones.map((z) => (
-                <option key={z.id} value={z.id}>{z.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
 
-        {/* Outros */}
-        {subzoneId && subzones.find((z) => z.id === Number(subzoneId))?.name === "Outros" && (
-          <div className="form-group">
-            <label className="form-label">Referência da localização</label>
-            <input className="form-input" type="text" placeholder='Ex: "Perto da Pousada Sol"' value={otherLocation} onChange={(e) => setOtherLocation(e.target.value)} maxLength={120} />
+            {!coversAllIsland && localities.map((loc) => {
+              const zones = allSubzones.filter((z) => z.locality_id === loc.id);
+              if (zones.length === 0) return null;
+              const zoneIds = zones.map((z) => z.id);
+              const allSelected = zoneIds.every((id) => serviceZoneIds.includes(id));
+              return (
+                <div key={loc.id} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", marginBottom: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "0.88rem", color: "var(--blue-main)", marginBottom: 6, cursor: "pointer" }}>
+                    <input type="checkbox" checked={allSelected} onChange={() => toggleLocalityZones(zoneIds, allSelected)} style={{ width: 16, height: 16 }} />
+                    {loc.name} <span style={{ fontWeight: 500, color: "var(--text-muted)", fontSize: "0.78rem" }}>(todas)</span>
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingLeft: 24 }}>
+                    {zones.map((z) => (
+                      <label key={z.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem", cursor: "pointer" }}>
+                        <input type="checkbox" checked={serviceZoneIds.includes(z.id)} onChange={() => toggleServiceZone(z.id)} style={{ width: 15, height: 15 }} />
+                        {z.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

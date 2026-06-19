@@ -87,7 +87,17 @@ function ListingsContent() {
       if (subcategoryIdParam) query = query.eq("subcategory_id", Number(subcategoryIdParam));
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       if (conditionFilter) query = query.eq("condition", conditionFilter);
-      if (zoneFilter) query = query.eq("locality_id", zoneFilter);
+      if (zoneFilter) {
+        // Incluye: base en la localidad, "toda a ilha", o que atienda alguna sub-zona de la localidad
+        const { data: zoneRows } = await supabase
+          .from("listing_service_zones")
+          .select("listing_id, subzones!inner(locality_id)")
+          .eq("subzones.locality_id", zoneFilter);
+        const ids = Array.from(new Set((zoneRows ?? []).map((r: any) => r.listing_id)));
+        const ors = [`locality_id.eq.${zoneFilter}`, "covers_all_island.eq.true"];
+        if (ids.length) ors.push(`id.in.(${ids.join(",")})`);
+        query = query.or(ors.join(","));
+      }
 
       if (sortBy === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
       else if (sortBy === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
