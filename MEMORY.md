@@ -69,7 +69,7 @@ están en ningún `.sql`. Esta tabla refleja el estado real de la DB en vivo.
 | 1 | Servicios do lar | `servicios-do-lar` | Zonas de atención | — | — |
 | 2 | Transporte de mercadería | `transporte-de-mercaderia` | Zonas de atención | — | — |
 | 3 | Encomendas | `encomendas` | Fija | — | — |
-| 4 | Delivery | `delivery` | Fija | — | ✓ |
+| 4 | Delivery | `delivery` | Zonas de atención | — | ✓ |
 | 5 | Gas | `gas` | Zonas de atención | — | — |
 | 6 | Mobilidade e transportes | `mobilidade-e-transportes` | Zonas de atención | — | — |
 | 7 | Aluguéis | `alugueis` | Fija | 60 días | — |
@@ -119,7 +119,9 @@ categoría están hardcodeados en `frontend/lib/categoryPlaceholders.ts` (mapa p
   `covers_all_island=true` → sin filas en esa tabla; `locality_id` queda null (es nullable
   desde fase-10). Si elige zonas, `locality_id` guarda la localidad de la 1ª zona (representativa).
   El filtro por localidad incluye estos anuncios vía join a `listing_service_zones`.
-  11 categorías son de este tipo (ver tabla §CATEGORÍAS).
+  12 categorías son de este tipo (ver tabla §CATEGORÍAS). En **Delivery** las zonas
+  representan a dónde entrega (su mecanismo `category_delivery_prices`/`delivery_data`
+  existe en DB pero nunca se cableó a la UI).
 - `sin_ubicacion`: sin campo de ubicación.
 
 ---
