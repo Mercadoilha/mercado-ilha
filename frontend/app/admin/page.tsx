@@ -1033,7 +1033,7 @@ function Categories() {
             {sections.map((sec, secIdx) => (
               <div key={sec.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.625rem", background: "#f8fafc", borderRadius: 8, border: "1px solid var(--border)" }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", minWidth: 22 }}>#{sec.id}</span>
-                {editingSection?.id === sec.id ? (
+                {editingSection !== null && editingSection.id === sec.id ? (
                   <>
                     <input className="form-input" type="text" value={editingSection.title}
                       onChange={(e) => setEditingSection((p) => p ? { ...p, title: e.target.value } : p)}
