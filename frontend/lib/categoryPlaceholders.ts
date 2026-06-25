@@ -119,12 +119,6 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva o imóvel: tamanho, quartos e banheiros, estado de conservação e o que inclui (quintal, garagem, mobília). Informe localização, valor ou se é sob consulta e condições de pagamento.",
     priceText: 'Ex: "R$ 350.000", "Sob consulta"',
   },
-  "fotografia-e-social-media": {
-    title: "Ex: Ensaio fotográfico na praia",
-    description:
-      "Descreva o serviço: tipo de trabalho (ensaio, evento, social media), o que inclui (fotos editadas, tempo, entrega) e seu portfólio. Informe valores ou pacotes, disponibilidade e formas de pagamento.",
-    priceText: 'Ex: "Pacote a partir de R$ 120", "Sob orçamento"',
-  },
   consertos: {
     title: "Ex: Conserto de celulares e eletrônicos",
     description:
@@ -179,11 +173,35 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva a experiência: roteiro, duração, o que inclui (transporte, guia, alimentação), ponto de saída e número de pessoas. Informe valores por pessoa, datas/horários e formas de pagamento.",
     priceText: 'Ex: "R$ 300 por pessoa", "Crianças grátis"',
   },
-  "copa-do-mundo-2026": {
-    title: "Ex: Telão para os jogos do Brasil",
+  internet: {
+    title: "Ex: Instalação de internet e Wi-Fi",
     description:
-      "Descreva o local ou evento: onde será a transmissão, estrutura (telão, som, ambiente), jogos que vai passar e se tem comida e bebida. Informe horários, se precisa reserva e formas de pagamento.",
-    priceText: 'Ex: "Entrada gratuita", "Couvert R$ 20"',
+      "Descreva o serviço: tipo de conexão oferecida, velocidade, equipamentos incluídos e área de cobertura. Informe planos, mensalidade ou taxa de instalação, disponibilidade e formas de pagamento.",
+    priceText: 'Ex: "R$ 120/mês", "Taxa de instalação R$ 80"',
+  },
+  "agua-para-beber": {
+    title: "Ex: Entrega de galão de água mineral",
+    description:
+      "Descreva o produto: marca, tamanho (galão 20L, garrafão 5L, etc.) e área de entrega. Informe o valor por unidade, disponibilidade, horários de entrega e formas de pagamento.",
+    priceText: 'Ex: "R$ 12 o galão", "A combinar"',
+  },
+  beleza: {
+    title: "Ex: Corte, escova e tintura a domicílio",
+    description:
+      "Descreva o serviço: o que inclui, produtos utilizados, sua experiência e se atende no local ou a domicílio. Informe valores por procedimento, disponibilidade e formas de pagamento.",
+    priceText: 'Ex: "R$ 50 o corte", "A partir de R$ 80"',
+  },
+  lojas: {
+    title: "Ex: Loja de roupas e acessórios",
+    description:
+      "Descreva a loja ou produto: o que vende, marcas disponíveis, formas de atendimento (loja física, delivery ou encomenda). Informe horários de funcionamento, localização e formas de pagamento.",
+    priceText: 'Ex: "A partir de R$ 30", "Consulte disponibilidade"',
+  },
+  mercados: {
+    title: "Ex: Mercadinho com produtos frescos",
+    description:
+      "Descreva o estabelecimento ou produto: o que comercializa, se tem delivery ou retirada no local, horários de funcionamento e localização. Informe valores ou formas de consulta de preços.",
+    priceText: 'Ex: "Preços variados", "Consulte disponibilidade"',
   },
 };
 

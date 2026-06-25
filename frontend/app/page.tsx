@@ -25,7 +25,7 @@ export default async function Home() {
       .limit(10),
     admin
       .from("categories")
-      .select("id,name,slug,icon,description")
+      .select("id,name,slug,icon,description,home_section_id,home_sections(id,title,sort_order,is_featured_block)")
       .eq("is_active", true)
       .order("sort_order"),
     admin

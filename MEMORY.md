@@ -54,61 +54,81 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 
 ---
 
-## CATEGORÍAS (28, todas en Supabase)
+## CATEGORÍAS (29 activas en Supabase, actualizado 2026-06-24)
 
-Tabla `categories` tiene columna `description text` (nullable) — se muestra debajo del
-ícono en la home. Se gestiona desde el tab Categorias del admin.
+Tabla `categories` tiene columna `description text` (nullable) y `home_section_id` (FK a
+`home_sections`). Se gestiona desde el tab Categorias del admin.
 
-**Fuente de verdad: query directa a Supabase (confirmada 2026-06-18).** El seed original
-`fase-1.sql` solo tenía 10 categorías; las demás se crearon a mano desde el admin y NO
-están en ningún `.sql`. Esta tabla refleja el estado real de la DB en vivo.
+**Cambios 2026-06-24:** eliminadas `Fotografía e social media`, `Copa do mundo 2026`,
+`Supermercados`, `Beleza e bem-estar`. Creadas: `Internet`, `Água para beber`, `Beleza`,
+`Lojas`, `Mercados`.
 
-| sort | Categoría | Slug | Ubicación | Expiración | Delivery |
-|---|-----------|------|-----------|------------|----------|
-| 0 | Produtos | `produtos` | Fija | 20 días | — |
-| 1 | Servicios do lar | `servicios-do-lar` | Zonas de atención | — | — |
-| 2 | Transporte de mercadería | `transporte-de-mercaderia` | Zonas de atención | — | — |
-| 3 | Encomendas | `encomendas` | Fija | — | — |
-| 4 | Delivery | `delivery` | Zonas de atención | — | ✓ |
-| 5 | Gas | `gas` | Zonas de atención | — | — |
-| 6 | Mobilidade e transportes | `mobilidade-e-transportes` | Zonas de atención | — | — |
-| 7 | Aluguéis | `alugueis` | Fija | 60 días | — |
-| 8 | Educação | `educacao` | Fija | — | — |
-| 9 | Babás | `babas` | Zonas de atención | — | — |
-| 10 | Esportes | `esportes` | Fija | — | — |
-| 11 | Arte e cultura | `arte-e-cultura` | Fija | — | — |
-| 12 | Beleza e bem-estar | `beleza-e-bem-estar` | Zonas de atención | — | — |
-| 13 | Supermercados | `supermercados` | Fija | — | — |
-| 14 | Restaurantes e bares | `restaurantes-e-bares` | Fija | — | — |
-| 15 | Terrenos | `terrenos` | Fija | 60 días | — |
-| 16 | Casas | `casas` | Fija | 60 días | — |
-| 17 | Fotografía e social media | `fotografia-e-social-media` | Zonas de atención | — | — |
-| 18 | Consertos | `consertos` | Zonas de atención | — | — |
-| 19 | Veículos | `veiculos` | Fija | — | — |
-| 20 | Construção e Reformas | `construcao-e-reformas` | Zonas de atención | — | — |
-| 21 | Bioconstrução | `bioconstrucao` | Zonas de atención | — | — |
-| 22 | Saúde | `saude` | Zonas de atención | — | — |
-| 23 | Doações | `doacoes` | Fija | — | — |
-| 24 | Empregos e bicos | `empregos-e-bicos` | Fija | — | — |
-| 25 | Serviços Profissionais | `servicos-profissionais` | Fija | — | — |
-| 26 | Experiências turísticas | `experiencias-turisticas` | Fija | — | — |
-| 27 | Copa do mundo 2026 | `copa-do-mundo-2026` | Fija | — | — |
+| Categoría | Slug |
+|-----------|------|
+| Produtos | `produtos` |
+| Serviços do lar | `servicios-do-lar` |
+| Transporte de mercadoria | `transporte-de-mercaderia` |
+| Encomendas | `encomendas` |
+| Delivery | `delivery` |
+| Gas | `gas` |
+| Mobilidade e transportes | `mobilidade-e-transportes` |
+| Aluguéis | `alugueis` |
+| Educação | `educacao` |
+| Babás | `babas` |
+| Esportes | `esportes` |
+| Arte e cultura | `arte-e-cultura` |
+| Restaurantes e bares | `restaurantes-e-bares` |
+| Terrenos | `terrenos` |
+| Casas | `casas` |
+| Consertos | `consertos` |
+| Veículos | `veiculos` |
+| Construção e Reformas | `construcao-e-reformas` |
+| Bioconstrução | `bioconstrucao` |
+| Saúde | `saude` |
+| Doações | `doacoes` |
+| Empregos e bicos | `empregos-e-bicos` |
+| Serviços Profissionais | `servicos-profissionais` |
+| Experiências turísticas | `experiencias-turisticas` |
+| Internet | `internet` |
+| Água para beber | `agua-para-beber` |
+| Beleza | `beleza` |
+| Lojas | `lojas` |
+| Mercados | `mercados` |
 
 **Botón de contacto:** casi todas usan "Contatar". Excepciones: Produtos/Terrenos/Casas →
 "Contatar vendedor"; Delivery → "Fazer pedido".
 
-**Slugs renombrados respecto del seed `fase-1.sql` original (¡ojo al referenciarlos!):**
-`servicos-do-lar`→`servicios-do-lar` (slug en español), `construcao`→`construcao-e-reformas`,
-`translados`→`mobilidade-e-transportes`, `envios`→`transporte-de-mercaderia`. `gastronomia`
-se dividió en `delivery` + `restaurantes-e-bares`.
+**Placeholders de publicar/editar:** textos-guía por categoría en
+`frontend/lib/categoryPlaceholders.ts` (mapa por slug + `DEFAULT_PLACEHOLDERS` fallback).
+Si se crea una categoría nueva en el admin, agregar su entrada ahí.
 
-**Desactualizado (solo fallback, no crítico):** los mapas `SLUG_ICON` en `HomeClient.tsx` y
-`listings/page.tsx` listan los slugs viejos. Hoy casi no se usan porque la DB guarda el emoji
-en la columna `icon` directamente (solo `babas` lo tiene null).
+## SECCIONES DEL HOME (tabla home_sections, creada y ejecutada 2026-06-24)
 
-**Placeholders de publicar/editar:** textos-guía (título, descripción, texto de precio) por
-categoría están hardcodeados en `frontend/lib/categoryPlaceholders.ts` (mapa por slug +
-`DEFAULT_PLACEHOLDERS` de fallback). Si se crea una categoría nueva, agregar su entrada ahí.
+Nueva tabla `home_sections` — `supabase/fase-11-home-sections.sql` ✅ ejecutado en Supabase.
+Controla cómo se agrupan las categorías en el home. Categoría con `home_section_id = null`
+no aparece.
+
+- `is_featured_block = true` → Bloque 1 (botones rectangulares horizontales, lista)
+- `is_featured_block = false` → Bloque 2 (secciones temáticas con grid 3 col, wrap)
+
+| #ID | Sección | Tipo |
+|-----|---------|------|
+| 1 | Destacadas | featured |
+| 2 | Logística | temática |
+| 3 | Serviços para sua casa | temática |
+| 4 | Educação e família | temática |
+| 5 | Cuidado Pessoal | temática |
+| 6 | Arte, esporte e lazer | temática |
+| 7 | Comércio local | temática |
+| 8 | Renove o que é seu | temática |
+| 9 | Compre seu veículo | temática |
+| 10 | Imóveis | temática |
+| 11 | Construção e Reformas | temática |
+| 12 | Profissionais certificados | temática |
+
+**Admin:** tab Categorias → panel colapsable "Seções do home" para crear/renombrar/
+reordenar secciones. Cada categoría muestra badge `#N` con su sección. El form de
+edición (panel expandido) tiene selector de sección.
 
 **Tipos de ubicación (fase-10):**
 - `fija`: una localidad + **una** sub-zona (select único). `locality_id` + `subzone_id` en
@@ -135,7 +155,8 @@ categoría están hardcodeados en `frontend/lib/categoryPlaceholders.ts` (mapa p
 - **Layout anuncios:** LISTA vertical de cards horizontales (miniatura 80x80px
   izquierda + título, precio, descripción, favorito derecha). NO grilla.
 - **Home:** header azul → búsqueda autocomplete (`BuscaAutocomplete`) → BannerRotativo
-  → 10 categorías (3 por fila) → anuncios recientes → **Tabela de Marés** → Fale conosco.
+  → **Categorias Destacadas** (5 botones rectangulares, lista vertical) → **Secciones temáticas**
+  (11 secciones con títulos, grid 3 col) → anuncios recientes → **Tabela de Marés** → Fale conosco.
 - **Búsqueda autocomplete:** Componente `BuscaAutocomplete.tsx`. Debounce 300ms,
   AbortController para cancelar requests en vuelo, cache en memoria por query,
   consultas paralelas (listings + categories + subcategories), skeleton loading,

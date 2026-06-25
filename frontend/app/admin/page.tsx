@@ -772,7 +772,7 @@ function Categories() {
   const [pickingNewCatIcon, setPickingNewCatIcon] = useState(false);
 
   // Edit category
-  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string; description: string } | null>(null);
+  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string; description: string; sectionId: number | null } | null>(null);
   const [editingCatSaving, setEditingCatSaving] = useState(false);
 
   // New subcategory form
@@ -786,9 +786,24 @@ function Categories() {
   const [editingSub, setEditingSub] = useState<{ id: number; catId: number; name: string } | null>(null);
   const [editingSubSaving, setEditingSubSaving] = useState(false);
 
+  // Sections management
+  const [sections, setSections] = useState<any[]>([]);
+  const [showSections, setShowSections] = useState(false);
+  const [showNewSection, setShowNewSection] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [newSectionSaving, setNewSectionSaving] = useState(false);
+  const [editingSection, setEditingSection] = useState<{ id: number; title: string } | null>(null);
+  const [editingSectionSaving, setEditingSectionSaving] = useState(false);
+
   useEffect(() => {
-    supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description,sort_order").order("sort_order")
-      .then(({ data }) => { setCategories(data ?? []); setLoading(false); });
+    Promise.all([
+      supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description,sort_order,home_section_id").order("sort_order"),
+      supabase.from("home_sections").select("id,title,sort_order,is_featured_block").order("sort_order"),
+    ]).then(([{ data: cats }, { data: secs }]) => {
+      setCategories(cats ?? []);
+      setSections(secs ?? []);
+      setLoading(false);
+    });
   }, []);
 
   const toSlug = (name: string) => name.toLowerCase()
@@ -843,6 +858,51 @@ function Categories() {
   };
 
   const flash = (text: string) => { setMsg(text); setTimeout(() => setMsg(""), 2500); };
+
+  // ── Section management ──
+  const addSection = async () => {
+    if (!newSectionTitle.trim()) { flash("Informe o título da seção."); return; }
+    setNewSectionSaving(true);
+    const { data, error } = await supabase.from("home_sections").insert({
+      title: newSectionTitle.trim(), sort_order: sections.length, is_featured_block: false,
+    }).select().single();
+    if (!error && data) { setSections((p) => [...p, data]); setNewSectionTitle(""); setShowNewSection(false); flash("Seção criada."); }
+    else flash("Erro: " + error?.message);
+    setNewSectionSaving(false);
+  };
+
+  const saveEditSection = async () => {
+    if (!editingSection || !editingSection.title.trim()) { flash("Informe o título."); return; }
+    setEditingSectionSaving(true);
+    const { error } = await supabase.from("home_sections").update({ title: editingSection.title.trim() }).eq("id", editingSection.id);
+    if (!error) { setSections((p) => p.map((s) => s.id === editingSection.id ? { ...s, title: editingSection.title.trim() } : s)); setEditingSection(null); flash("Seção atualizada."); }
+    else flash("Erro: " + error.message);
+    setEditingSectionSaving(false);
+  };
+
+  const deleteSection = async (sectionId: number) => {
+    if (!confirm("Deletar esta seção? As categorias associadas ficarão sem seção.")) return;
+    const { error } = await supabase.from("home_sections").delete().eq("id", sectionId);
+    if (!error) { setSections((p) => p.filter((s) => s.id !== sectionId)); flash("Seção deletada."); }
+    else flash("Erro: " + error.message);
+  };
+
+  const moveSection = async (idx: number, dir: -1 | 1) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const next = [...sections];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    const results = await Promise.all(next.map((s, i) => supabase.from("home_sections").update({ sort_order: i }).eq("id", s.id)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) { alert("Erro ao reordenar: " + failed.error.message); return; }
+    setSections(next.map((s, i) => ({ ...s, sort_order: i })));
+  };
+
+  const assignSection = async (catId: number, sectionId: number | null) => {
+    const { error } = await supabase.from("categories").update({ home_section_id: sectionId }).eq("id", catId);
+    if (!error) setCategories((p) => p.map((c) => c.id === catId ? { ...c, home_section_id: sectionId } : c));
+    else flash("Erro: " + error.message);
+  };
 
   const saveCatIcon = async (catId: number, icon: string) => {
     const { error } = await supabase.from("categories").update({ icon }).eq("id", catId);
@@ -924,9 +984,10 @@ function Categories() {
       location_type: editingCat.type,
       contact_button_text: editingCat.btn || "Contatar",
       description: editingCat.description.trim() || null,
+      home_section_id: editingCat.sectionId,
     }).eq("id", editingCat.id);
     if (!error) {
-      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim(), description: editingCat.description.trim() || null } : c));
+      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim(), description: editingCat.description.trim() || null, home_section_id: editingCat.sectionId } : c));
       setEditingCat(null);
       flash("Categoria atualizada.");
     } else flash("Erro: " + error.message);
@@ -959,6 +1020,69 @@ function Categories() {
       </div>
 
       {msg && <p style={{ fontSize: "0.8rem", color: msg.startsWith("Erro") ? "#dc2626" : "#059669", fontWeight: 600, marginBottom: 8 }}>{msg}</p>}
+
+      {/* ── Seções do home ── */}
+      <div className="card" style={{ padding: "0.75rem", marginBottom: "0.875rem" }}>
+        <button type="button" onClick={() => setShowSections((v) => !v)}
+          style={{ background: "none", border: "none", cursor: "pointer", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: 0 }}>
+          <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b" }}>Seções do home ({sections.length})</span>
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{showSections ? "▲" : "▼"}</span>
+        </button>
+        {showSections && (
+          <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            {sections.map((sec, secIdx) => (
+              <div key={sec.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.625rem", background: "#f8fafc", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", minWidth: 22 }}>#{sec.id}</span>
+                {editingSection?.id === sec.id ? (
+                  <>
+                    <input className="form-input" type="text" value={editingSection.title}
+                      onChange={(e) => setEditingSection((p) => p ? { ...p, title: e.target.value } : p)}
+                      style={{ flex: 1, fontSize: "0.8rem", padding: "0.25rem 0.5rem" }} />
+                    <button type="button" className="btn btn-primary" disabled={editingSectionSaving} onClick={saveEditSection} style={{ fontSize: "0.72rem", padding: "0.25rem 0.5rem" }}>
+                      {editingSectionSaving ? "..." : "💾"}
+                    </button>
+                    <button type="button" onClick={() => setEditingSection(null)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0.25rem 0.4rem", cursor: "pointer", fontSize: "0.72rem", color: "var(--text-muted)" }}>✕</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1, fontSize: "0.82rem", fontWeight: sec.is_featured_block ? 700 : 400, color: "#1e293b" }}>
+                      {sec.title}{sec.is_featured_block ? " ⭐" : ""}
+                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <button type="button" disabled={secIdx === 0} onClick={() => moveSection(secIdx, -1)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 4, padding: "0px 5px", cursor: secIdx === 0 ? "default" : "pointer", fontSize: "0.6rem", color: secIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "14px" }}>↑</button>
+                      <button type="button" disabled={secIdx === sections.length - 1} onClick={() => moveSection(secIdx, 1)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 4, padding: "0px 5px", cursor: secIdx === sections.length - 1 ? "default" : "pointer", fontSize: "0.6rem", color: secIdx === sections.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "14px" }}>↓</button>
+                    </div>
+                    <button type="button" onClick={() => setEditingSection({ id: sec.id, title: sec.title })}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", color: "var(--blue-main)" }}>✏️</button>
+                    {!sec.is_featured_block && (
+                      <button type="button" onClick={() => deleteSection(sec.id)}
+                        style={{ background: "#fef2f2", border: "none", borderRadius: 6, padding: "0.2rem 0.45rem", cursor: "pointer", color: "#dc2626", fontSize: "0.72rem" }}>🗑️</button>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+            {showNewSection ? (
+              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                <input className="form-input" type="text" placeholder="Nome da nova seção *" value={newSectionTitle}
+                  onChange={(e) => setNewSectionTitle(e.target.value)} style={{ flex: 1, fontSize: "0.8rem" }} />
+                <button type="button" className="btn btn-primary" disabled={newSectionSaving} onClick={addSection} style={{ fontSize: "0.75rem", padding: "0.3rem 0.6rem" }}>
+                  {newSectionSaving ? "..." : "Criar"}
+                </button>
+                <button type="button" onClick={() => { setShowNewSection(false); setNewSectionTitle(""); }}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0.3rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", color: "var(--text-muted)" }}>✕</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowNewSection(true)}
+                style={{ background: "none", border: "1px dashed var(--border)", borderRadius: 8, padding: "0.5rem", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600, marginTop: 2 }}>
+                + Nova seção
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* New category form */}
       {showNewCat && (
@@ -1004,7 +1128,18 @@ function Categories() {
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.875rem", color: cat.is_active ? "#1e293b" : "#94a3b8" }}>{cat.name}</div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{cat.slug}</span>
+                  {cat.home_section_id ? (
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, background: "var(--blue-xlight)", color: "var(--blue-main)", borderRadius: 4, padding: "0px 5px" }}>
+                      #{cat.home_section_id}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, background: "#fef9c3", color: "#a16207", borderRadius: 4, padding: "0px 5px" }}>
+                      sem seção
+                    </span>
+                  )}
+                </div>
               </div>
               {/* Order buttons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
@@ -1056,6 +1191,12 @@ function Categories() {
                       </select>
                       <input className="form-input" type="text" placeholder="Botão" value={editingCat.btn} onChange={(e) => setEditingCat((p) => p ? { ...p, btn: e.target.value } : p)} style={{ flex: 1 }} />
                     </div>
+                    <select className="form-select" value={editingCat.sectionId ?? ""} onChange={(e) => setEditingCat((p) => p ? { ...p, sectionId: e.target.value ? Number(e.target.value) : null } : p)}>
+                      <option value="">— Sem seção (não aparece no home) —</option>
+                      {sections.map((s) => (
+                        <option key={s.id} value={s.id}>#{s.id} · {s.title}</option>
+                      ))}
+                    </select>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button type="button" className="btn btn-primary" disabled={editingCatSaving} onClick={saveEditCat} style={{ flex: 1, fontSize: "0.8rem", padding: "0.35rem" }}>
                         {editingCatSaving ? "..." : "💾 Salvar"}
@@ -1067,7 +1208,7 @@ function Categories() {
                   </div>
                 ) : (
                   <button type="button"
-                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar", description: cat.description ?? "" })}
+                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar", description: cat.description ?? "", sectionId: cat.home_section_id ?? null })}
                     style={{ width: "100%", padding: "0.5rem 0.75rem", background: "none", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600, textAlign: "left" }}>
                     ✏️ Editar categoria
                   </button>

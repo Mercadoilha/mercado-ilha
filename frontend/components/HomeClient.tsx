@@ -106,46 +106,89 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
       {/* ── Categorias ── */}
       <section style={{ padding: "0 1rem" }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "#1e293b" }}>
-          Categorias
-        </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "0.625rem",
-          }}
-        >
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/category/${cat.slug}`}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-                padding: "0.75rem 0.5rem",
-                background: "#fff",
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                textDecoration: "none",
-                color: "#1e293b",
-                transition: "box-shadow 0.15s",
-              }}
-            >
-              <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>{cat.icon || SLUG_ICON[cat.slug] || "📌"}</span>
-              <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
-                {cat.name}
-              </span>
-              {cat.description && (
-                <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textAlign: "center", lineHeight: 1.2, marginTop: -2 }}>
-                  {cat.description}
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
+
+        {/* Bloque 1: Categorias Destacadas */}
+        {(() => {
+          const featured = categories.filter((c: any) => c.home_sections?.is_featured_block);
+          if (featured.length === 0) return null;
+          return (
+            <div style={{ marginBottom: "1.25rem" }}>
+              <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.625rem", color: "#1e293b" }}>
+                Categorias Destacadas
+              </h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {featured.map((cat: any) => (
+                  <Link
+                    key={cat.slug}
+                    href={`/category/${cat.slug}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      padding: "0.875rem 1rem",
+                      background: "#fff",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      textDecoration: "none",
+                      color: "#1e293b",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5rem", lineHeight: 1, flexShrink: 0 }}>
+                      {cat.icon || SLUG_ICON[cat.slug] || "📌"}
+                    </span>
+                    <span style={{ fontSize: "0.9rem", fontWeight: 600, flex: 1 }}>{cat.name}</span>
+                    <span style={{ fontSize: "1rem", color: "#cbd5e1" }}>›</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Bloque 2: Secciones temáticas */}
+        {(() => {
+          const withSection = categories.filter((c: any) => c.home_sections && !c.home_sections.is_featured_block);
+          const sectionsMap = new Map<number, { section: any; cats: any[] }>();
+          withSection.forEach((cat: any) => {
+            const s = cat.home_sections;
+            if (!sectionsMap.has(s.id)) sectionsMap.set(s.id, { section: s, cats: [] });
+            sectionsMap.get(s.id)!.cats.push(cat);
+          });
+          const sortedSections = [...sectionsMap.values()].sort((a, b) => a.section.sort_order - b.section.sort_order);
+          return sortedSections.map(({ section, cats }) => (
+            <div key={section.id} style={{ marginBottom: "1.25rem" }}>
+              <h2 style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {section.title}
+              </h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem" }}>
+                {cats.map((cat: any) => (
+                  <Link
+                    key={cat.slug}
+                    href={`/category/${cat.slug}`}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "0.75rem 0.5rem",
+                      background: "#fff",
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                      textDecoration: "none",
+                      color: "#1e293b",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>{cat.icon || SLUG_ICON[cat.slug] || "📌"}</span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
+                      {cat.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ));
+        })()}
+
       </section>
 
       {/* ── Anúncios recentes ── */}
