@@ -182,6 +182,11 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
                     <span style={{ fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>
                       {cat.name}
                     </span>
+                    {cat.description && (
+                      <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textAlign: "center", lineHeight: 1.2, marginTop: -2 }}>
+                        {cat.description}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>
