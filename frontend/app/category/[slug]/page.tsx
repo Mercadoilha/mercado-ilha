@@ -2,8 +2,16 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-// ISR: categorías/subcategorías casi nunca cambian → cache de 300s desde el edge.
 export const revalidate = 300;
+
+export async function generateStaticParams() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  const { data } = await supabase.from("categories").select("slug").eq("is_active", true);
+  return (data ?? []).map(({ slug }: { slug: string }) => ({ slug }));
+}
 
 export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const { slug } = params;

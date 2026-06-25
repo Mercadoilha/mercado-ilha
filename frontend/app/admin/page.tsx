@@ -145,12 +145,16 @@ export default function AdminPage() {
     async function check() {
       const { data } = await supabase.auth.getSession();
       if (!data?.session) { router.push("/signin"); return; }
+      const uid = data.session.user.id;
+      const cacheKey = `mercado-ilha-admin-${uid}`;
+      if (sessionStorage.getItem(cacheKey) === "1") { setReady(true); return; }
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
-        .eq("id", data.session.user.id)
+        .eq("id", uid)
         .single();
       if (profile?.role !== "admin") { router.push("/"); return; }
+      sessionStorage.setItem(cacheKey, "1");
       setReady(true);
     }
     check();
@@ -209,14 +213,14 @@ export default function AdminPage() {
       </div>
 
       <div style={{ padding: "1rem" }}>
-        {tab === "dashboard" && <Dashboard />}
-        {tab === "metricas" && <Metrics />}
-        {tab === "listings" && <Listings />}
-        {tab === "reports" && <Reports />}
-        {tab === "banners" && <Banners />}
-        {tab === "users" && <Users />}
-        {tab === "categorias" && <Categories />}
-        {tab === "settings" && <Settings />}
+        <div style={{ display: tab === "dashboard" ? undefined : "none" }}><Dashboard /></div>
+        <div style={{ display: tab === "metricas" ? undefined : "none" }}><Metrics /></div>
+        <div style={{ display: tab === "listings" ? undefined : "none" }}><Listings /></div>
+        <div style={{ display: tab === "reports" ? undefined : "none" }}><Reports /></div>
+        <div style={{ display: tab === "banners" ? undefined : "none" }}><Banners /></div>
+        <div style={{ display: tab === "users" ? undefined : "none" }}><Users /></div>
+        <div style={{ display: tab === "categorias" ? undefined : "none" }}><Categories /></div>
+        <div style={{ display: tab === "settings" ? undefined : "none" }}><Settings /></div>
       </div>
     </div>
   );
@@ -977,33 +981,37 @@ function Categories() {
 
   const saveEditCat = async () => {
     if (!editingCat || !editingCat.name.trim() || !editingCat.slug.trim()) { flash("Nome e slug são obrigatórios."); return; }
-    setEditingCatSaving(true);
-    const { error } = await supabase.from("categories").update({
+    const snapshot = categories;
+    const updated = {
       name: editingCat.name.trim(),
       slug: editingCat.slug.trim(),
       location_type: editingCat.type,
       contact_button_text: editingCat.btn || "Contatar",
       description: editingCat.description.trim() || null,
       home_section_id: editingCat.sectionId,
-    }).eq("id", editingCat.id);
-    if (!error) {
-      setCategories((p) => p.map((c) => c.id === editingCat.id ? { ...c, ...editingCat, name: editingCat.name.trim(), slug: editingCat.slug.trim(), description: editingCat.description.trim() || null, home_section_id: editingCat.sectionId } : c));
-      setEditingCat(null);
-      flash("Categoria atualizada.");
-    } else flash("Erro: " + error.message);
-    setEditingCatSaving(false);
+    };
+    setCategories((p) => p.map((c) => c.id === editingCat!.id ? { ...c, ...updated } : c));
+    setEditingCat(null);
+    flash("Categoria atualizada.");
+    const { error } = await supabase.from("categories").update(updated).eq("id", editingCat.id);
+    if (error) {
+      setCategories(snapshot);
+      flash("Erro ao salvar: " + error.message);
+    }
   };
 
   const saveEditSub = async () => {
     if (!editingSub || !editingSub.name.trim()) { flash("Informe o nome."); return; }
-    setEditingSubSaving(true);
-    const { error } = await supabase.from("subcategories").update({ name: editingSub.name.trim() }).eq("id", editingSub.id);
-    if (!error) {
-      setSubcats((p) => ({ ...p, [editingSub.catId]: (p[editingSub.catId] ?? []).map((s) => s.id === editingSub.id ? { ...s, name: editingSub.name.trim() } : s) }));
-      setEditingSub(null);
-      flash("Subcategoria atualizada.");
-    } else flash("Erro: " + error.message);
-    setEditingSubSaving(false);
+    const snapshotSubs = subcats;
+    const newName = editingSub.name.trim();
+    setSubcats((p) => ({ ...p, [editingSub!.catId]: (p[editingSub!.catId] ?? []).map((s) => s.id === editingSub!.id ? { ...s, name: newName } : s) }));
+    setEditingSub(null);
+    flash("Subcategoria atualizada.");
+    const { error } = await supabase.from("subcategories").update({ name: newName }).eq("id", editingSub.id);
+    if (error) {
+      setSubcats(snapshotSubs);
+      flash("Erro ao salvar: " + error.message);
+    }
   };
 
   const isPicking = (type: "cat" | "subcat", id: number) => pickingFor?.type === type && pickingFor?.id === id;
