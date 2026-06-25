@@ -136,7 +136,14 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
                     <span style={{ fontSize: "1.5rem", lineHeight: 1, flexShrink: 0 }}>
                       {cat.icon || SLUG_ICON[cat.slug] || "📌"}
                     </span>
-                    <span style={{ fontSize: "0.9rem", fontWeight: 600, flex: 1 }}>{cat.name}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "0.9rem", fontWeight: 600 }}>{cat.name}</div>
+                      {cat.description && (
+                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {cat.description}
+                        </div>
+                      )}
+                    </div>
                     <span style={{ fontSize: "1rem", color: "#cbd5e1" }}>›</span>
                   </Link>
                 ))}
