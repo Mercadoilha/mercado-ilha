@@ -226,9 +226,9 @@ export default function StorePage() {
                   {/* Miniatura */}
                   <div
                     style={{
-                      width: 72,
-                      height: 72,
-                      minWidth: 72,
+                      width: 88,
+                      height: 88,
+                      minWidth: 88,
                       borderRadius: 8,
                       background: "#fff",
                       display: "flex",
