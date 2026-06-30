@@ -338,7 +338,7 @@ export default function ListingDetailPage() {
               src={photos[photoIdx]?.photo_url}
               alt={listing.title}
               onClick={() => openLightbox(photoIdx)}
-              style={{ width: "100%", height: 260, objectFit: "cover", display: "block", cursor: "zoom-in" }}
+              style={{ width: "100%", height: "auto", maxHeight: "70vh", minHeight: 200, objectFit: "contain", background: "#fff", display: "block", cursor: "zoom-in" }}
             />
             {/* Counter */}
             <div

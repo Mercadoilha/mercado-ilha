@@ -54,7 +54,7 @@ export default memo(function ListingCard({
             width: 80,
             height: 80,
             borderRadius: 10,
-            background: "var(--blue-xlight)",
+            background: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -67,7 +67,7 @@ export default memo(function ListingCard({
               src={firstPhoto}
               alt={listing.title}
               loading="lazy"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
             />
           ) : (
             <span style={{ fontSize: "2rem" }}>🛍️</span>

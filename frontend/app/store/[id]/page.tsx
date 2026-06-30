@@ -230,7 +230,7 @@ export default function StorePage() {
                       height: 72,
                       minWidth: 72,
                       borderRadius: 8,
-                      background: "var(--blue-xlight)",
+                      background: "#fff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -240,7 +240,7 @@ export default function StorePage() {
                   >
                     {photo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt={l.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={photo} alt={l.title} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : "🛍️"}
                   </div>
 

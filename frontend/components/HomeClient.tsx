@@ -321,7 +321,7 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
           height: 72,
           minWidth: 72,
           borderRadius: 8,
-          background: "var(--blue-xlight)",
+          background: "#fff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -336,7 +336,7 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
             src={firstPhoto}
             alt={listing.title}
             loading="lazy"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
         ) : (
           "🛍️"
