@@ -435,6 +435,9 @@ export default function EditListingPage() {
         {/* Descripción */}
         <div className="form-group">
           <label className="form-label">Descrição *</label>
+          <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "2px 0 6px" }}>
+            Dedique alguns minutos para descrever bem seu anúncio: uma boa descrição vende mais e mais rápido.
+          </p>
           <textarea className="form-textarea" placeholder={ph.description} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
         </div>
 
