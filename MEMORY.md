@@ -54,7 +54,7 @@ pre-armado). Servicio gratuito al inicio. Nombre: **Mercado Ilha**.
 
 ---
 
-## CATEGORÍAS (29 activas en Supabase, actualizado 2026-06-24)
+## CATEGORÍAS (31 activas en Supabase, actualizado 2026-06-29)
 
 Tabla `categories` tiene columna `description text` (nullable) y `home_section_id` (FK a
 `home_sections`). Se gestiona desde el tab Categorias del admin.
@@ -62,6 +62,13 @@ Tabla `categories` tiene columna `description text` (nullable) y `home_section_i
 **Cambios 2026-06-24:** eliminadas `Fotografía e social media`, `Copa do mundo 2026`,
 `Supermercados`, `Beleza e bem-estar`. Creadas: `Internet`, `Água para beber`, `Beleza`,
 `Lojas`, `Mercados`.
+
+**Cambios 2026-06-26/29:** renombradas `Consertos`→`Consertos geral` (slug `consertos-geral`),
+`Internet`→`Internet wifi` (slug `internet-wifi`), `Água para beber`→`Agua` (slug `agua`),
+`Lojas`→`Lojas e barracas` (slug `lojas-e-barracas`). Creadas: `Bem-estar` (slug `bem-estar`,
+separada de Beleza), `Electrónica` (slug `electronica`) y `Electrodomesticos` (slug
+`electrodomesticos`) — ambas son servicios de reparación/assistência técnica, NO venta de
+productos, agrupadas junto a `Consertos geral` en la sección home "Renove o que é seu".
 
 | Categoría | Slug |
 |-----------|------|
@@ -80,7 +87,9 @@ Tabla `categories` tiene columna `description text` (nullable) y `home_section_i
 | Restaurantes e bares | `restaurantes-e-bares` |
 | Terrenos | `terrenos` |
 | Casas | `casas` |
-| Consertos | `consertos` |
+| Consertos geral | `consertos-geral` |
+| Electrónica | `electronica` |
+| Electrodomesticos | `electrodomesticos` |
 | Veículos | `veiculos` |
 | Construção e Reformas | `construcao-e-reformas` |
 | Bioconstrução | `bioconstrucao` |
@@ -89,10 +98,11 @@ Tabla `categories` tiene columna `description text` (nullable) y `home_section_i
 | Empregos e bicos | `empregos-e-bicos` |
 | Serviços Profissionais | `servicos-profissionais` |
 | Experiências turísticas | `experiencias-turisticas` |
-| Internet | `internet` |
-| Água para beber | `agua-para-beber` |
+| Internet wifi | `internet-wifi` |
+| Agua | `agua` |
 | Beleza | `beleza` |
-| Lojas | `lojas` |
+| Bem-estar | `bem-estar` |
+| Lojas e barracas | `lojas-e-barracas` |
 | Mercados | `mercados` |
 
 **Botón de contacto:** casi todas usan "Contatar". Excepciones: Produtos/Terrenos/Casas →
@@ -100,7 +110,10 @@ Tabla `categories` tiene columna `description text` (nullable) y `home_section_i
 
 **Placeholders de publicar/editar:** textos-guía por categoría en
 `frontend/lib/categoryPlaceholders.ts` (mapa por slug + `DEFAULT_PLACEHOLDERS` fallback).
-Si se crea una categoría nueva en el admin, agregar su entrada ahí.
+Si se crea una categoría nueva en el admin, agregar su entrada ahí — el slug de la key DEBE
+coincidir exactamente con el slug en DB, o cae al texto genérico sin avisar (pasó con 4
+categorías renombradas el 2026-06-26/29; quedaron usando `DEFAULT_PLACEHOLDERS` hasta que se
+detectó y corrigió). Ejemplos de precio en los placeholders usan "R$ X" (sin valores reales).
 
 ## SECCIONES DEL HOME (tabla home_sections, creada y ejecutada 2026-06-24)
 

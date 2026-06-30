@@ -119,11 +119,23 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva o imóvel: tamanho, quartos e banheiros, estado de conservação e o que inclui (quintal, garagem, mobília). Informe localização, valor ou se é sob consulta e condições de pagamento.",
     priceText: 'Ex: "R$ 350.000", "Sob consulta"',
   },
-  consertos: {
-    title: "Ex: Conserto de celulares e eletrônicos",
+  "consertos-geral": {
+    title: "Ex: Conserto de sapatos, roupas e bicicletas",
     description:
       "Descreva o conserto: o que você arruma, prazo médio, garantia e se atende no local ou retira o objeto. Informe valores ou orçamento sob consulta, disponibilidade e formas de pagamento.",
-    priceText: 'Ex: "Orçamento grátis", "A partir de R$ 50"',
+    priceText: 'Ex: "Orçamento grátis", "A partir de R$ X"',
+  },
+  electronica: {
+    title: "Ex: Conserto de celular e notebook",
+    description:
+      "Descreva o serviço de assistência técnica: quais aparelhos você conserta (celular, computador, TV, etc.), prazo médio, garantia e se atende no local ou retira o equipamento. Informe valores ou orçamento sob consulta, disponibilidade e formas de pagamento.",
+    priceText: 'Ex: "Orçamento grátis", "A partir de R$ X"',
+  },
+  electrodomesticos: {
+    title: "Ex: Conserto de geladeira e máquina de lavar",
+    description:
+      "Descreva o serviço: quais eletrodomésticos você conserta, prazo médio, garantia e se atende no local ou faz visita técnica. Informe valores ou orçamento sob consulta, disponibilidade e formas de pagamento.",
+    priceText: 'Ex: "Orçamento grátis", "A partir de R$ X"',
   },
   veiculos: {
     title: "Ex: Moto Honda Biz 2020, 15.000 km",
@@ -173,17 +185,17 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva a experiência: roteiro, duração, o que inclui (transporte, guia, alimentação), ponto de saída e número de pessoas. Informe valores por pessoa, datas/horários e formas de pagamento.",
     priceText: 'Ex: "R$ 300 por pessoa", "Crianças grátis"',
   },
-  internet: {
+  "internet-wifi": {
     title: "Ex: Instalação de internet e Wi-Fi",
     description:
       "Descreva o serviço: tipo de conexão oferecida, velocidade, equipamentos incluídos e área de cobertura. Informe planos, mensalidade ou taxa de instalação, disponibilidade e formas de pagamento.",
-    priceText: 'Ex: "R$ 120/mês", "Taxa de instalação R$ 80"',
+    priceText: 'Ex: "R$ X/mês", "Taxa de instalação R$ X"',
   },
-  "agua-para-beber": {
+  agua: {
     title: "Ex: Entrega de galão de água mineral",
     description:
       "Descreva o produto: marca, tamanho (galão 20L, garrafão 5L, etc.) e área de entrega. Informe o valor por unidade, disponibilidade, horários de entrega e formas de pagamento.",
-    priceText: 'Ex: "R$ 12 o galão", "A combinar"',
+    priceText: 'Ex: "R$ X o galão", "A combinar"',
   },
   beleza: {
     title: "Ex: Corte, escova e tintura a domicílio",
@@ -191,11 +203,17 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva o serviço: o que inclui, produtos utilizados, sua experiência e se atende no local ou a domicílio. Informe valores por procedimento, disponibilidade e formas de pagamento.",
     priceText: 'Ex: "R$ 50 o corte", "A partir de R$ 80"',
   },
-  lojas: {
+  "bem-estar": {
+    title: "Ex: Massagem relaxante e terapias",
+    description:
+      "Descreva o serviço: tipo de terapia ou tratamento, técnicas utilizadas, sua formação/experiência e se atende no local ou a domicílio. Informe valores por sessão, duração, disponibilidade e formas de pagamento.",
+    priceText: 'Ex: "R$ X a sessão", "Pacote de X sessões"',
+  },
+  "lojas-e-barracas": {
     title: "Ex: Loja de roupas e acessórios",
     description:
       "Descreva a loja ou produto: o que vende, marcas disponíveis, formas de atendimento (loja física, delivery ou encomenda). Informe horários de funcionamento, localização e formas de pagamento.",
-    priceText: 'Ex: "A partir de R$ 30", "Consulte disponibilidade"',
+    priceText: 'Ex: "A partir de R$ X", "Consulte disponibilidade"',
   },
   mercados: {
     title: "Ex: Mercadinho com produtos frescos",
