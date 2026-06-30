@@ -10,6 +10,7 @@ import { useSession } from "../contexts/SessionContext";
 import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
+import BarcosWidget from "./BarcosWidget";
 
 function categoryHref(cat: any) {
   const hasSubs = (cat.subcategories ?? []).some((s: any) => s.is_active);
@@ -246,6 +247,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Informação útil</h2>
         </div>
         <MaresWidget />
+        <BarcosWidget />
       </section>
 
       {/* ── Fale conosco ── */}
