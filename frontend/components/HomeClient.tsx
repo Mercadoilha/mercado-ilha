@@ -11,6 +11,11 @@ import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
 
+function categoryHref(cat: any) {
+  const hasSubs = (cat.subcategories ?? []).some((s: any) => s.is_active);
+  return hasSubs ? `/category/${cat.slug}` : `/listings?category=${cat.slug}`;
+}
+
 const SLUG_ICON: Record<string, string> = {
   "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
   "beleza-e-bem-estar": "💅", "translados": "🚗", "envios": "📫",
@@ -120,7 +125,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
                 {featured.map((cat: any) => (
                   <Link
                     key={cat.slug}
-                    href={`/category/${cat.slug}`}
+                    href={categoryHref(cat)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -171,7 +176,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
                 {cats.map((cat: any) => (
                   <Link
                     key={cat.slug}
-                    href={`/category/${cat.slug}`}
+                    href={categoryHref(cat)}
                     style={{
                       display: "flex",
                       flexDirection: "column",
