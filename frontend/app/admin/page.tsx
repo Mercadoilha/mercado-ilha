@@ -66,6 +66,13 @@ const ICON_GROUPS: { group: string; icons: { e: string; l: string }[] }[] = [
     { e: "💻", l: "Computadores" }, { e: "📱", l: "Celulares" }, { e: "🖨️", l: "Impressoras" },
     { e: "📡", l: "Internet / Antenas" }, { e: "🔋", l: "Baterias / Energia" },
   ]},
+  { group: "Eletrodomésticos & Conserto", icons: [
+    { e: "❄️", l: "Geladeira / Frigorífico" }, { e: "🌀", l: "Máquina de lavar" },
+    { e: "📺", l: "Televisão" }, { e: "🔌", l: "Eletrodoméstico" },
+    { e: "🎛️", l: "Painel / Controles" }, { e: "🫧", l: "Lava-louças" },
+    { e: "💡", l: "Elétrica" }, { e: "🛠️", l: "Conserto geral" },
+    { e: "🔧", l: "Reparo / Manutenção" }, { e: "🪛", l: "Eletrônica" },
+  ]},
   { group: "Eventos & lazer", icons: [
     { e: "🎉", l: "Festas" }, { e: "📸", l: "Fotografia" }, { e: "🎵", l: "Música ao vivo" },
     { e: "🎭", l: "Entretenimento" }, { e: "⚽", l: "Esportes" }, { e: "🌊", l: "Mar / Praia" },
@@ -927,12 +934,13 @@ function Categories() {
   const toggleCat = async (catId: number, current: boolean) => {
     await supabase.from("categories").update({ is_active: !current }).eq("id", catId);
     setCategories((p) => p.map((c) => c.id === catId ? { ...c, is_active: !current } : c));
+    revalidateHome();
   };
 
   const deleteCat = async (catId: number) => {
     if (!confirm("Deletar esta categoria? Os anúncios existentes não serão afetados.")) return;
     const { error } = await supabase.from("categories").delete().eq("id", catId);
-    if (!error) { setCategories((p) => p.filter((c) => c.id !== catId)); flash("Categoria deletada."); }
+    if (!error) { setCategories((p) => p.filter((c) => c.id !== catId)); flash("Categoria deletada."); revalidateHome(); }
     else flash("Erro: " + error.message);
   };
 
@@ -948,6 +956,7 @@ function Categories() {
       setCategories((p) => [...p, data]);
       setShowNewCat(false); setNewCatName(""); setNewCatSlug(""); setNewCatIcon(""); setNewCatType("fija"); setNewCatBtn("Contatar");
       flash("Categoria criada.");
+      revalidateHome();
     } else flash("Erro: " + error?.message);
     setNewCatSaving(false);
   };
@@ -997,6 +1006,8 @@ function Categories() {
     if (error) {
       setCategories(snapshot);
       flash("Erro ao salvar: " + error.message);
+    } else {
+      revalidateHome();
     }
   };
 
@@ -1015,6 +1026,13 @@ function Categories() {
   };
 
   const isPicking = (type: "cat" | "subcat", id: number) => pickingFor?.type === type && pickingFor?.id === id;
+
+  const revalidateHome = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) return;
+    fetch("/api/revalidate", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+  };
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
 
