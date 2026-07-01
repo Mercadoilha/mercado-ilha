@@ -28,7 +28,10 @@ export default memo(function ListingCard({
   );
   const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
 
-  const locationText: string | null = (listing.localities as any)?.name ?? null;
+  const locationText: string | null =
+    (listing.subzones as any)?.name ??
+    (listing.localities as any)?.name ??
+    null;
 
   return (
     <article
@@ -51,8 +54,8 @@ export default memo(function ListingCard({
       >
         <div
           style={{
-            width: 100,
-            height: 100,
+            width: 125,
+            height: 125,
             borderRadius: 10,
             background: "#fff",
             display: "flex",
