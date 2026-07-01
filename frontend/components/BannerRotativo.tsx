@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { whatsappUrl } from "../lib/adminSettings";
-import { openWhatsApp } from "../lib/whatsappUrl";
 import { trackBannerClick, trackWhatsappClick } from "../lib/tracking";
 
 type Banner = {
@@ -64,13 +63,15 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
         </div>
         <p style={{ textAlign: "center", padding: "0.4rem 1rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
           Quer anunciar aqui?{" "}
-          <button
-            type="button"
-            onClick={() => { trackWhatsappClick(null, "banner_cta"); openWhatsApp(whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")); }}
-            style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit" }}
+          <a
+            href={whatsappUrl(adminWa, "Quero anunciar no Mercado Ilha")}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackWhatsappClick(null, "banner_cta")}
+            style={{ color: "var(--blue-main)", fontWeight: 700, textDecoration: "none", cursor: "pointer", font: "inherit" }}
           >
             Fale conosco
-          </button>
+          </a>
         </p>
       </div>
     );

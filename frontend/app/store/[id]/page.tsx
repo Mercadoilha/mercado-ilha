@@ -161,34 +161,55 @@ export default function StorePage() {
         </div>
 
         {seller && (
-          <button
-            type="button"
-            onClick={() => {
-              if (!session) { router.push("/signin?msg=contact"); return; }
-              if (!sellerPhone) {
+          sellerPhone ? (
+            <a
+              href={buildWaUrl(sellerPhone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackWhatsappClick(null, "store")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 12,
+                background: "#25d366",
+                color: "#fff",
+                padding: "0.5rem 1.25rem",
+                borderRadius: 999,
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              💬 Falar com o vendedor
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (!session) { router.push("/signin?msg=contact"); return; }
                 alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
-                return;
-              }
-              trackWhatsappClick(null, "store");
-              window.open(buildWaUrl(sellerPhone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`), "_blank", "noreferrer");
-            }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 12,
-              background: "#25d366",
-              color: "#fff",
-              padding: "0.5rem 1.25rem",
-              borderRadius: 999,
-              fontWeight: 700,
-              fontSize: "0.875rem",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            💬 Falar com o vendedor
-          </button>
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 12,
+                background: "#25d366",
+                color: "#fff",
+                padding: "0.5rem 1.25rem",
+                borderRadius: 999,
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              💬 Falar com o vendedor
+            </button>
+          )
         )}
 
         <button

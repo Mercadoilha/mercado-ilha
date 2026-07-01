@@ -255,16 +255,20 @@ export default function ListingDetailPage() {
     setFavBusy(false);
   };
 
-  const handleContact = () => {
+  // URL do WhatsApp pré-calculada (usada num <a> nativo — não é bloqueado por popup blockers)
+  const waHref = sellerPhone
+    ? buildWaUrl(
+        sellerPhone,
+        (category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`)
+          .replace("[título]", listing?.title ?? "")
+          .replace("[title]", listing?.title ?? "")
+      )
+    : null;
+
+  // Fallback para quando ainda não há telefone (não logado ou vendedor sem número)
+  const handleContactFallback = () => {
     if (!session) { router.push("/signin?msg=contact"); return; }
-    if (!sellerPhone) {
-      alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
-      return;
-    }
-    const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
-    const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
-    trackWhatsappClick(listingId, "listing");
-    window.open(buildWaUrl(sellerPhone, message), "_blank", "noreferrer");
+    alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
   };
 
   const sendReport = async () => {
@@ -523,16 +527,29 @@ export default function ListingDetailPage() {
           </div>
         )}
 
-        {/* Botão WhatsApp */}
+        {/* Botão WhatsApp — <a> nativo quando há telefone (evita bloqueio de popup no mobile) */}
         {!isOwner && seller && (
-          <button
-            type="button"
-            onClick={handleContact}
-            className="btn btn-whatsapp btn-block"
-            style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}
-          >
-            💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
-          </button>
+          waHref ? (
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackWhatsappClick(listingId, "listing")}
+              className="btn btn-whatsapp btn-block"
+              style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleContactFallback}
+              className="btn btn-whatsapp btn-block"
+              style={{ fontSize: "1.05rem", padding: "0.875rem", marginBottom: 12, cursor: "pointer" }}
+            >
+              💬 {category?.contact_button_text ?? "Contatar"} pelo WhatsApp
+            </button>
+          )
         )}
 
         {/* Se é o dono, mostrar opções */}
