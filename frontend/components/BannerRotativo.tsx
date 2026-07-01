@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { whatsappUrl } from "../lib/adminSettings";
 import { openWhatsApp } from "../lib/whatsappUrl";
 import { trackBannerClick, trackWhatsappClick } from "../lib/tracking";
@@ -88,12 +89,13 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
       }}
     >
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         key={current.id}
         src={current.image_url}
         alt={current.title ?? "Banner"}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.4s" }}
+        fill
+        sizes="100vw"
+        style={{ objectFit: "cover", display: "block", transition: "opacity 0.4s" }}
       />
 
       {banners.length > 1 && (

@@ -18,7 +18,7 @@ export default async function Home() {
     admin
       .from("listings")
       .select(
-        "id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name)"
+        "id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)"
       )
       .eq("status", "active")
       .order("created_at", { ascending: false })

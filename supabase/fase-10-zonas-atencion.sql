@@ -14,7 +14,7 @@ set location_type = 'zonas_de_atencion'
 where slug in (
   'gas',
   'babas',
-  'fotografia-e-social-media',
+  'fotografia-e-social-media',  -- ⚠️ categoría eliminada de la app el 2026-06-24 (no borrar esta línea: es registro histórico de la migración)
   'consertos',
   'construcao-e-reformas',
   'bioconstrucao',

@@ -29,7 +29,7 @@ export const CATEGORY_PLACEHOLDERS: Record<string, CategoryPlaceholders> = {
       "Descreva o serviço: o que está incluído, sua experiência e as zonas que atende. Informe valor por hora/diária ou se é sob orçamento, dias e horários disponíveis e as formas de pagamento.",
     priceText: 'Ex: "R$ 120 a diária", "Sob orçamento"',
   },
-  "transporte-de-mercaderia": {
+  "transporte-de-mercadoria": {
     title: "Ex: Carregador ou frete com trator",
     description:
       "Descreva o serviço de transporte: zonas e trajetos que atende, tipo e tamanho de carga e prazos. Informe valores ou orçamento sob consulta, disponibilidade e formas de pagamento.",

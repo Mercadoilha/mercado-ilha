@@ -74,7 +74,7 @@ function ListingsContent() {
 
     async function load() {
       // When categorySlug is present, filter via PostgREST join (no slug→id resolution round-trip)
-      const selectBase = "id, title, price, price_text, condition, locality_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
+      const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)";
       const selectWithCat = selectBase + ", categories!inner(id, name, icon)";
 
       let query = supabase

@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
 import { openWhatsApp } from "../lib/whatsappUrl";
@@ -352,11 +353,12 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
         }}
       >
         {firstPhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={firstPhoto}
             alt={listing.title}
-            loading="lazy"
+            width={115}
+            height={115}
+            sizes="115px"
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
         ) : (

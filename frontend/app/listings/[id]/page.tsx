@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { trackListingView, trackWhatsappClick } from "../../../lib/tracking";
@@ -299,7 +300,11 @@ export default function ListingDetailPage() {
     <div className="page-body">
       {/* Header */}
       <header className="page-header">
-        <Link href="/listings" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+        >←</button>
         <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
           {listing.title}
         </h1>
@@ -385,8 +390,7 @@ export default function ListingDetailPage() {
                     onClick={() => setPhotoIdx(i)}
                     style={{ padding: 0, border: i === photoIdx ? "2px solid var(--blue-main)" : "2px solid transparent", borderRadius: 6, cursor: "pointer", flexShrink: 0 }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.photo_url} alt="" loading="lazy" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                    <Image src={p.photo_url} alt="" width={44} height={44} sizes="44px" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4, display: "block" }} />
                   </button>
                 ))}
               </div>

@@ -118,17 +118,6 @@ function SignInContent() {
       return;
     }
 
-    // Espera breve para que el trigger de Supabase cree el perfil primero
-    await new Promise((r) => setTimeout(r, 600));
-
-    await supabase.from("profiles").upsert({
-      id: data.user.id,
-      full_name: regName.trim(),
-      whatsapp: regWhatsapp.trim(),
-      role: "user",
-      is_active: true,
-    }, { onConflict: "id" });
-
     setLoading(false);
 
     // If email confirmation is required

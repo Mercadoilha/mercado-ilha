@@ -74,7 +74,7 @@ productos, agrupadas junto a `Consertos geral` en la sección home "Renove o que
 |-----------|------|
 | Produtos | `produtos` |
 | Serviços do lar | `servicios-do-lar` |
-| Transporte de mercadoria | `transporte-de-mercaderia` |
+| Transporte de mercadoria | `transporte-de-mercadoria` |
 | Encomendas | `encomendas` |
 | Delivery | `delivery` |
 | Gas | `gas` |

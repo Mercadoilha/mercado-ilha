@@ -62,9 +62,10 @@ export default function ProfilePage() {
       let p = profileRes.data;
       const pe = profileRes.error;
       if (!p && pe?.code === "PGRST116") {
+        const meta = activeSession.user.user_metadata ?? {};
         const { data: np } = await supabase
           .from("profiles")
-          .insert({ id: uid, full_name: activeSession.user.email ?? "Usuário", whatsapp: "", role: "user" })
+          .insert({ id: uid, full_name: meta.full_name ?? meta.name ?? "Usuário", whatsapp: meta.whatsapp ?? "", role: "user" })
           .select("*")
           .single();
         p = np;
@@ -155,7 +156,10 @@ export default function ProfilePage() {
     const goActive = currentStatus !== "active";
     const update: Record<string, unknown> = {
       status: goActive ? "active" : "paused",
-      ...(goActive && { expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() }),
+      ...(goActive && {
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        deletion_warning_sent_at: null,
+      }),
     };
     const { error: e } = await supabase.from("listings").update(update).eq("id", id);
     if (!e) {

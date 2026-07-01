@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { trackWhatsappClick } from "../../../lib/tracking";
@@ -143,8 +144,7 @@ export default function StorePage() {
           }}
         >
           {seller.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={seller.avatar_url} alt={seller.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <Image src={seller.avatar_url} alt={seller.full_name} width={72} height={72} sizes="72px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : "👤"}
         </div>
         <div style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 4 }}>{seller.full_name}</div>
