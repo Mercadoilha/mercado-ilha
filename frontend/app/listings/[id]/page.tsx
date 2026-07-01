@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildWaUrl, openWhatsAppTab, redirectTabToWhatsApp } from "../../../lib/whatsappUrl";
+import { buildWaUrl } from "../../../lib/whatsappUrl";
 import { trackListingView, trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
@@ -41,6 +41,7 @@ export default function ListingDetailPage() {
   const [reportSent, setReportSent] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
+  const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const viewTracked = useRef<number | null>(null);
 
   useEffect(() => {
@@ -216,6 +217,13 @@ export default function ListingDetailPage() {
     setIsDragging(false);
   };
 
+  // Pre-fetch seller phone so the contact button is fully synchronous (avoids mobile popup blocker)
+  useEffect(() => {
+    if (!session || !seller?.id) { setSellerPhone(null); return; }
+    supabase.rpc("get_seller_whatsapp", { seller_id: seller.id })
+      .then(({ data }) => setSellerPhone(data ?? null));
+  }, [session, seller?.id]);
+
   // Load favorite status whenever session or listing changes
   useEffect(() => {
     if (!session || !listingId || Number.isNaN(listingId)) { setIsFavorite(false); return; }
@@ -247,21 +255,16 @@ export default function ListingDetailPage() {
     setFavBusy(false);
   };
 
-  const handleContact = async () => {
+  const handleContact = () => {
     if (!session) { router.push("/signin?msg=contact"); return; }
-    // Open tab synchronously inside the user gesture to avoid mobile popup blockers
-    const tab = openWhatsAppTab();
-    const { data: phone, error: rpcErr } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller?.id });
-    if (rpcErr || !phone) {
-      tab?.close();
-      if (rpcErr) console.error("[handleContact] RPC error:", rpcErr);
-      alert(rpcErr ? "Erro ao obter contato do vendedor. Tente novamente." : "Este vendedor ainda não cadastrou o número de WhatsApp.");
+    if (!sellerPhone) {
+      alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
       return;
     }
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
     const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
     trackWhatsappClick(listingId, "listing");
-    redirectTabToWhatsApp(tab, buildWaUrl(phone, message));
+    window.open(buildWaUrl(sellerPhone, message), "_blank", "noreferrer");
   };
 
   const sendReport = async () => {
