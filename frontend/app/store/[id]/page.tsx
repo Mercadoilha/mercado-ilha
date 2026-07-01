@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { buildWaUrl, openWhatsAppTab, redirectTabToWhatsApp } from "../../../lib/whatsappUrl";
 import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import ShareIcon from "../../../components/ShareIcon";
@@ -157,11 +157,17 @@ export default function StorePage() {
             type="button"
             onClick={async () => {
               if (!session) { router.push("/signin?msg=contact"); return; }
-              const { data: phone } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller.id });
-              if (phone) {
-                trackWhatsappClick(null, "store");
-                openWhatsApp(buildWaUrl(phone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
+              // Open tab synchronously inside the user gesture to avoid mobile popup blockers
+              const tab = openWhatsAppTab();
+              const { data: phone, error: rpcErr } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller.id });
+              if (rpcErr || !phone) {
+                tab?.close();
+                if (rpcErr) console.error("[StorePage] RPC error:", rpcErr);
+                alert(rpcErr ? "Erro ao obter contato do vendedor. Tente novamente." : "Este vendedor ainda não cadastrou o número de WhatsApp.");
+                return;
               }
+              trackWhatsappClick(null, "store");
+              redirectTabToWhatsApp(tab, buildWaUrl(phone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`));
             }}
             style={{
               display: "inline-flex",

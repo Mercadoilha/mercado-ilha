@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "../../../lib/supabaseClient";
-import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
+import { buildWaUrl, openWhatsAppTab, redirectTabToWhatsApp } from "../../../lib/whatsappUrl";
 import { trackListingView, trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
@@ -249,12 +249,19 @@ export default function ListingDetailPage() {
 
   const handleContact = async () => {
     if (!session) { router.push("/signin?msg=contact"); return; }
-    const { data: phone } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller?.id });
-    if (!phone) return;
+    // Open tab synchronously inside the user gesture to avoid mobile popup blockers
+    const tab = openWhatsAppTab();
+    const { data: phone, error: rpcErr } = await supabase.rpc("get_seller_whatsapp", { seller_id: seller?.id });
+    if (rpcErr || !phone) {
+      tab?.close();
+      if (rpcErr) console.error("[handleContact] RPC error:", rpcErr);
+      alert(rpcErr ? "Erro ao obter contato do vendedor. Tente novamente." : "Este vendedor ainda não cadastrou o número de WhatsApp.");
+      return;
+    }
     const template = category?.whatsapp_message ?? `Olá! Vi seu anúncio "${listing?.title}" no Mercado Ilha e quero saber mais.`;
     const message = template.replace("[título]", listing?.title ?? "").replace("[title]", listing?.title ?? "");
     trackWhatsappClick(listingId, "listing");
-    openWhatsApp(buildWaUrl(phone, message));
+    redirectTabToWhatsApp(tab, buildWaUrl(phone, message));
   };
 
   const sendReport = async () => {

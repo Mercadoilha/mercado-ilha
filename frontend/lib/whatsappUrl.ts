@@ -34,8 +34,18 @@ export function buildWaUrl(whatsapp: string, message: string): string {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
-// Opens WhatsApp in a new tab and closes the blank tab after the app has launched.
-export function openWhatsApp(url: string): void {
-  const tab = window.open(url, "_blank", "noreferrer");
-  if (tab) setTimeout(() => { try { tab.close(); } catch (_) {} }, 1500);
+// Opens a blank tab synchronously (must be called inside a user gesture),
+// then redirects it to the WhatsApp URL once the URL is ready.
+// This avoids mobile popup blockers that reject window.open() after async calls.
+export function openWhatsAppTab(): Window | null {
+  return window.open("", "_blank", "noreferrer");
+}
+
+export function redirectTabToWhatsApp(tab: Window | null, url: string): void {
+  if (tab) {
+    tab.location.href = url;
+  } else {
+    // Fallback: navigate current tab (popup was blocked)
+    window.location.href = url;
+  }
 }
