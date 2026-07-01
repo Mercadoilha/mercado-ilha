@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
@@ -130,18 +131,24 @@ export default function FavoritesPage() {
                         width: 72,
                         height: 72,
                         borderRadius: 8,
-                        background: "var(--blue-xlight)",
+                        background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: "1.75rem",
                         overflow: "hidden",
                         flexShrink: 0,
+                        position: "relative",
                       }}
                     >
                       {firstPhoto ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={firstPhoto} alt={l.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <Image
+                          src={firstPhoto}
+                          alt={l.title}
+                          fill
+                          sizes="72px"
+                          style={{ objectFit: "contain" }}
+                        />
                       ) : "🛍️"}
                     </div>
                   </Link>
