@@ -249,6 +249,27 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
             <RecentListingRow key={l.id} listing={l} />
           ))}
         </div>
+
+        {listings.length > 0 && (
+          <Link
+            href="/listings"
+            style={{
+              display: "block",
+              marginTop: "0.75rem",
+              padding: "0.75rem",
+              background: "#fff",
+              border: "2px solid var(--blue-main)",
+              borderRadius: 12,
+              textAlign: "center",
+              color: "var(--blue-main)",
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              textDecoration: "none",
+            }}
+          >
+            Ver todos os anúncios →
+          </Link>
+        )}
       </section>
 
       {/* ── Informação útil ── */}
@@ -317,9 +338,9 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
     >
       <div
         style={{
-          width: 100,
-          height: 100,
-          minWidth: 100,
+          width: 115,
+          height: 115,
+          minWidth: 115,
           borderRadius: 8,
           background: "#fff",
           display: "flex",
