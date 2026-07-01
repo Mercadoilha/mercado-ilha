@@ -54,8 +54,8 @@ export default memo(function ListingCard({
       >
         <div
           style={{
-            width: 125,
-            height: 125,
+            width: 140,
+            height: 140,
             borderRadius: 10,
             background: "#fff",
             display: "flex",

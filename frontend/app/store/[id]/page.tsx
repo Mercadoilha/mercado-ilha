@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
@@ -8,6 +8,7 @@ import { buildWaUrl, openWhatsApp } from "../../../lib/whatsappUrl";
 import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import ShareIcon from "../../../components/ShareIcon";
+import ListingCard from "../../../components/ListingCard";
 
 export default function StorePage() {
   const params = useParams();
@@ -19,6 +20,8 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<any>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+  const [busyIds, setBusyIds] = useState<number[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
@@ -31,14 +34,20 @@ export default function StorePage() {
     let mounted = true;
 
     async function load() {
-      const [sellerRes, listingsRes] = await Promise.all([
+      const { data: sessionData } = await supabase.auth.getSession();
+      const activeSession = sessionData?.session ?? null;
+
+      const [sellerRes, listingsRes, favRes] = await Promise.all([
         supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
-          .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order)")
+          .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name),subzones(name)")
           .eq("user_id", sellerId)
           .eq("status", "active")
           .order("created_at", { ascending: false }),
+        activeSession
+          ? supabase.from("favorites").select("listing_id").eq("profile_id", activeSession.user.id)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (!mounted) return;
@@ -51,12 +60,29 @@ export default function StorePage() {
       }
       setSeller(sellerRes.data);
       setListings(listingsRes.data ?? []);
+      if (favRes?.data) {
+        setFavoriteIds(new Set((favRes.data as any[]).map((f) => f.listing_id)));
+      }
       setLoading(false);
     }
 
     load();
     return () => { mounted = false; };
   }, [sellerId]);
+
+  const toggleFavorite = useCallback(async (listingId: number) => {
+    if (!session) { router.push("/signin?msg=contact"); return; }
+    const isFav = favoriteIds.has(listingId);
+    setBusyIds((c) => [...c, listingId]);
+    if (isFav) {
+      const { error: e } = await supabase.from("favorites").delete().eq("listing_id", listingId).eq("profile_id", session.user.id);
+      if (!e) setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; });
+    } else {
+      const { error: e } = await supabase.from("favorites").insert({ listing_id: listingId, profile_id: session.user.id });
+      if (!e) setFavoriteIds((c) => new Set([...c, listingId]));
+    }
+    setBusyIds((c) => c.filter((id) => id !== listingId));
+  }, [session, favoriteIds, router]);
 
   if (loading) return (
     <div className="page-body" style={{ display: "flex", justifyContent: "center", paddingTop: "4rem" }}>
@@ -81,14 +107,6 @@ export default function StorePage() {
   );
 
   const memberSince = new Date(seller.created_at).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-  const listingPrice = (l: any) =>
-    l.price != null
-      ? `R$ ${Number(l.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-      : l.price_text ?? "Consulte";
-
-  const firstPhoto = (l: any) =>
-    (l.listing_photos ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order)[0]?.photo_url ?? null;
 
   return (
     <div className="page-body">
@@ -205,64 +223,16 @@ export default function StorePage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-            {listings.map((l) => {
-              const photo = firstPhoto(l);
-              return (
-                <Link
-                  key={l.id}
-                  href={`/listings/${l.id}`}
-                  style={{
-                    display: "flex",
-                    gap: "0.75rem",
-                    background: "#fff",
-                    borderRadius: 12,
-                    border: "1px solid var(--border)",
-                    padding: "0.625rem",
-                    textDecoration: "none",
-                    color: "inherit",
-                    alignItems: "center",
-                  }}
-                >
-                  {/* Miniatura */}
-                  <div
-                    style={{
-                      width: 125,
-                      height: 125,
-                      minWidth: 125,
-                      borderRadius: 8,
-                      background: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                      fontSize: "1.75rem",
-                    }}
-                  >
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt={l.title} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                    ) : "🛍️"}
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {l.title}
-                    </div>
-                    <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--blue-main)", marginTop: 2 }}>
-                      {listingPrice(l)}
-                    </div>
-                    {l.condition && (
-                      <span className="badge badge-sand" style={{ marginTop: 4, display: "inline-block" }}>
-                        {l.condition}
-                      </span>
-                    )}
-                  </div>
-
-                  <span style={{ color: "#cbd5e1", flexShrink: 0 }}>›</span>
-                </Link>
-              );
-            })}
+            {listings.map((l) => (
+              <ListingCard
+                key={l.id}
+                listing={l}
+                sessionExists={!!session}
+                isFavorite={favoriteIds.has(l.id)}
+                busy={busyIds.includes(l.id)}
+                onToggleFavorite={toggleFavorite}
+              />
+            ))}
           </div>
         )}
       </div>

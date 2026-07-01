@@ -317,9 +317,9 @@ const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: 
     >
       <div
         style={{
-          width: 88,
-          height: 88,
-          minWidth: 88,
+          width: 100,
+          height: 100,
+          minWidth: 100,
           borderRadius: 8,
           background: "#fff",
           display: "flex",
