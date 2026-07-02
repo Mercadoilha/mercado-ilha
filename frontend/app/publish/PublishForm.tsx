@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../lib/categoryPlaceholders";
+import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../components/ExtraCategoriesPicker";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -32,6 +33,7 @@ export default function PublishForm({ categories, localities, allSubzones, islan
 
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
+  const [extraEntries, setExtraEntries] = useState<ExtraCategoryEntry[]>([]);
   const [localityId, setLocalityId] = useState("");
   const [subzoneId, setSubzoneId] = useState("");
   const [serviceZoneIds, setServiceZoneIds] = useState<number[]>([]);
@@ -82,6 +84,12 @@ export default function PublishForm({ categories, localities, allSubzones, islan
 
   // Reset selección de ubicación al cambiar de categoría (evita arrastrar zonas a un anuncio fija)
   useEffect(() => { setServiceZoneIds([]); setCoversAllIsland(false); }, [categoryId]);
+
+  // Si la nueva categoría principal coincide con una secundaria, quitarla (no duplicar).
+  useEffect(() => {
+    if (!categoryId) return;
+    setExtraEntries((prev) => prev.filter((e) => e.categoryId !== categoryId));
+  }, [categoryId]);
 
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
   const locationType = selectedCategory?.location_type ?? "";
@@ -141,6 +149,14 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     const missingSubcat = subcategories.length > 0 && !subcategoryId;
     if (!categoryId || missingSubcat || !title.trim() || !description.trim()) {
       setError("Preencha todos os campos obrigatórios.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Categorías secundarias: si la categoría tiene subcategorías, la subcategoría es obligatoria.
+    const validExtras = extraEntries.filter((e) => e.categoryId);
+    if (validExtras.some((e) => e.hasSubcats && !e.subcategoryId)) {
+      setError("Escolha a subcategoria das categorias adicionais.");
       setSubmitting(false);
       return;
     }
@@ -220,6 +236,17 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     if (isZonas && !coversAllIsland && serviceZoneIds.length > 0) {
       await supabase.from("listing_service_zones").insert(
         serviceZoneIds.map((zid) => ({ listing_id: listing.id, subzone_id: zid }))
+      );
+    }
+
+    // Guardar categorías secundarias (solo para descubrimiento; no afectan comportamiento)
+    if (validExtras.length > 0) {
+      await supabase.from("listing_extra_categories").insert(
+        validExtras.map((e) => ({
+          listing_id: listing.id,
+          category_id: Number(e.categoryId),
+          subcategory_id: e.subcategoryId ? Number(e.subcategoryId) : null,
+        }))
       );
     }
 
@@ -395,6 +422,16 @@ export default function PublishForm({ categories, localities, allSubzones, islan
               ))}
             </select>
           </div>
+        )}
+
+        {/* Categorías secundarias (aparecer também em) */}
+        {categoryId && (
+          <ExtraCategoriesPicker
+            categories={categories}
+            primaryCategoryId={categoryId}
+            entries={extraEntries}
+            onChange={setExtraEntries}
+          />
         )}
 
         {/* Título */}

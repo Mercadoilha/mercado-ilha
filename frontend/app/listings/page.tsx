@@ -73,18 +73,48 @@ function ListingsContent() {
     setError(null);
 
     async function load() {
-      // When categorySlug is present, filter via PostgREST join (no slug→id resolution round-trip)
       const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)";
-      const selectWithCat = selectBase + ", categories!inner(id, name, icon)";
+
+      // Resolver categoría por slug (id + etiqueta del encabezado).
+      let catId: number | null = null;
+      if (categorySlug) {
+        const { data: cat } = await supabase.from("categories").select("id, name, icon").eq("slug", categorySlug).maybeSingle();
+        if (mounted && cat) {
+          catId = (cat as any).id;
+          const icon = (cat as any).icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
+          setCategoryLabel(`${icon} ${(cat as any).name}`);
+        }
+        // Slug inválido: sin categoría → no mostrar nada.
+        if (!cat) {
+          if (mounted) { setListings([]); setLoading(false); }
+          return;
+        }
+      }
+
+      // Anuncios que tienen esta categoría (y subcategoría) como SECUNDARIA.
+      let extraIds: number[] = [];
+      if (catId) {
+        let ex = supabase.from("listing_extra_categories").select("listing_id").eq("category_id", catId);
+        if (subcategoryIdParam) ex = ex.eq("subcategory_id", Number(subcategoryIdParam));
+        const { data: exRows } = await ex;
+        extraIds = Array.from(new Set((exRows ?? []).map((r: any) => r.listing_id)));
+      }
 
       let query = supabase
         .from("listings")
-        .select(categorySlug ? selectWithCat : selectBase)
+        .select(selectBase)
         .eq("status", "active")
         .limit(60);
 
-      if (categorySlug) query = (query as any).eq("categories.slug", categorySlug);
-      if (subcategoryIdParam) query = query.eq("subcategory_id", Number(subcategoryIdParam));
+      // Incluir: categoría PRINCIPAL coincidente O anuncios con esta categoría SECUNDARIA.
+      if (catId) {
+        const primary = subcategoryIdParam
+          ? `and(category_id.eq.${catId},subcategory_id.eq.${Number(subcategoryIdParam)})`
+          : `category_id.eq.${catId}`;
+        const ors = [primary];
+        if (extraIds.length) ors.push(`id.in.(${extraIds.join(",")})`);
+        query = query.or(ors.join(","));
+      }
       if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       if (conditionFilter) query = query.eq("condition", conditionFilter);
       if (zoneFilter) {
@@ -122,23 +152,6 @@ function ListingsContent() {
         setListings([]);
       } else {
         setListings(listingsResult.data ?? []);
-
-        // Extract category label from joined data (no extra round-trip needed)
-        if (categorySlug) {
-          const firstCat = (listingsResult.data as any[])[0]?.categories;
-          if (firstCat) {
-            const icon = firstCat.icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
-            setCategoryLabel(`${icon} ${firstCat.name}`);
-          } else if (listingsResult.data.length === 0) {
-            // Empty category: fetch label separately (rare case)
-            supabase.from("categories").select("name,icon").eq("slug", categorySlug).maybeSingle()
-              .then(({ data: cat }) => {
-                if (!mounted || !cat) return;
-                const icon = (cat as any).icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
-                setCategoryLabel(`${icon} ${(cat as any).name}`);
-              });
-          }
-        }
       }
 
       if (favResult?.data) {

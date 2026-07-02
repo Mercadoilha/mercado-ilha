@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../../../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
+import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../../../components/ExtraCategoriesPicker";
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -33,6 +34,7 @@ export default function EditListingPage() {
   // Form fields
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
+  const [extraEntries, setExtraEntries] = useState<ExtraCategoryEntry[]>([]);
   const [localityId, setLocalityId] = useState("");
   const [subzoneId, setSubzoneId] = useState("");
   const [serviceZoneIds, setServiceZoneIds] = useState<number[]>([]);
@@ -104,6 +106,13 @@ export default function EditListingPage() {
       const { data: zones } = await supabase.from("listing_service_zones").select("subzone_id").eq("listing_id", listingId);
       setServiceZoneIds((zones ?? []).map((z: any) => z.subzone_id));
 
+      // Precargar categorías secundarias
+      const { data: extras } = await supabase.from("listing_extra_categories").select("category_id,subcategory_id").eq("listing_id", listingId);
+      setExtraEntries((extras ?? []).map((x: any) => ({
+        categoryId: String(x.category_id),
+        subcategoryId: x.subcategory_id != null ? String(x.subcategory_id) : "",
+      })));
+
       const photos = [...(data.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       setExistingPhotos(photos);
       setDataLoading(false);
@@ -117,6 +126,12 @@ export default function EditListingPage() {
     if (!categoryId) { setSubcategories([]); return; }
     supabase.from("subcategories").select("id,name").eq("category_id", Number(categoryId)).eq("is_active", true).order("sort_order")
       .then(({ data }) => setSubcategories(data ?? []));
+  }, [categoryId]);
+
+  // Si la categoría principal coincide con una secundaria, quitarla (no duplicar).
+  useEffect(() => {
+    if (!categoryId) return;
+    setExtraEntries((prev) => prev.filter((e) => e.categoryId !== categoryId));
   }, [categoryId]);
 
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
@@ -170,6 +185,14 @@ export default function EditListingPage() {
 
     if (!categoryId || !title.trim() || !description.trim()) {
       setError("Preencha todos os campos obrigatórios.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Categorías secundarias: subcategoría obligatoria si la categoría tiene subcategorías.
+    const validExtras = extraEntries.filter((e) => e.categoryId);
+    if (validExtras.some((e) => e.hasSubcats && !e.subcategoryId)) {
+      setError("Escolha a subcategoria das categorias adicionais.");
       setSubmitting(false);
       return;
     }
@@ -242,6 +265,18 @@ export default function EditListingPage() {
     if (isZonas && !coversAllIsland && serviceZoneIds.length > 0) {
       await supabase.from("listing_service_zones").insert(
         serviceZoneIds.map((zid) => ({ listing_id: listingId, subzone_id: zid }))
+      );
+    }
+
+    // Sincronizar categorías secundarias: borrar e reinsertar
+    await supabase.from("listing_extra_categories").delete().eq("listing_id", listingId);
+    if (validExtras.length > 0) {
+      await supabase.from("listing_extra_categories").insert(
+        validExtras.map((e) => ({
+          listing_id: listingId,
+          category_id: Number(e.categoryId),
+          subcategory_id: e.subcategoryId ? Number(e.subcategoryId) : null,
+        }))
       );
     }
 
@@ -424,6 +459,16 @@ export default function EditListingPage() {
               ))}
             </select>
           </div>
+        )}
+
+        {/* Categorías secundarias (aparecer também em) */}
+        {categoryId && (
+          <ExtraCategoriesPicker
+            categories={categories}
+            primaryCategoryId={categoryId}
+            entries={extraEntries}
+            onChange={setExtraEntries}
+          />
         )}
 
         {/* Título */}
