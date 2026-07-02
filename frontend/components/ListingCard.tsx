@@ -40,11 +40,9 @@ export default memo(function ListingCard({
         display: "flex",
         gap: "0.75rem",
         background: "#fff",
-        borderRadius: 12,
-        border: "1px solid var(--border)",
-        overflow: "hidden",
+        borderBottom: "1px solid var(--border)",
         alignItems: "center",
-        padding: "0.625rem",
+        padding: "0.625rem 1rem",
         position: "relative",
       }}
     >

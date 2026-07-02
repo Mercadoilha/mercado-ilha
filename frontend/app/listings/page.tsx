@@ -320,8 +320,8 @@ function ListingsContent() {
       </div>
 
       {/* Contenido */}
-      <div style={{ padding: "0.75rem 1rem" }}>
-        {error && <p className="text-error" style={{ marginBottom: 8 }}>{error}</p>}
+      <div style={{ padding: "0.75rem 0" }}>
+        {error && <p className="text-error" style={{ margin: "0 1rem 8px" }}>{error}</p>}
 
         {loading && (
           <div style={{ textAlign: "center", padding: "3rem 0" }}>
@@ -334,6 +334,7 @@ function ListingsContent() {
             style={{
               textAlign: "center",
               padding: "3rem 1rem",
+              margin: "0 1rem",
               background: "#fff",
               borderRadius: 12,
               color: "var(--text-muted)",
@@ -356,7 +357,7 @@ function ListingsContent() {
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           {listings.map((l) => (
             <ListingCard
               key={l.id}

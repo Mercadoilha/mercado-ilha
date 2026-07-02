@@ -241,18 +241,18 @@ export default function StorePage() {
       </div>
 
       {/* Anúncios */}
-      <div style={{ padding: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.75rem" }}>
+      <div style={{ padding: "1rem 0" }}>
+        <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "0 1rem 0.75rem" }}>
           Anúncios ativos
         </h2>
 
         {listings.length === 0 ? (
-          <div className="card" style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
+          <div className="card" style={{ margin: "0 1rem", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
             <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
             <p style={{ fontSize: "0.875rem" }}>Este vendedor não tem anúncios ativos no momento.</p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             {listings.map((l) => (
               <ListingCard
                 key={l.id}
