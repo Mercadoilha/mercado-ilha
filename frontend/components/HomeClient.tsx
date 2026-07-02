@@ -11,6 +11,7 @@ import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
 import BarcosWidget from "./BarcosWidget";
+import InstallAppCard from "./InstallAppCard";
 
 // Nomes com palavra única muito longa que não cabe em 3 colunas no tamanho padrão
 const LONG_NAME_SLUGS = new Set(["bioconstrucao", "electrodomesticos"]);
@@ -280,6 +281,8 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
         <MaresWidget />
         <BarcosWidget />
       </section>
+
+      <InstallAppCard adminWa={adminWa} />
 
       {/* ── Fale conosco ── */}
       <section style={{ margin: "1.5rem 1rem 1rem" }}>
