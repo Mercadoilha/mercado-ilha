@@ -70,17 +70,11 @@ function SignInContent() {
 
     setLoading(false);
     if (authErr) {
-      const newAttempts = loginAttempts + 1;
-      setLoginAttempts(newAttempts);
-      if (newAttempts >= 3) {
-        // Após 3 tentativas, encaminha ao fluxo de recuperação por código
-        // (/forgot-password), que envia o código de 8 dígitos e permite criar
-        // uma nova senha. Não usamos link por e-mail — o template só tem {{ .Token }}.
-        setError(null);
-        router.push(`/forgot-password?email=${encodeURIComponent(loginEmail.trim())}`);
-      } else {
-        setError("Email ou senha incorretos. Tente novamente.");
-      }
+      // Mensagem genérica: não revela se o e-mail existe (evita enumeração).
+      // A partir de 3 tentativas, mostramos um card com botão para o fluxo de
+      // recuperação por código (/forgot-password), que envia o código de 8 dígitos.
+      setLoginAttempts((n) => n + 1);
+      setError("Email ou senha incorretos. Tente novamente.");
       return;
     }
     router.push("/");
@@ -229,6 +223,22 @@ function SignInContent() {
             <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: "0.875rem", fontSize: "1rem", marginTop: 4 }}>
               {loading ? "Entrando..." : "Entrar"}
             </button>
+
+            {loginAttempts >= 3 && (
+              <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.875rem 1rem", display: "flex", flexDirection: "column", gap: 10, marginTop: 2 }}>
+                <span style={{ fontSize: "0.85rem", color: "#92400e", fontWeight: 600, lineHeight: 1.5 }}>
+                  Esqueceu sua senha? Você pode criar uma nova em poucos passos.
+                </span>
+                <Link
+                  href={`/forgot-password?email=${encodeURIComponent(loginEmail.trim())}`}
+                  className="btn btn-primary btn-block"
+                  style={{ padding: "0.75rem", fontSize: "0.95rem", textAlign: "center", textDecoration: "none" }}
+                >
+                  Criar nova senha
+                </Link>
+              </div>
+            )}
+
             <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 4 }}>
               Ainda não tem conta?{" "}
               <button type="button" onClick={() => setTab("register")} style={{ background: "none", border: "none", color: "var(--blue-main)", fontWeight: 700, cursor: "pointer", fontSize: "0.82rem" }}>
