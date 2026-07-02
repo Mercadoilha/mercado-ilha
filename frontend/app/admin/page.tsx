@@ -52,6 +52,7 @@ const ICON_GROUPS: { group: string; icons: { e: string; l: string }[] }[] = [
   { group: "Imóveis", icons: [
     { e: "🏡", l: "Casa" }, { e: "🏢", l: "Apartamento" }, { e: "🔑", l: "Aluguel" },
     { e: "🌍", l: "Terreno" }, { e: "🏖️", l: "Praia" }, { e: "🏕️", l: "Área rural" },
+    { e: "🛎️", l: "Hospedagem" },
   ]},
   { group: "Agro & natureza", icons: [
     { e: "🌱", l: "Plantas" }, { e: "🪴", l: "Jardim" }, { e: "🐄", l: "Agropecuário" },
