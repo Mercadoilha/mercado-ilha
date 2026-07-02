@@ -49,7 +49,6 @@ function SignInContent() {
 
   // Login attempt counter
   const [loginAttempts, setLoginAttempts] = useState(0);
-  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const [showLoginPw, setShowLoginPw] = useState(false);
   const [showRegPw, setShowRegPw] = useState(false);
@@ -74,11 +73,11 @@ function SignInContent() {
       const newAttempts = loginAttempts + 1;
       setLoginAttempts(newAttempts);
       if (newAttempts >= 3) {
-        await supabase.auth.resetPasswordForEmail(loginEmail, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        setShowRecoveryModal(true);
+        // Após 3 tentativas, encaminha ao fluxo de recuperação por código
+        // (/forgot-password), que envia o código de 8 dígitos e permite criar
+        // uma nova senha. Não usamos link por e-mail — o template só tem {{ .Token }}.
         setError(null);
+        router.push(`/forgot-password?email=${encodeURIComponent(loginEmail.trim())}`);
       } else {
         setError("Email ou senha incorretos. Tente novamente.");
       }
@@ -144,28 +143,6 @@ function SignInContent() {
 
   return (
     <div className="page-body">
-
-      {/* Modal: recovery email sent after 3 failed attempts */}
-      {showRecoveryModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "1.75rem 1.5rem", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📧</div>
-            <p style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", marginBottom: 8 }}>E-mail de recuperação enviado</p>
-            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 20 }}>
-              Enviamos um link para <strong>{loginEmail}</strong> para você criar uma nova senha.<br />
-              Verifique sua caixa de entrada e o spam.
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary btn-block"
-              onClick={() => { setShowRecoveryModal(false); setLoginAttempts(0); }}
-              style={{ padding: "0.75rem", fontSize: "1rem" }}
-            >
-              Aceitar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <header className="page-header">
