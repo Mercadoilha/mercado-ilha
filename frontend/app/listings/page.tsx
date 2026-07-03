@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, Suspense } from "react";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import ListingCard from "../../components/ListingCard";
 import { useSession } from "../../contexts/SessionContext";
+import { trackSearch } from "../../lib/tracking";
 
 const SORT_OPTIONS = [
   { key: "recent", label: "🕐 Recentes" },
@@ -52,6 +53,8 @@ function ListingsContent() {
   const [conditionFilter, setConditionFilter] = useState("");
   const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
   const [zoneFilter, setZoneFilter] = useState<number | null>(null);
+  // Evita registrar la misma búsqueda dos veces (al cambiar orden/zona).
+  const loggedTermRef = useRef<string>("");
 
   // Reset filters when category/search changes
   useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
@@ -152,6 +155,14 @@ function ListingsContent() {
         setListings([]);
       } else {
         setListings(listingsResult.data ?? []);
+      }
+
+      // Registrar la búsqueda de texto (una vez por término) con su cantidad
+      // de resultados. Alimenta la detección de búsquedas sin resultados.
+      if (searchQuery && loggedTermRef.current !== searchQuery) {
+        loggedTermRef.current = searchQuery;
+        const count = listingsResult.error ? 0 : (listingsResult.data?.length ?? 0);
+        trackSearch(searchQuery, count);
       }
 
       if (favResult?.data) {

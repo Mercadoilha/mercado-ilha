@@ -4,105 +4,192 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 
-const SLUG_ICON: Record<string, string> = {
-  "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
-  "beleza-e-bem-estar": "💅", "translados": "🚗", "envios": "📫",
-  "gastronomia": "🍽️", "terrenos": "🌍", "casas": "🏡", "alugueis": "🔑",
+// Tres tipos de sugerencia, en este orden de prioridad:
+//  - "term": la búsqueda particular (texto). Primera y más específica.
+//            Ej.: "iph" → "iphone" → muestra solo iphones.
+//  - "category" / "subcategory": relacionadas, para llevar a más anuncios
+//            (estimular el scroll). Se deducen de los anuncios que coinciden.
+type Suggestion = {
+  label: string;
+  href: string;
+  hint: string; // etiqueta a la derecha; "" = sin etiqueta (término particular)
 };
 
-type ListingSuggestion = {
-  kind: "listing";
-  id: string;
-  title: string;
-  price: number | null;
-  price_text: string | null;
-  categoryName: string;
-};
+const cache = new Map<string, Suggestion[]>();
 
-type CategorySuggestion = {
-  kind: "category";
-  name: string;
-  slug: string;
-  icon: string | null;
-};
+function norm(s: string) {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
-type Suggestion = ListingSuggestion | CategorySuggestion;
+// Ordena las palabras de los títulos que contienen `word`, mejores primero:
+// coincidencia exacta > más frecuente > más corta.
+// Ej.: títulos con "iPhone 13", "iPhone Pro" + word="iph" → ["iphone", ...].
+function rankCompletions(titles: string[], word: string): string[] {
+  const count = new Map<string, number>();
+  for (const title of titles) {
+    for (const raw of title.split(/[\s,.;:/()\-–—|@#!?"']+/)) {
+      const w = raw.toLowerCase();
+      if (w.length < 2 || w.length > 24) continue;
+      if (/^\d+$/.test(w)) continue; // ignorar números sueltos
+      if (!w.includes(word)) continue;
+      count.set(w, (count.get(w) ?? 0) + 1);
+    }
+  }
+  return [...count.entries()]
+    .sort((a, b) => {
+      const ea = a[0] === word ? 1 : 0;
+      const eb = b[0] === word ? 1 : 0;
+      if (ea !== eb) return eb - ea; // el término exacto primero
+      if (b[1] !== a[1]) return b[1] - a[1]; // luego el más frecuente
+      return a[0].length - b[0].length; // luego el más corto
+    })
+    .map((e) => e[0]);
+}
 
-const cache = new Map<string, { listings: ListingSuggestion[]; categories: CategorySuggestion[] }>();
-
-async function fetchSuggestions(
-  q: string,
-  signal: AbortSignal
-): Promise<{ listings: ListingSuggestion[]; categories: CategorySuggestion[] }> {
-  const key = q.toLowerCase();
+async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggestion[]> {
+  const key = norm(q);
   if (cache.has(key)) return cache.get(key)!;
 
+  const ql = key;
   const like = `%${q}%`;
 
   const [listRes, catRes, subRes] = await Promise.all([
+    // Anuncios que coinciden por título: de aquí salen los términos
+    // particulares y las categorías/subcategorías relacionadas.
     supabase
       .from("listings")
-      .select("id, title, price, price_text, categories(name, slug)")
+      .select("title, categories:category_id(name, slug), subcategories:subcategory_id(id, name, categories(name, slug))")
       .eq("status", "active")
       .ilike("title", like)
-      .limit(5)
+      .limit(20)
       .abortSignal(signal),
+    // Coincidencia directa por nombre de categoría (ej. escribir "celul").
     supabase
       .from("categories")
-      .select("name, slug, icon")
+      .select("name, slug")
       .ilike("name", like)
       .eq("is_active", true)
-      .limit(3)
+      .limit(5)
       .abortSignal(signal),
+    // Coincidencia directa por nombre de subcategoría.
     supabase
       .from("subcategories")
-      .select("name, slug, categories(slug, icon)")
+      .select("id, name, categories(name, slug)")
       .ilike("name", like)
-      .limit(3)
+      .limit(5)
       .abortSignal(signal),
   ]);
 
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
 
-  const listings: ListingSuggestion[] = (listRes.data ?? []).map((r: any) => ({
-    kind: "listing",
-    id: r.id,
-    title: r.title,
-    price: r.price ?? null,
-    price_text: r.price_text ?? null,
-    categoryName: r.categories?.name ?? "",
-  }));
+  // Títulos que coinciden → de aquí sale la búsqueda particular.
+  const titles: string[] = [];
+  // Categorías relacionadas (por los anuncios que coinciden + match directo).
+  const catMap = new Map<string, { label: string; slug: string; count: number }>();
+  // Subcategorías relacionadas.
+  const subMap = new Map<string, { label: string; href: string; hint: string; count: number }>();
 
-  const catSlugs = new Set<string>();
-  const categories: CategorySuggestion[] = [];
-
-  for (const c of catRes.data ?? []) {
-    if (!catSlugs.has(c.slug)) {
-      catSlugs.add(c.slug);
-      categories.push({ kind: "category", name: c.name, slug: c.slug, icon: c.icon });
+  for (const row of listRes.data ?? []) {
+    const r = row as any;
+    titles.push((r.title as string) ?? "");
+    const cat = r.categories;
+    if (cat?.slug) {
+      const e = catMap.get(cat.slug) ?? { label: cat.name, slug: cat.slug, count: 0 };
+      e.count += 1;
+      catMap.set(cat.slug, e);
     }
+    const sub = r.subcategories;
+    const subParentSlug = sub?.categories?.slug;
+    if (sub?.id && subParentSlug) {
+      const k = `${subParentSlug}:${sub.id}`;
+      const e = subMap.get(k) ?? {
+        label: sub.name,
+        href: `/listings?category=${subParentSlug}&subcategory_id=${sub.id}`,
+        hint: sub.categories?.name ?? "Categoria",
+        count: 0,
+      };
+      e.count += 1;
+      subMap.set(k, e);
+    }
+  }
+
+  // Coincidencias directas (peso base para que aparezcan aunque no haya
+  // anuncios con ese texto en el título).
+  for (const c of catRes.data ?? []) {
+    const cc = c as any;
+    if (!cc.slug) continue;
+    const e = catMap.get(cc.slug) ?? { label: cc.name, slug: cc.slug, count: 0 };
+    e.count += 0.5;
+    catMap.set(cc.slug, e);
   }
   for (const s of subRes.data ?? []) {
-    const parentSlug = (s as any).categories?.slug;
-    const icon = (s as any).categories?.icon ?? null;
-    if (parentSlug && !catSlugs.has(s.slug)) {
-      catSlugs.add(s.slug);
-      categories.push({ kind: "category", name: s.name, slug: parentSlug, icon });
-    }
-    if (categories.length >= 3) break;
+    const ss = s as any;
+    const parentSlug = ss.categories?.slug;
+    if (!ss.id || !parentSlug) continue;
+    const k = `${parentSlug}:${ss.id}`;
+    const e = subMap.get(k) ?? {
+      label: ss.name,
+      href: `/listings?category=${parentSlug}&subcategory_id=${ss.id}`,
+      hint: ss.categories?.name ?? "Categoria",
+      count: 0,
+    };
+    e.count += 0.5;
+    subMap.set(k, e);
   }
 
-  const result = { listings, categories: categories.slice(0, 3) };
-  if (result.listings.length > 0 || result.categories.length > 0) {
-    cache.set(key, result);
+  const seen = new Set<string>();
+  const result: Suggestion[] = [];
+  const add = (s: Suggestion) => {
+    const k = norm(s.label);
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    result.push(s);
+  };
+
+  // 1) Búsqueda particular (primera y más específica).
+  const words = ql.split(/\s+/).filter((w) => w.length >= 2);
+  const firstWord = words[0] ?? ql;
+  const comps = rankCompletions(titles, firstWord);
+  if (words.length > 1) {
+    // Frase completa ("iphone 13") → resultados EXACTOS de lo escrito.
+    add({ label: ql, href: `/listings?q=${encodeURIComponent(q.trim())}`, hint: "" });
+    // Y la versión amplia ("iphone") para explorar más anuncios.
+    if (comps[0]) add({ label: comps[0], href: `/listings?q=${encodeURIComponent(comps[0])}`, hint: "" });
+  } else {
+    // Fragmento ("iph") → completar al término real ("iphone").
+    const term = comps[0] ?? ql;
+    add({ label: term, href: `/listings?q=${encodeURIComponent(term)}`, hint: "" });
   }
-  return result;
+
+  // 2) Categorías relacionadas (máx 3).
+  const cats = [...catMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+  for (const c of cats) {
+    add({ label: c.label, href: `/listings?category=${c.slug}`, hint: "Categoria" });
+  }
+
+  // 3) Subcategorías relacionadas (máx 3).
+  const subs = [...subMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+  for (const s of subs) {
+    add({ label: s.label, href: s.href, hint: s.hint });
+  }
+
+  const final = result.slice(0, 8);
+  if (final.length > 0) cache.set(key, final);
+  return final;
 }
 
-function priceLabel(l: ListingSuggestion) {
-  if (l.price != null)
-    return `R$ ${Number(l.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-  return l.price_text ?? "";
+// Resalta en negrita la parte del término que coincide con lo escrito.
+function highlight(term: string, q: string) {
+  const idx = term.toLowerCase().indexOf(q.trim().toLowerCase());
+  if (idx < 0 || !q.trim()) return <>{term}</>;
+  const end = idx + q.trim().length;
+  return (
+    <>
+      {term.slice(0, idx)}
+      <strong style={{ fontWeight: 700, color: "#1e293b" }}>{term.slice(idx, end)}</strong>
+      {term.slice(end)}
+    </>
+  );
 }
 
 export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?: string }) {
@@ -110,8 +197,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
   const [query, setQuery] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [listings, setListings] = useState<ListingSuggestion[]>([]);
-  const [cats, setCats] = useState<CategorySuggestion[]>([]);
+  const [items, setItems] = useState<Suggestion[]>([]);
   const [activeIdx, setActiveIdx] = useState(-1);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,17 +205,14 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const allItems: Suggestion[] = [...listings, ...cats];
-
   const runSearch = useCallback((q: string) => {
     if (abortRef.current) abortRef.current.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
     fetchSuggestions(q, ctrl.signal)
-      .then(({ listings: l, categories: c }) => {
-        setListings(l);
-        setCats(c);
+      .then((t) => {
+        setItems(t);
         setActiveIdx(-1);
         setOpen(true);
       })
@@ -141,8 +224,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
     if (timerRef.current) clearTimeout(timerRef.current);
     if (query.length < 2) {
       setOpen(false);
-      setListings([]);
-      setCats([]);
+      setItems([]);
       setLoading(false);
       if (abortRef.current) abortRef.current.abort();
       return;
@@ -162,33 +244,33 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (activeIdx >= 0 && allItems[activeIdx]) {
-      selectItem(allItems[activeIdx]);
-      return;
-    }
-    const q = query.trim();
-    if (q) {
-      setOpen(false);
-      router.push(`/listings?q=${encodeURIComponent(q)}`);
-    }
+  function goHref(href: string) {
+    setOpen(false);
+    router.push(href);
   }
 
-  function selectItem(item: Suggestion) {
+  // Enter sin sugerencia elegida → búsqueda de texto amplia (título + descripción).
+  function goFreeText(term: string) {
+    const q = term.trim();
+    if (!q) return;
     setOpen(false);
-    if (item.kind === "listing") {
-      router.push(`/listings/${item.id}`);
-    } else {
-      router.push(`/listings?category=${item.slug}`);
+    router.push(`/listings?q=${encodeURIComponent(q)}`);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (activeIdx >= 0 && items[activeIdx]) {
+      goHref(items[activeIdx].href);
+      return;
     }
+    goFreeText(query);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!open) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIdx((i) => Math.min(i + 1, allItems.length - 1));
+      setActiveIdx((i) => Math.min(i + 1, items.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIdx((i) => Math.max(i - 1, -1));
@@ -198,7 +280,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
     }
   }
 
-  const hasResults = listings.length > 0 || cats.length > 0;
+  const hasResults = items.length > 0;
 
   return (
     <div ref={containerRef} style={{ position: "relative", marginTop: "0.875rem" }}>
@@ -284,91 +366,62 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
-                <div key={i} style={{ padding: "0.75rem 1rem", display: "flex", gap: 10, alignItems: "center" }}>
-                  <div style={skeletonStyle(20, 20, "50%")} />
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={skeletonStyle(12, `${60 + i * 15}%`)} />
-                    <div style={skeletonStyle(10, "40%")} />
-                  </div>
+                <div key={i} style={{ padding: "0.7rem 1rem", display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={skeletonStyle(16, 16, "50%")} />
+                  <div style={skeletonStyle(12, `${55 + i * 15}%`)} />
                 </div>
               ))}
             </>
           )}
 
           {!loading && !hasResults && (
-            <div style={{ padding: "1rem", fontSize: "0.875rem", color: "var(--text-muted)", textAlign: "center" }}>
-              Nenhum resultado para &ldquo;<strong>{query}</strong>&rdquo;
+            <div
+              role="option"
+              aria-selected={false}
+              onPointerDown={(e) => { e.preventDefault(); goFreeText(query); }}
+              style={{ padding: "0.75rem 1rem", display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}
+            >
+              <span aria-hidden="true" style={{ fontSize: "0.9rem", opacity: 0.5 }}>🔍</span>
+              <span style={{ fontSize: "0.9rem", color: "#475569" }}>
+                Buscar &ldquo;<strong style={{ color: "#1e293b" }}>{query}</strong>&rdquo; em todos os anúncios
+              </span>
             </div>
           )}
 
-          {!loading && listings.length > 0 && (
-            <>
-              <GroupLabel label="Anúncios" />
-              {listings.map((item, i) => (
-                <SuggestionItem
-                  key={item.id}
-                  id={`busca-item-${i}`}
-                  active={activeIdx === i}
-                  onSelect={() => selectItem(item)}
-                  onHover={() => setActiveIdx(i)}
-                >
-                  <span style={{ fontSize: "1rem" }}>🏷️</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {item.title}
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 1 }}>
-                      {priceLabel(item) && (
-                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--blue-main)" }}>
-                          {priceLabel(item)}
-                        </span>
-                      )}
-                      <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{item.categoryName}</span>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: "0.75rem", color: "#cbd5e1", flexShrink: 0 }}>›</span>
-                </SuggestionItem>
-              ))}
-            </>
-          )}
-
-          {!loading && cats.length > 0 && (
-            <>
-              {listings.length > 0 && <div style={{ height: 1, background: "var(--border)", margin: "0 1rem" }} />}
-              <GroupLabel label="Categorias" />
-              {cats.map((item, i) => {
-                const idx = listings.length + i;
-                const icon = item.icon ?? SLUG_ICON[item.slug] ?? "📌";
-                return (
-                  <SuggestionItem
-                    key={item.slug + item.name}
-                    id={`busca-item-${idx}`}
-                    active={activeIdx === idx}
-                    onSelect={() => selectItem(item)}
-                    onHover={() => setActiveIdx(idx)}
-                  >
-                    <span style={{ fontSize: "1rem" }}>{icon}</span>
-                    <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: 600, color: "#1e293b" }}>
-                      {item.name}
-                    </span>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", flexShrink: 0 }}>
-                      Ver todos →
-                    </span>
-                  </SuggestionItem>
-                );
-              })}
-            </>
-          )}
+          {!loading && items.map((item, i) => (
+            <SuggestionItem
+              key={item.href}
+              id={`busca-item-${i}`}
+              active={activeIdx === i}
+              onSelect={() => goHref(item.href)}
+              onHover={() => setActiveIdx(i)}
+            >
+              <span aria-hidden="true" style={{ fontSize: "0.9rem", opacity: 0.5, flexShrink: 0 }}>🔍</span>
+              <span style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: "0.9rem",
+                color: "#475569",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {highlight(item.label, query)}
+              </span>
+              {item.hint && (
+                <span style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-muted)",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}>
+                  em {item.hint}
+                </span>
+              )}
+            </SuggestionItem>
+          ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function GroupLabel({ label }: { label: string }) {
-  return (
-    <div style={{ padding: "0.4rem 1rem 0.2rem", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-      {label}
     </div>
   );
 }

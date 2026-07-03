@@ -39,6 +39,23 @@ export function trackBannerClick(
     .then(() => {}, () => {});
 }
 
+/**
+ * Registra una búsqueda de texto y cuántos resultados obtuvo.
+ * Sirve para descubrir búsquedas sin resultados (candidatas a sinónimos)
+ * y las más frecuentes. La normalización del término la hace el servidor.
+ */
+export function trackSearch(term: string, resultsCount: number): void {
+  const t = term.trim();
+  if (t.length < 2) return;
+  supabase
+    .rpc("track_search", {
+      _term: t,
+      _results_count: resultsCount,
+      _visitor_id: getVisitorId(),
+    })
+    .then(() => {}, () => {});
+}
+
 /** Registra una vista de anuncio. */
 export function trackListingView(listingId: number, profileId: string | null): void {
   supabase
