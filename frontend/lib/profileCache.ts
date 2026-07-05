@@ -25,7 +25,7 @@ export async function prewarmProfile(uid: string): Promise<void> {
       supabase.from("profiles").select("*").eq("id", uid).single(),
       supabase
         .from("listings")
-        .select("id,title,price,price_text,status,created_at,expires_at")
+        .select("id,title,price,price_text,status,created_at,expires_at,bumped_at")
         .eq("user_id", uid)
         .order("created_at", { ascending: false }),
     ]);

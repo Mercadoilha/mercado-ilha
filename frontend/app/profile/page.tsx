@@ -20,6 +20,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<number | null>(null);
+  const [bumping, setBumping] = useState<number | null>(null);
+  const [bumpMsg, setBumpMsg] = useState<{ id: number; text: string; ok: boolean } | null>(null);
 
   // Edit profile
   const [editMode, setEditMode] = useState(false);
@@ -54,7 +56,7 @@ export default function ProfilePage() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
       const [profileRes, listRes, statsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).single(),
-        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at").eq("user_id", uid).order("created_at", { ascending: false }),
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at").eq("user_id", uid).order("created_at", { ascending: false }),
         supabase.rpc("get_my_listings_stats"),
       ]);
 
@@ -170,6 +172,45 @@ export default function ProfilePage() {
       });
     }
     setToggling(null);
+  };
+
+  // Destacar: empuja el anuncio de vuelta al tope de la home (bumped_at = now)
+  // y renueva la validez 30 días. Cooldown de 1h (validado también en la RPC).
+  const bumpListing = async (id: number) => {
+    setBumping(id);
+    setBumpMsg(null);
+    const { data, error: e } = await supabase.rpc("bump_listing", { _listing_id: id });
+    if (!e) {
+      const now = (data as string) ?? new Date().toISOString();
+      const update = {
+        bumped_at: now,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        deletion_warning_sent_at: null,
+      };
+      setMyListings((prev) => {
+        const next = prev.map((l) => (l.id === id ? { ...l, ...update } : l));
+        if (session) setCachedProfile(session.user.id, { listings: next });
+        return next;
+      });
+      setBumpMsg({ id, text: "⭐ Anúncio destacado! Aparecerá no topo da tela principal.", ok: true });
+    } else {
+      const isCooldown = (e.message ?? "").toLowerCase().includes("cooldown");
+      setBumpMsg({
+        id,
+        text: isCooldown
+          ? "Você já destacou este anúncio. Tente novamente em até 1 hora."
+          : "Não foi possível destacar o anúncio. Tente novamente.",
+        ok: false,
+      });
+    }
+    setBumping(null);
+  };
+
+  // Minutos restantes de cooldown (0 = pode destacar). 1h desde bumped_at.
+  const cooldownLeftMin = (bumpedAt?: string | null): number => {
+    if (!bumpedAt) return 0;
+    const diffMs = 60 * 60 * 1000 - (Date.now() - new Date(bumpedAt).getTime());
+    return diffMs > 0 ? Math.ceil(diffMs / 60000) : 0;
   };
 
   const signOut = async () => {
@@ -353,9 +394,12 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {myListings.map((l) => (
+              {myListings.map((l) => {
+                const cdMin = l.status === "active" ? cooldownLeftMin(l.bumped_at) : 0;
+                const canBump = l.status === "active" && cdMin === 0 && bumping !== l.id;
+                return (
+                <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <div
-                  key={l.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -384,6 +428,35 @@ export default function ProfilePage() {
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0 }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
+                  {l.status === "active" && (
+                    <button
+                      type="button"
+                      disabled={!canBump}
+                      onClick={() => bumpListing(l.id)}
+                      title={
+                        bumping === l.id
+                          ? "Destacando…"
+                          : cdMin > 0
+                          ? `Você poderá destacar de novo em ${cdMin} min`
+                          : "Destacar: aparecer no topo da tela principal (1 vez por hora)"
+                      }
+                      style={{
+                        background: canBump ? "#EF9F27" : "#fdecc8",
+                        border: "none",
+                        borderRadius: 6,
+                        cursor: canBump ? "pointer" : "not-allowed",
+                        color: canBump ? "#fff" : "#b98219",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        padding: "0.25rem 0.5rem",
+                        flexShrink: 0,
+                        opacity: bumping === l.id ? 0.6 : 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {cdMin > 0 ? `⭐ ${cdMin}min` : "⭐ Destacar"}
+                    </button>
+                  )}
                   {l.status !== "blocked" && l.status !== "sold" && (
                     <button
                       type="button"
@@ -423,7 +496,21 @@ export default function ProfilePage() {
                     🗑
                   </button>
                 </div>
-              ))}
+                {bumpMsg && bumpMsg.id === l.id && (
+                  <div style={{ fontSize: "0.72rem", fontWeight: 600, color: bumpMsg.ok ? "#0f6e56" : "#b45309", padding: "0 0.25rem" }}>
+                    {bumpMsg.text}
+                  </div>
+                )}
+                </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Leyenda del botón Destacar */}
+          {myListings.length > 0 && (
+            <div style={{ background: "#fff4e0", border: "1px solid #EF9F27", borderRadius: 10, padding: "0.7rem 0.875rem", fontSize: "0.78rem", color: "#92400e", marginTop: "0.5rem", lineHeight: 1.5 }}>
+              ⭐ <strong>Destacar:</strong> coloque seu anúncio de volta no topo da tela principal para ser visto por mais pessoas, como se você tivesse acabado de publicá-lo. Você pode destacar cada anúncio <strong>1 vez por hora</strong>.
             </div>
           )}
 

@@ -21,7 +21,7 @@ export default async function Home() {
         "id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)"
       )
       .eq("status", "active")
-      .order("created_at", { ascending: false })
+      .order("bumped_at", { ascending: false })
       .limit(10),
     admin
       .from("categories")
