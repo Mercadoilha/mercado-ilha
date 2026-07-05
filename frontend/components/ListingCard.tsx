@@ -31,10 +31,7 @@ export default memo(function ListingCard({
   );
   const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
 
-  const locationText: string | null =
-    (listing.subzones as any)?.name ??
-    (listing.localities as any)?.name ??
-    null;
+  const locationText: string | null = (listing.localities as any)?.name ?? null;
 
   return (
     <article

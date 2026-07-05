@@ -252,7 +252,7 @@ export default function StorePage() {
             <p style={{ fontSize: "0.875rem" }}>Este vendedor não tem anúncios ativos no momento.</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1px", background: "var(--border)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "1px", rowGap: "0.5rem" }}>
             {listings.map((l) => (
               <ListingCard
                 key={l.id}

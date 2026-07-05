@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
@@ -69,6 +70,31 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
     window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const quickBtnStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    aspectRatio: "1 / 1",
+    padding: "0.5rem 0.35rem",
+    background: "#fff",
+    borderRadius: 12,
+    border: "1px solid var(--border)",
+    textDecoration: "none",
+    color: "#1e293b",
+    cursor: "pointer",
+    textAlign: "center",
+    minWidth: 0,
+    font: "inherit",
+  };
+  const quickBtnIcon: CSSProperties = { fontSize: "1.6rem", lineHeight: 1 };
+  const quickBtnLabel: CSSProperties = { fontSize: "0.72rem", fontWeight: 600, lineHeight: 1.2 };
+
   return (
     <div className="page-body">
       {/* ── Header azul ── */}
@@ -113,8 +139,53 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
       {/* ── Banner publicitário ── */}
       <BannerRotativo position="home" banners={banners} adminWa={adminWa} bannerInterval={bannerInterval} />
 
+      {/* ── Acesso rápido: 3 botões ── */}
+      <nav style={{ padding: "1rem 1rem 0.5rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
+        <Link href="/listings" style={quickBtnStyle}>
+          <span style={quickBtnIcon}>🛍️</span>
+          <span style={quickBtnLabel}>Todos os anúncios</span>
+        </Link>
+        <button type="button" onClick={() => scrollToSection("secao-categorias")} style={quickBtnStyle}>
+          <span style={quickBtnIcon}>🗂️</span>
+          <span style={quickBtnLabel}>Anúncios por categoria</span>
+        </button>
+        <button type="button" onClick={() => scrollToSection("secao-info")} style={quickBtnStyle}>
+          <span style={quickBtnIcon}>ℹ️</span>
+          <span style={quickBtnLabel}>Informação útil</span>
+        </button>
+      </nav>
+
+      {/* ── Anúncios destacados ── */}
+      <section style={{ padding: "0.75rem 1rem 0.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios destacados</h2>
+        </div>
+
+        {listings.length === 0 && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "2rem 1rem",
+              background: "#fff",
+              borderRadius: 12,
+              color: "var(--text-muted)",
+            }}
+          >
+            <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
+            <p style={{ fontSize: "0.9rem" }}>Ainda não há anúncios.</p>
+            <p style={{ fontSize: "0.8rem", marginTop: 4 }}>Seja o primeiro a publicar!</p>
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "1px", rowGap: "0.5rem", margin: "0 -1rem" }}>
+          {listings.map((l) => (
+            <ListingCard key={l.id} listing={l} />
+          ))}
+        </div>
+      </section>
+
       {/* ── Categorias ── */}
-      <section style={{ padding: "0 1rem" }}>
+      <section id="secao-categorias" style={{ padding: "0 1rem", scrollMarginTop: "0.75rem" }}>
 
         {/* Bloque 1: Categorias Destacadas */}
         {(() => {
@@ -219,80 +290,8 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
       </section>
 
-      {/* ── Botão "Ver todos os anúncios" (azul com detalhe dourado) ── */}
-      {listings.length > 0 && (
-        <div style={{ padding: "0 1rem 0.25rem" }}>
-          <Link
-            href="/listings"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              width: "100%",
-              padding: "0.85rem 1rem",
-              background: "linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)",
-              borderRadius: 14,
-              boxShadow: "0 4px 14px rgba(24,95,165,0.28)",
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}>
-              Ver todos os anúncios
-            </span>
-            <span
-              style={{
-                flexShrink: 0,
-                width: 30,
-                height: 30,
-                borderRadius: 999,
-                background: "var(--sand)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.05rem",
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              →
-            </span>
-          </Link>
-        </div>
-      )}
-
-      {/* ── Anúncios destacados ── */}
-      <section style={{ padding: "1.25rem 1rem 0.5rem" }}>
-        <div style={{ marginBottom: "0.75rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios destacados</h2>
-        </div>
-
-        {listings.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "2rem 1rem",
-              background: "#fff",
-              borderRadius: 12,
-              color: "var(--text-muted)",
-            }}
-          >
-            <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
-            <p style={{ fontSize: "0.9rem" }}>Ainda não há anúncios.</p>
-            <p style={{ fontSize: "0.8rem", marginTop: 4 }}>Seja o primeiro a publicar!</p>
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1px", background: "var(--border)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 -1rem" }}>
-          {listings.map((l) => (
-            <ListingCard key={l.id} listing={l} />
-          ))}
-        </div>
-      </section>
-
       {/* ── Informação útil ── */}
-      <section style={{ padding: "1.25rem 1rem 0.5rem" }}>
+      <section id="secao-info" style={{ padding: "1.25rem 1rem 0.5rem", scrollMarginTop: "0.75rem" }}>
         <div style={{ marginBottom: "0.75rem" }}>
           <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Informação útil</h2>
         </div>

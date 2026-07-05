@@ -402,7 +402,7 @@ export default function ProfilePage() {
                 <div
                   style={{
                     display: "flex",
-                    alignItems: "center",
+                    flexDirection: "column",
                     background: "#fff",
                     border: "1px solid var(--border)",
                     borderRadius: 10,
@@ -412,7 +412,7 @@ export default function ProfilePage() {
                 >
                   <Link
                     href={`/listings/${l.id}`}
-                    style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}
+                    style={{ textDecoration: "none", color: "inherit" }}
                   >
                     <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {l.title}
@@ -425,7 +425,8 @@ export default function ProfilePage() {
                       <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
                     </div>
                   </Link>
-                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
                   {l.status === "active" && (
@@ -495,6 +496,7 @@ export default function ProfilePage() {
                   >
                     🗑
                   </button>
+                  </div>
                 </div>
                 {bumpMsg && bumpMsg.id === l.id && (
                   <div style={{ fontSize: "0.72rem", fontWeight: 600, color: bumpMsg.ok ? "#0f6e56" : "#b45309", padding: "0 0.25rem" }}>
