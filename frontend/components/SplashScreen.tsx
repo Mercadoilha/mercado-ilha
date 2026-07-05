@@ -24,7 +24,17 @@ export default function SplashScreen() {
       opacity: 1;
       transition: opacity .45s ease;
     }
-    #mi-splash.mi-show { display: flex; }
+    /* En el PWA instalado el splash se pinta desde el PRIMER frame, por CSS
+       puro, sin esperar a que corra el JS. Así no hay flash blanco: la app
+       abre directo en azul (como Mercado Livre). En navegador no aplica. */
+    @media all and (display-mode: standalone) {
+      html { background: #185FA5; }
+      #mi-splash { display: flex; }
+    }
+    @media all and (display-mode: fullscreen) {
+      html { background: #185FA5; }
+      #mi-splash { display: flex; }
+    }
     #mi-splash.mi-hide { opacity: 0; pointer-events: none; }
     #mi-splash .mi-logo {
       height: 60px;
@@ -108,7 +118,8 @@ export default function SplashScreen() {
         }
       } catch (e) {}
 
-      el.classList.add('mi-show');
+      // El splash ya está visible por CSS (media standalone). El JS solo lo
+      // oculta cuando la app terminó de cargar (o por failsafe).
       var start = Date.now();
       var done = false;
       function hide() {
