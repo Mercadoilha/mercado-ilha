@@ -381,7 +381,7 @@ function ListingsContent() {
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem", padding: "0 0.75rem" }}>
           {listings.map((l) => (
             <ListingCard
               key={l.id}

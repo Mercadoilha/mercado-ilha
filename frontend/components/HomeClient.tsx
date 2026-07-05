@@ -1,8 +1,6 @@
 "use client";
 
-import { memo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
 import { trackWhatsappClick } from "../lib/tracking";
@@ -12,6 +10,7 @@ import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
 import BarcosWidget from "./BarcosWidget";
 import InstallAppCard from "./InstallAppCard";
+import ListingCard from "./ListingCard";
 
 // Nomes com palavra única muito longa que não cabe em 3 colunas no tamanho padrão
 const LONG_NAME_SLUGS = new Set(["bioconstrucao", "electrodomesticos"]);
@@ -220,13 +219,53 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
       </section>
 
-      {/* ── Anúncios recentes ── */}
-      <section style={{ padding: "1.25rem 1rem 0.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios recentes</h2>
-          <Link href="/listings" style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, textDecoration: "none" }}>
-            Ver todos →
+      {/* ── Botão "Ver todos os anúncios" (azul com detalhe dourado) ── */}
+      {listings.length > 0 && (
+        <div style={{ padding: "0 1rem 0.25rem" }}>
+          <Link
+            href="/listings"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              width: "100%",
+              padding: "0.85rem 1rem",
+              background: "linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)",
+              borderRadius: 14,
+              boxShadow: "0 4px 14px rgba(24,95,165,0.28)",
+              textDecoration: "none",
+            }}
+          >
+            <span style={{ color: "#fff", fontWeight: 800, fontSize: "0.95rem" }}>
+              Ver todos os anúncios
+            </span>
+            <span
+              style={{
+                flexShrink: 0,
+                width: 30,
+                height: 30,
+                borderRadius: 999,
+                background: "var(--sand)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.05rem",
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              →
+            </span>
           </Link>
+        </div>
+      )}
+
+      {/* ── Anúncios destacados ── */}
+      <section style={{ padding: "1.25rem 1rem 0.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios destacados</h2>
         </div>
 
         {listings.length === 0 && (
@@ -245,32 +284,11 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
           {listings.map((l) => (
-            <RecentListingRow key={l.id} listing={l} />
+            <ListingCard key={l.id} listing={l} />
           ))}
         </div>
-
-        {listings.length > 0 && (
-          <Link
-            href="/listings"
-            style={{
-              display: "block",
-              marginTop: "0.75rem",
-              padding: "0.75rem",
-              background: "#fff",
-              border: "2px solid var(--blue-main)",
-              borderRadius: 12,
-              textAlign: "center",
-              color: "var(--blue-main)",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              textDecoration: "none",
-            }}
-          >
-            Ver todos os anúncios →
-          </Link>
-        )}
       </section>
 
       {/* ── Informação útil ── */}
@@ -313,93 +331,3 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
     </div>
   );
 }
-
-const RecentListingRow = memo(function RecentListingRow({ listing }: { listing: any }) {
-  const price = listing.price != null
-    ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-    : listing.price_text ?? "Consulte";
-
-  const sortedPhotos = [...(listing.listing_photos ?? [])].sort(
-    (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
-  );
-  const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
-  const locationText: string | null = (listing.localities as any)?.name ?? null;
-
-  return (
-    <Link
-      href={`/listings/${listing.id}`}
-      style={{
-        display: "flex",
-        gap: "0.75rem",
-        background: "#fff",
-        borderRadius: 12,
-        border: "1px solid var(--border)",
-        overflow: "hidden",
-        textDecoration: "none",
-        color: "inherit",
-        alignItems: "center",
-        padding: "0.625rem",
-      }}
-    >
-      <div
-        style={{
-          width: 115,
-          height: 115,
-          minWidth: 115,
-          borderRadius: 8,
-          background: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "1.75rem",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
-      >
-        {firstPhoto ? (
-          <Image
-            src={firstPhoto}
-            alt={listing.title}
-            width={115}
-            height={115}
-            sizes="115px"
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-          />
-        ) : (
-          "🛍️"
-        )}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: "0.9rem",
-            color: "#1e293b",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {listing.title}
-        </div>
-        <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--blue-main)", marginTop: 2 }}>
-          {price}
-        </div>
-        {locationText && (
-          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            📍 {locationText}
-          </div>
-        )}
-        {listing.condition && (
-          <span style={{ display: "inline-block", marginTop: 3, fontSize: "0.65rem", fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 7px" }}>
-            {listing.condition}
-          </span>
-        )}
-      </div>
-
-      <span style={{ fontSize: "1rem", color: "#cbd5e1", flexShrink: 0 }}>›</span>
-    </Link>
-  );
-});
-

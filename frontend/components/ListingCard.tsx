@@ -6,10 +6,10 @@ import Image from "next/image";
 
 type ListingCardProps = {
   listing: any;
-  isFavorite: boolean;
-  onToggleFavorite: (listingId: number) => Promise<void>;
-  sessionExists: boolean;
-  busy: boolean;
+  isFavorite?: boolean;
+  onToggleFavorite?: (listingId: number) => Promise<void>;
+  sessionExists?: boolean;
+  busy?: boolean;
 };
 
 export default memo(function ListingCard({
@@ -37,25 +37,30 @@ export default memo(function ListingCard({
   return (
     <article
       style={{
-        display: "flex",
-        gap: "0.75rem",
-        background: "#fff",
-        borderBottom: "1px solid var(--border)",
-        alignItems: "center",
-        padding: "0.625rem 1rem",
         position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        background: "#fff",
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        overflow: "hidden",
       }}
     >
-      {/* Miniatura */}
       <Link
         href={`/listings/${listing.id}`}
-        style={{ flexShrink: 0, textDecoration: "none" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          textDecoration: "none",
+          color: "inherit",
+        }}
       >
+        {/* Imagem grande no topo (full-bleed) */}
         <div
           style={{
-            width: 160,
-            height: 160,
-            borderRadius: 10,
+            position: "relative",
+            width: "100%",
+            aspectRatio: "1 / 1",
             background: "#fff",
             display: "flex",
             alignItems: "center",
@@ -67,44 +72,40 @@ export default memo(function ListingCard({
             <Image
               src={firstPhoto}
               alt={listing.title}
-              width={160}
-              height={160}
-              sizes="160px"
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              fill
+              sizes="(max-width: 520px) 50vw, 240px"
+              style={{ objectFit: "contain" }}
             />
           ) : (
-            <span style={{ fontSize: "2rem" }}>🛍️</span>
+            <span style={{ fontSize: "2.5rem" }}>🛍️</span>
           )}
         </div>
-      </Link>
 
-      {/* Contenido */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <Link
-          href={`/listings/${listing.id}`}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
+        {/* Conteúdo */}
+        <div style={{ padding: "0.4rem 0.55rem 0.55rem" }}>
           <div
             style={{
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              color: "#1e293b",
-              whiteSpace: "nowrap",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              color: "#334155",
+              lineHeight: 1.25,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
               overflow: "hidden",
-              textOverflow: "ellipsis",
             }}
           >
             {listing.title}
           </div>
-          <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--blue-main)", marginTop: 3 }}>
+          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--blue-main)", marginTop: 3, letterSpacing: "-0.01em" }}>
             {price}
           </div>
           {locationText && (
             <div
               style={{
-                fontSize: "0.75rem",
+                fontSize: "0.7rem",
                 color: "var(--text-muted)",
-                marginTop: 2,
+                marginTop: 1,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -114,24 +115,38 @@ export default memo(function ListingCard({
             </div>
           )}
           {listing.condition && (
-            <span style={{ display: "inline-block", marginTop: 3, fontSize: "0.65rem", fontWeight: 700, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 7px" }}>
+            <span style={{ display: "inline-block", marginTop: 4, fontSize: "0.62rem", fontWeight: 600, background: "#f1f5f9", color: "#64748b", borderRadius: 999, padding: "1px 7px" }}>
               {listing.condition}
             </span>
           )}
-        </Link>
-      </div>
+        </div>
+      </Link>
 
-      {/* Favorito */}
-      <button
-        type="button"
-        onClick={() => onToggleFavorite(listing.id)}
-        disabled={busy}
-        className="fav-btn"
-        title={sessionExists ? (isFavorite ? "Remover favorito" : "Favoritar") : "Entre para favoritar"}
-        style={{ flexShrink: 0, alignSelf: "flex-start", paddingTop: 2 }}
-      >
-        {busy ? "⏳" : isFavorite ? "❤️" : "🤍"}
-      </button>
+      {/* Favorito (opcional) — overlay no canto da imagem */}
+      {onToggleFavorite && (
+        <button
+          type="button"
+          onClick={() => onToggleFavorite(listing.id)}
+          disabled={busy}
+          className="fav-btn"
+          title={sessionExists ? (isFavorite ? "Remover favorito" : "Favoritar") : "Entre para favoritar"}
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            background: "rgba(255,255,255,0.9)",
+            borderRadius: 999,
+            width: 34,
+            height: 34,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+          }}
+        >
+          {busy ? "⏳" : isFavorite ? "❤️" : "🤍"}
+        </button>
+      )}
     </article>
   );
 });
