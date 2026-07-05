@@ -19,10 +19,12 @@ export default memo(function ListingCard({
   sessionExists,
   busy,
 }: ListingCardProps) {
-  const price =
-    listing.price != null
-      ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-      : listing.price_text ?? "Consulte";
+  const hasNumericPrice = listing.price != null;
+  const priceMain = hasNumericPrice
+    ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+    : (listing.price_text?.trim() || "Consulte");
+  // Quando há preço fixo, o texto de preço vira uma nota curta exibida abaixo do valor.
+  const priceNote = hasNumericPrice ? (listing.price_text?.trim() || null) : null;
 
   const sortedPhotos = [...(listing.listing_photos ?? [])].sort(
     (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
@@ -41,8 +43,7 @@ export default memo(function ListingCard({
         display: "flex",
         flexDirection: "column",
         background: "#fff",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
+        minWidth: 0,
         overflow: "hidden",
       }}
     >
@@ -55,13 +56,13 @@ export default memo(function ListingCard({
           color: "inherit",
         }}
       >
-        {/* Imagem grande no topo (full-bleed) */}
+        {/* Imagem grande no topo (full-bleed, preenche o quadro) */}
         <div
           style={{
             position: "relative",
             width: "100%",
             aspectRatio: "1 / 1",
-            background: "#fff",
+            background: "#f1f5f9",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -74,7 +75,7 @@ export default memo(function ListingCard({
               alt={listing.title}
               fill
               sizes="(max-width: 520px) 50vw, 240px"
-              style={{ objectFit: "contain" }}
+              style={{ objectFit: "cover" }}
             />
           ) : (
             <span style={{ fontSize: "2.5rem" }}>🛍️</span>
@@ -97,9 +98,34 @@ export default memo(function ListingCard({
           >
             {listing.title}
           </div>
-          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--blue-main)", marginTop: 3, letterSpacing: "-0.01em" }}>
-            {price}
+          <div
+            style={{
+              fontSize: hasNumericPrice ? "0.95rem" : "0.85rem",
+              fontWeight: 700,
+              color: "var(--blue-main)",
+              marginTop: 3,
+              letterSpacing: "-0.01em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {priceMain}
           </div>
+          {priceNote && (
+            <div
+              style={{
+                fontSize: "0.68rem",
+                color: "var(--text-muted)",
+                marginTop: 1,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {priceNote}
+            </div>
+          )}
           {locationText && (
             <div
               style={{

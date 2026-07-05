@@ -214,7 +214,7 @@ export default function PublishForm({ categories, localities, allSubzones, islan
         title: title.trim(),
         description: description.trim(),
         price: price ? Number(price.replace(",", ".")) : null,
-        price_text: !price && priceText ? priceText : null,
+        price_text: priceText.trim() || null,
         condition: condition || null,
         contact_button_text: selectedCategory?.contact_button_text ?? "Contatar",
         whatsapp_message: selectedCategory?.whatsapp_message ?? null,
@@ -456,12 +456,24 @@ export default function PublishForm({ categories, localities, allSubzones, islan
             <label className="form-label">Valor em R$</label>
             <input className="form-input" type="number" placeholder="0,00" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
-          {!price && (
-            <div className="form-group" style={{ marginTop: 8 }}>
-              <label className="form-label">Ou texto de preço</label>
-              <input className="form-input" type="text" placeholder={ph.priceText} value={priceText} onChange={(e) => setPriceText(e.target.value)} maxLength={60} />
-            </div>
-          )}
+          <div className="form-group" style={{ marginTop: 8 }}>
+            <label className="form-label">
+              {price ? "Detalhe abaixo do preço (opcional)" : "Ou texto de preço"}
+            </label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder={price ? 'Ex: "+ frete", "por pessoa", "cada"' : ph.priceText}
+              value={priceText}
+              onChange={(e) => setPriceText(e.target.value)}
+              maxLength={price ? 30 : 40}
+            />
+            <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+              {price
+                ? "Texto curto que aparece abaixo do valor no anúncio."
+                : "Use quando não há um valor fixo. Mantenha curto para ficar bem no card."}
+            </p>
+          </div>
         </div>
 
         {/* Condición (solo para produtos) */}

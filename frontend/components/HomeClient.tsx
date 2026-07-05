@@ -284,7 +284,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1px", background: "var(--border)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 -1rem" }}>
           {listings.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}
