@@ -2,6 +2,8 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
+import SplashScreen from "../components/SplashScreen";
+import SplashSponsorSync from "../components/SplashSponsorSync";
 import { SessionProvider } from "../contexts/SessionContext";
 
 export const viewport: Viewport = {
@@ -56,10 +58,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://pub-d6279f6f1d8b4352953818cd9e119e87.r2.dev" />
       </head>
       <body>
+        <SplashScreen />
         <SessionProvider>
           {children}
           <BottomNav />
           <RegisterSW />
+          <SplashSponsorSync />
         </SessionProvider>
       </body>
     </html>
