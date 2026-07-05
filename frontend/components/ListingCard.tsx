@@ -75,7 +75,7 @@ export default memo(function ListingCard({
               alt={listing.title}
               fill
               sizes="(max-width: 520px) 50vw, 240px"
-              style={{ objectFit: "cover" }}
+              style={{ objectFit: "contain" }}
             />
           ) : (
             <span style={{ fontSize: "2.5rem" }}>🛍️</span>
