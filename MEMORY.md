@@ -374,6 +374,12 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fase 1 completada (ver changelog 2026-07-06, commit
+  `fd32be8`). Quedan Fase 2 (`/listings` instantáneo: caché de resultados + scroll, desarmar
+  waterfall, caché de sesión — Opus 4.8), Fase 3 (detalle instantáneo: render optimista +
+  shells estáticos — Opus 4.8), Fase 4 (reescritura del Service Worker + página offline —
+  Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, edit server-side, store con SessionContext,
+  splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -406,6 +412,27 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` (auditoría de velocidad de navegación, 15
+  problemas priorizados en 6 fases) → **Fase 1 completada** (quick wins de percepción, T1-T5):
+  (T1) `priority` de `next/image` en el banner del home y en las primeras 4 cards de destacados
+  (`ListingCard` ganó prop `priority`); (T2) galería del detalle (`listings/[id]`) migrada de
+  `<img>` crudo a `next/image` con `priority` en la foto activa (contenedor pasó de altura auto a
+  `height: clamp(200px, 65vh, 600px)` para poder usar `fill`); thumbnails del lightbox también a
+  `next/image` — el `<img>` grande del lightbox se mantiene crudo a propósito (zoom sin
+  recompresión); (T3) orden (`Menor/Maior preço`) en `/listings` pasó a ser 100% client-side
+  (`useMemo`, sin request, nulls siempre al final) y los filtros que sí requieren red (zona,
+  condición) ya no vacían la pantalla — mantienen la lista anterior visible con un indicador
+  sutil "Atualizando…" en vez del spinner completo; (T4) el fetch de favoritos se separó a un
+  `useEffect` propio dependiente solo de la sesión → se eliminó la doble carga de `/listings`
+  para usuarios logueados (antes el efecto principal dependía de `session`); (T5) las queries de
+  listas (home, `/listings`, `/store/[id]`, `/profile`) ahora piden 1 sola foto por anuncio vía
+  `.order(...).limit(1, { referencedTable: "listing_photos" })` en vez de traer hasta 6, y se
+  sacó el join de `subzones` que ningún card usa (quedó afuera `/favorites` por tener el embed a
+  dos niveles de profundidad — `listings.listing_photos` —, sintaxis no verificada, riesgo/beneficio
+  bajo por ser una pantalla de bajo tráfico). Verificado: `npm run build` mantiene `/` y
+  `/listings` en `○ Static` y `/category/[slug]` en `● SSG`; navegación real con Playwright
+  headless (orden sin request, filtro sin limpiar pantalla, detalle sin errores de consola).
+  Quedan pendientes las Fases 2-6 del plan (ver §19). Commit: `fd32be8`.
 - **2026-07-06** — Splash del PWA: bajado el mínimo visible de 1.1s a 600ms en
   `SplashScreen.tsx` (script inline, cálculo de `wait`). Motivo: en cargas rápidas cacheadas la
   espera de 1100ms agregaba ~700ms de latencia artificial tapando una app ya lista; ahora el
