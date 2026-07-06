@@ -374,12 +374,12 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 completadas y **EN PRODUCCIÓN** (push a `main`
-  → deploy Vercel, HEAD `5ef6493`; código en `fd32be8` y `de86814`). Quedan Fase 3 (detalle
-  instantáneo: render optimista +
-  shells estáticos — Opus 4.8), Fase 4 (reescritura del Service Worker + página offline —
-  Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, edit server-side, store con SessionContext,
-  splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 **EN PRODUCCIÓN** (push a `main` → deploy Vercel,
+  `5ef6493`; código en `fd32be8` y `de86814`). **Fase 3 completada** (detalle instantáneo,
+  T9-T11 — commit `76dc20f`; **falta desplegar**). Quedan Fase 4 (reescritura del Service Worker
+  + página offline — Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, **edit server-side + shell
+  estático de `/listings/[id]/edit`, aún ƒ**, store con SessionContext, splash sponsor liviano —
+  Sonnet), Fase 6 (Web Vitals reales — Sonnet).
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -412,6 +412,30 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 3 completada** (detalle de anuncio
+  instantáneo, T9-T11; Opus 4.8). (T9) **Render optimista**: nuevo `lib/listingPreview.ts` (Map
+  de módulo, cap 30) donde la card guarda al hacer click los datos que ya tiene (título, precio,
+  price_text, condición, 1ª foto, localidad); el detalle los usa como estado inicial y pinta el
+  layout completo al instante — **sin spinner de página** — mientras llega la query completa
+  (descripción y vendedor se muestran como skeleton con altura reservada para no generar CLS).
+  Deep link / refresh sin preview mantienen el comportamiento actual (spinner). `isOwner` pasó a
+  exigir `user_id` conocido para no marcar "dueño" durante el render optimista. (T10) **Queries
+  consolidadas**: el RPC del teléfono (`get_seller_whatsapp`) se dispara apenas se conoce
+  `user_id` + sesión (antes esperaba a que cargara `profiles_public`), y el botón de WhatsApp
+  aparece apenas se sabe que no es el dueño — cascada del detalle en máx 2 niveles (principal ‖
+  favorito → vendedor+teléfono+zonas en paralelo). Flag `phoneLoaded` evita el falso "vendedor
+  sem número" mientras el teléfono carga. Regla anti popup-blocker (`<a>` nativo con teléfono
+  pre-cargado) intacta. (T11) **Shells estáticos**: `/listings/[id]` y `/store/[id]` pasaron de
+  `ƒ` (función serverless por navegación) a `● SSG` — `page.tsx` es ahora un Server Component
+  wrapper (`generateStaticParams` vacío + `dynamicParams`) que renderiza el componente cliente
+  (`ListingDetailClient.tsx` / `StoreClient.tsx`, renombrados). Se borraron los `loading.tsx`
+  (spinner de página) que competían con el render optimista. `/listings/[id]/edit` sigue `ƒ`
+  (diferido a la Fase 5/T15, que lo hará ISR con datos server-side). Verificado: `npm run build`
+  mantiene `/` `○`, `/category/[slug]` `●`, `/listings` `○` y ahora `/listings/[id]` `●` +
+  `/store/[id]` `●`; navegación real con Chromium confirma título+foto instantáneos al tocar la
+  card (0 ms, sin spinner), deep link y back sin regresión, tienda estática OK — 0 errores de app
+  (un 404 preexistente de un avatar roto en R2, ajeno a esta fase). Commit: `76dc20f`. **Falta
+  desplegar a producción.**
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 2 completada** (navegación instantánea
   en `/listings`, T6-T8; ejecutada con Opus 4.8 · `xhigh`). Tres helpers nuevos en `lib/`:
   (T6) `listingsCache.ts` — caché de resultados por clave de filtros (categoría|q|subcat|condición|zona;
