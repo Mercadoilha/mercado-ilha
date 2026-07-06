@@ -196,7 +196,7 @@ categoría/subcategoría con UI optimista (revierte si falla).
 | `/listings/[id]` | Detalle: galería, precio, vendedor, WhatsApp (RPC lazy), denuncia. Botón editar para dueño. |
 | `/listings/[id]/edit` | Editar anuncio (solo dueño). |
 | `/publish` | Formulario: fotos, categoría→subcategoría, ubicación según tipo. Llama `/api/revalidate` al publicar. |
-| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con 👁️/💬 stats, botón ⭐ Destacar. |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. |
 | `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
 | `/forgot-password` | 1 paso, solo email. `resetPasswordForEmail`. |
@@ -406,6 +406,11 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — En `/profile`, cada card de "Meus anúncios" ahora muestra una miniatura de
+  52×52px (primeira foto por `sort_order`, `next/image` con `sizes="52px"` y `objectFit: contain`,
+  placeholder 🛍️ si no tem foto) para que o usuário distinga mais fácil qual anúncio é qual —
+  mesmo padrão já usado em `/favorites`. Query de `listings` agregó join `listing_photos(photo_url,sort_order)`.
+  Build verificado: `/profile` segue `○ Static`. Pendiente de push.
 - **2026-07-06** — Fix del error de hidratación de React en `SplashScreen` detectado en la sesión
   anterior (ver entrada de abajo): el script inline removía `#mi-splash` del DOM antes de que React
   hidrate. Ver detalle en §18. Commit: `47bcbbf`.

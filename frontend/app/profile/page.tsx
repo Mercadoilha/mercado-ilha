@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
@@ -56,7 +57,7 @@ export default function ProfilePage() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
       const [profileRes, listRes, statsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).single(),
-        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at").eq("user_id", uid).order("created_at", { ascending: false }),
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at,listing_photos(photo_url,sort_order)").eq("user_id", uid).order("created_at", { ascending: false }),
         supabase.rpc("get_my_listings_stats"),
       ]);
 
@@ -397,6 +398,10 @@ export default function ProfilePage() {
               {myListings.map((l) => {
                 const cdMin = l.status === "active" ? cooldownLeftMin(l.bumped_at) : 0;
                 const canBump = l.status === "active" && cdMin === 0 && bumping !== l.id;
+                const sortedPhotos = [...(l.listing_photos ?? [])].sort(
+                  (a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+                );
+                const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
                 return (
                 <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <div
@@ -410,21 +415,50 @@ export default function ProfilePage() {
                     gap: 8,
                   }}
                 >
-                  <Link
-                    href={`/listings/${l.id}`}
-                    style={{ textDecoration: "none", color: "inherit" }}
-                  >
-                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {l.title}
-                    </div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
-                      {listingPrice(l)}
-                    </div>
-                    <div style={{ display: "flex", gap: 10, marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
-                      <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
-                      <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
-                    </div>
-                  </Link>
+                  <div style={{ display: "flex", gap: "0.625rem" }}>
+                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: 8,
+                          background: firstPhoto ? "#fff" : "var(--blue-xlight)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.4rem",
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          position: "relative",
+                        }}
+                      >
+                        {firstPhoto ? (
+                          <Image
+                            src={firstPhoto}
+                            alt={l.title}
+                            fill
+                            sizes="52px"
+                            style={{ objectFit: "contain" }}
+                          />
+                        ) : "🛍️"}
+                      </div>
+                    </Link>
+                    <Link
+                      href={`/listings/${l.id}`}
+                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {l.title}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
+                        {listingPrice(l)}
+                      </div>
+                      <div style={{ display: "flex", gap: 10, marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                        <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
+                        <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
+                      </div>
+                    </Link>
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
                     {statusLabel[l.status] ?? l.status}
