@@ -374,8 +374,9 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 completadas (ver changelog 2026-07-06, commits
-  `fd32be8` y `de86814`). Quedan Fase 3 (detalle instantáneo: render optimista +
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 completadas y **EN PRODUCCIÓN** (push a `main`
+  → deploy Vercel, HEAD `5ef6493`; código en `fd32be8` y `de86814`). Quedan Fase 3 (detalle
+  instantáneo: render optimista +
   shells estáticos — Opus 4.8), Fase 4 (reescritura del Service Worker + página offline —
   Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, edit server-side, store con SessionContext,
   splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
@@ -436,7 +437,8 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   `/listings` `○` (168 kB); navegación real con Chromium headless confirma back instantáneo con
   scroll restaurado (471→471 estable), orden sin request de red, extras inner-join sin errores,
   catálogo cacheado y filtros sin vaciar la pantalla — 0 errores de consola, 0 respuestas ≥400.
-  Quedan pendientes las Fases 3-6 (ver §19). Commit: `de86814`.
+  Quedan pendientes las Fases 3-6 (ver §19). Commit: `de86814`. **Fases 1 y 2 llevadas a
+  PRODUCCIÓN** el 2026-07-06 (push a `main`, HEAD `5ef6493` → deploy automático de Vercel).
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` (auditoría de velocidad de navegación, 15
   problemas priorizados en 6 fases) → **Fase 1 completada** (quick wins de percepción, T1-T5):
   (T1) `priority` de `next/image` en el banner del home y en las primeras 4 cards de destacados
