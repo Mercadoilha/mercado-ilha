@@ -410,7 +410,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   52×52px (primeira foto por `sort_order`, `next/image` con `sizes="52px"` y `objectFit: contain`,
   placeholder 🛍️ si no tem foto) para que o usuário distinga mais fácil qual anúncio é qual —
   mesmo padrão já usado em `/favorites`. Query de `listings` agregó join `listing_photos(photo_url,sort_order)`.
-  Build verificado: `/profile` segue `○ Static`. Pendiente de push.
+  Build verificado: `/profile` segue `○ Static`. Commit: `e7e47b3`.
 - **2026-07-06** — Fix del error de hidratación de React en `SplashScreen` detectado en la sesión
   anterior (ver entrada de abajo): el script inline removía `#mi-splash` del DOM antes de que React
   hidrate. Ver detalle en §18. Commit: `47bcbbf`.
