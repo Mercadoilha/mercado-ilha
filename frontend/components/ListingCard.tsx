@@ -10,6 +10,7 @@ type ListingCardProps = {
   onToggleFavorite?: (listingId: number) => Promise<void>;
   sessionExists?: boolean;
   busy?: boolean;
+  priority?: boolean;
 };
 
 export default memo(function ListingCard({
@@ -18,6 +19,7 @@ export default memo(function ListingCard({
   onToggleFavorite,
   sessionExists,
   busy,
+  priority,
 }: ListingCardProps) {
   const hasNumericPrice = listing.price != null;
   const priceMain = hasNumericPrice
@@ -73,6 +75,7 @@ export default memo(function ListingCard({
               alt={listing.title}
               fill
               sizes="(max-width: 520px) 50vw, 240px"
+              priority={priority}
               style={{ objectFit: "contain" }}
             />
           ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
@@ -45,6 +45,7 @@ function ListingsContent() {
   const [listings, setListings] = useState<any[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [categoryLabel, setCategoryLabel] = useState("");
@@ -72,11 +73,12 @@ function ListingsContent() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
+    setRefreshing(true);
     setError(null);
 
     async function load() {
-      const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)";
+      // 1 foto por anúncio (a primeira por sort_order); subzones não é usado pelo card.
+      const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
 
       // Resolver categoría por slug (id + etiqueta del encabezado).
       let catId: number | null = null;
@@ -89,7 +91,7 @@ function ListingsContent() {
         }
         // Slug inválido: sin categoría → no mostrar nada.
         if (!cat) {
-          if (mounted) { setListings([]); setLoading(false); }
+          if (mounted) { setListings([]); setLoading(false); setRefreshing(false); }
           return;
         }
       }
@@ -106,7 +108,10 @@ function ListingsContent() {
       let query = supabase
         .from("listings")
         .select(selectBase)
+        .order("sort_order", { referencedTable: "listing_photos" })
+        .limit(1, { referencedTable: "listing_photos" })
         .eq("status", "active")
+        .order("created_at", { ascending: false })
         .limit(60);
 
       // Incluir: categoría PRINCIPAL coincidente O anuncios con esta categoría SECUNDARIA.
@@ -132,15 +137,8 @@ function ListingsContent() {
         query = query.or(ors.join(","));
       }
 
-      if (sortBy === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
-      else if (sortBy === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
-      else query = query.order("created_at", { ascending: false });
-
-      const [listingsResult, favResult, localitiesResult] = await Promise.all([
+      const [listingsResult, localitiesResult] = await Promise.all([
         query,
-        session
-          ? supabase.from("favorites").select("listing_id").eq("profile_id", session.user.id)
-          : Promise.resolve({ data: [], error: null }),
         localities.length === 0
           ? supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
           : Promise.resolve({ data: null, error: null }),
@@ -165,17 +163,44 @@ function ListingsContent() {
         trackSearch(searchQuery, count);
       }
 
-      if (favResult?.data) {
-        setFavoriteIds(new Set((favResult.data as any[]).map((f) => f.listing_id)));
-      }
-
       setLoading(false);
+      setRefreshing(false);
     }
 
     load();
 
     return () => { mounted = false; };
-  }, [session, categorySlug, subcategoryIdParam, searchQuery, sortBy, conditionFilter, zoneFilter]);
+  }, [categorySlug, subcategoryIdParam, searchQuery, conditionFilter, zoneFilter]);
+
+  // Favoritos: efecto propio dependiente solo de la sesión, para que resolverla
+  // no dispare un segundo fetch de la lista completa (evita la doble carga).
+  useEffect(() => {
+    if (!session) { setFavoriteIds(new Set()); return; }
+    let mounted = true;
+    supabase
+      .from("favorites")
+      .select("listing_id")
+      .eq("profile_id", session.user.id)
+      .then(({ data }) => {
+        if (mounted && data) setFavoriteIds(new Set((data as any[]).map((f) => f.listing_id)));
+      });
+    return () => { mounted = false; };
+  }, [session]);
+
+  // Orden aplicado client-side sobre los resultados ya cargados: instantáneo,
+  // sin red. Precio con nulls siempre al final (mismo criterio que antes en SQL).
+  const sortedListings = useMemo(() => {
+    if (sortBy === "recent") return listings;
+    const copy = [...listings];
+    copy.sort((a: any, b: any) => {
+      const pa = a.price, pb = b.price;
+      if (pa == null && pb == null) return 0;
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return sortBy === "price_asc" ? pa - pb : pb - pa;
+    });
+    return copy;
+  }, [listings, sortBy]);
 
   const toggleFavorite = useCallback(async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }
@@ -347,9 +372,17 @@ function ListingsContent() {
       <div style={{ padding: "0.75rem 0" }}>
         {error && <p className="text-error" style={{ margin: "0 1rem 8px" }}>{error}</p>}
 
-        {loading && (
+        {/* Spinner de página inteira: só na primeira carga, sem dados ainda */}
+        {loading && listings.length === 0 && (
           <div style={{ textAlign: "center", padding: "3rem 0" }}>
             <div className="spinner" />
+          </div>
+        )}
+
+        {/* Indicador sutil: filtro/busca mudou, mantém a lista anterior visível */}
+        {refreshing && listings.length > 0 && (
+          <div style={{ textAlign: "center", padding: "0.4rem 0", fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            Atualizando…
           </div>
         )}
 
@@ -382,7 +415,7 @@ function ListingsContent() {
         )}
 
         <div className="listing-grid">
-          {listings.map((l) => (
+          {sortedListings.map((l) => (
             <ListingCard
               key={l.id}
               listing={l}

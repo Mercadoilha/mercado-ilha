@@ -96,6 +96,7 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
         alt={current.title ?? "Banner"}
         fill
         sizes="100vw"
+        priority
         style={{ objectFit: "cover", display: "block", transition: "opacity 0.4s" }}
       />
 

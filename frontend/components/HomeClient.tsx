@@ -172,8 +172,8 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
         )}
 
         <div className="listing-grid">
-          {listings.map((l) => (
-            <ListingCard key={l.id} listing={l} />
+          {listings.map((l, i) => (
+            <ListingCard key={l.id} listing={l} priority={i < 4} />
           ))}
         </div>
       </section>

@@ -18,8 +18,10 @@ export default async function Home() {
     admin
       .from("listings")
       .select(
-        "id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name), subzones(id, name)"
+        "id, title, price, price_text, condition, locality_id, subzone_id, category_id, created_at, listing_photos(photo_url, sort_order), localities(name)"
       )
+      .order("sort_order", { referencedTable: "listing_photos" })
+      .limit(1, { referencedTable: "listing_photos" })
       .eq("status", "active")
       .order("bumped_at", { ascending: false })
       .limit(10),

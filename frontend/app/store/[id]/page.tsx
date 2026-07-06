@@ -43,7 +43,9 @@ export default function StorePage() {
         supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
-          .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name),subzones(name)")
+          .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name)")
+          .order("sort_order", { referencedTable: "listing_photos" })
+          .limit(1, { referencedTable: "listing_photos" })
           .eq("user_id", sellerId)
           .eq("status", "active")
           .order("created_at", { ascending: false }),

@@ -352,13 +352,19 @@ export default function ListingDetailPage() {
       <div style={{ position: "relative", background: "#e8eef6" }}>
         {photos.length > 0 ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photos[photoIdx]?.photo_url}
-              alt={listing.title}
+            <div
               onClick={() => openLightbox(photoIdx)}
-              style={{ width: "100%", height: "auto", maxHeight: "70vh", minHeight: 200, objectFit: "contain", background: "#fff", display: "block", cursor: "zoom-in" }}
-            />
+              style={{ position: "relative", width: "100%", height: "clamp(200px, 65vh, 600px)", background: "#fff", cursor: "zoom-in" }}
+            >
+              <Image
+                src={photos[photoIdx]?.photo_url}
+                alt={listing.title}
+                fill
+                priority={photoIdx === 0}
+                sizes="(max-width: 480px) 100vw, 480px"
+                style={{ objectFit: "contain" }}
+              />
+            </div>
             {/* Counter */}
             <div
               style={{
@@ -792,8 +798,7 @@ export default function ListingDetailPage() {
                     transition: "opacity 0.15s",
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.photo_url} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 4, display: "block" }} />
+                  <Image src={p.photo_url} alt="" width={52} height={52} sizes="52px" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 4, display: "block" }} />
                 </button>
               ))}
             </div>
