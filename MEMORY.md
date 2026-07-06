@@ -411,7 +411,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   espera de 1100ms agregaba ~700ms de latencia artificial tapando una app ya lista; ahora el
   splash es prácticamente puro relleno del delay de arranque. Recordatorio: el splash SOLO
   aparece en recargas completas del PWA standalone (SO reabriendo el WebView), nunca en la
-  navegación interna (`layout.tsx` persiste). Commit: `COMMIT_HASH`.
+  navegación interna (`layout.tsx` persiste). Commit: `c4e4cd9`.
 - **2026-07-06** — En `/profile`, cada card de "Meus anúncios" ahora muestra una miniatura de
   52×52px (primeira foto por `sort_order`, `next/image` con `sizes="52px"` y `objectFit: contain`,
   placeholder 🛍️ si no tem foto) para que o usuário distinga mais fácil qual anúncio é qual —
