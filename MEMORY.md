@@ -406,7 +406,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   con Playwright en local (medidas de ancho/alto de columnas y filas, capturas de pantalla) — sin
   desfasajes, filas parejas. Detectado (no resuelto, a pedido del usuario para otra sesión): error
   de hidratación de React en `SplashScreen` visible en `npm run dev` al navegar a `/listings`.
-  Commit: _(pendiente)_.
+  Commit: `2ccaa51`.
 - **2026-07-05** — Fix login: `signin/page.tsx` distinguía mal los errores de Supabase y mostraba
   "senha incorreta" también ante fallos de red (típico en el primer login tras reinstalar el PWA).
   Ahora solo cuenta como credencial inválida el mensaje "invalid login credentials"; otros errores
@@ -416,4 +416,4 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   como fuente única del sistema multiagente, `CLAUDE.md` con el pilar de velocidad de navegación,
   `PROMPT_CLAUDE_CODE.md`/`PROMPT_MAESTRO_PARA_CLAUDE_CODE.md` marcados como históricos. Skill
   `/memory` creada (`.claude/skills/memory/SKILL.md`): cierra sesión actualizando este archivo y
-  desplegando a producción (commit + push a `main`). Commit: _(pendiente)_.
+  desplegando a producción (commit + push a `main`). Commit: `2ccaa51`.
