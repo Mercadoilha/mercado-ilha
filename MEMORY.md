@@ -374,9 +374,9 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 **EN PRODUCCIÓN** (push a `main` → deploy Vercel,
-  `5ef6493`; código en `fd32be8` y `de86814`). **Fase 3 completada** (detalle instantáneo,
-  T9-T11 — commit `76dc20f`; **falta desplegar**). Quedan Fase 4 (reescritura del Service Worker
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-3 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
+  Vercel, `5ef6493`, código en `fd32be8` y `de86814`; Fase 3: detalle instantáneo T9-T11, push a
+  `main` → deploy Vercel, `f202fed`, código en `76dc20f`). Quedan Fase 4 (reescritura del Service Worker
   + página offline — Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, **edit server-side + shell
   estático de `/listings/[id]/edit`, aún ƒ**, store con SessionContext, splash sponsor liviano —
   Sonnet), Fase 6 (Web Vitals reales — Sonnet).
@@ -434,8 +434,9 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   mantiene `/` `○`, `/category/[slug]` `●`, `/listings` `○` y ahora `/listings/[id]` `●` +
   `/store/[id]` `●`; navegación real con Chromium confirma título+foto instantáneos al tocar la
   card (0 ms, sin spinner), deep link y back sin regresión, tienda estática OK — 0 errores de app
-  (un 404 preexistente de un avatar roto en R2, ajeno a esta fase). Commit: `76dc20f`. **Falta
-  desplegar a producción.**
+  (un 404 preexistente de un avatar roto en R2, ajeno a esta fase). Commit: `76dc20f`.
+  **Llevada a PRODUCCIÓN el 2026-07-06** (push a `main`, HEAD `f202fed` → deploy automático de
+  Vercel).
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 2 completada** (navegación instantánea
   en `/listings`, T6-T8; ejecutada con Opus 4.8 · `xhigh`). Tres helpers nuevos en `lib/`:
   (T6) `listingsCache.ts` — caché de resultados por clave de filtros (categoría|q|subcat|condición|zona;
