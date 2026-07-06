@@ -361,6 +361,16 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   porque `handleLogin` no distinguía el tipo de error de Supabase. Fix: solo se cuenta como
   credencial inválida si `authErr.message` incluye "invalid login credentials"; cualquier otro
   error muestra "Erro de conexão" y no suma al contador que dispara el flujo de recuperación.
+- **Hidratación en `SplashScreen` (2026-07-06):** el script inline hacía
+  `el.parentNode.removeChild(el)` para esconder el splash fuera del PWA instalado — pero eso pasa
+  ANTES de que React hidrate, y React sigue esperando encontrar ese `<div>` (lo renderiza
+  `SplashScreen`, un Server Component dentro de `layout.tsx`). Pasaba en TODA carga en navegador
+  normal (no solo PWA), porque `!standalone` es el caso común. Fix: no tocar el DOM en ese caso —
+  el CSS ya esconde `#mi-splash` por defecto (`display:none`, solo pasa a `flex` en
+  `@media (display-mode: standalone/fullscreen)`). También se sacó el `removeChild` final tras el
+  fade-out en el caso PWA (se deja el nodo oculto por clase, nunca se remueve) y se agregó
+  `suppressHydrationWarning` en `#mi-splash`/`#mi-sponsor` como refuerzo. Verificado con Playwright
+  en local: sin mensajes de "hydration" en consola en `/` ni `/listings`.
 
 ## 19. PENDIENTES / IDEAS
 
@@ -396,6 +406,9 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — Fix del error de hidratación de React en `SplashScreen` detectado en la sesión
+  anterior (ver entrada de abajo): el script inline removía `#mi-splash` del DOM antes de que React
+  hidrate. Ver detalle en §18. Commit: _(pendiente)_.
 - **2026-07-06** — Cierre de la refactorización de `.listing-grid` (`globals.css` +
   `ListingCard.tsx`): se corrigió un desfasaje de 1px entre las columnas de imagen (causado por
   `border-right` en una sola columna + `box-sizing: border-box`) usando `border-right` en ambas

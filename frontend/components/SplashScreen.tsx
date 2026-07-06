@@ -96,7 +96,11 @@ export default function SplashScreen() {
       if (!el) return;
       var standalone = window.matchMedia('(display-mode: standalone)').matches
         || window.navigator.standalone === true;
-      if (!standalone) { el.parentNode && el.parentNode.removeChild(el); return; }
+      // Fora do PWA instalado, o CSS já esconde #mi-splash por padrão
+      // (display: none, só vira flex no media standalone/fullscreen). Não
+      // mexer no DOM aqui: remover o nó antes da hidratação do React causava
+      // um erro de hidratação (React espera encontrar o elemento).
+      if (!standalone) { return; }
 
       // Slot de patrocinador: se pinta al instante desde caché (localStorage),
       // sin esperar red. La imagen viaja como data-URL, así no hay request.
@@ -127,7 +131,6 @@ export default function SplashScreen() {
         var wait = Math.max(0, 1100 - (Date.now() - start));
         setTimeout(function () {
           el.classList.add('mi-hide');
-          setTimeout(function () { el.parentNode && el.parentNode.removeChild(el); }, 500);
         }, wait);
       }
       if (document.readyState === 'complete') hide();
@@ -139,12 +142,12 @@ export default function SplashScreen() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-      <div id="mi-splash" aria-hidden="true">
+      <div id="mi-splash" aria-hidden="true" suppressHydrationWarning>
         {/* Logo real da app (mesmo do header). Branco sobre azul. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="mi-logo" src="/logo.svg" alt="Mercado Ilha" />
-        {/* Slot de patrocinador — rellenado por el script inline desde caché */}
-        <div id="mi-sponsor" className="mi-sponsor" />
+        {/* Slot de patrocinador — preenchido pelo script inline a partir do cache */}
+        <div id="mi-sponsor" className="mi-sponsor" suppressHydrationWarning />
       </div>
       <script dangerouslySetInnerHTML={{ __html: script }} />
     </>
