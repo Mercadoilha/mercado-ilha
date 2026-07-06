@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"/Users/leo.cufone/Desktop/IA/Mercado Ilha\" && echo \"=== RPC def in fase-3 \\(130-155\\) ===\" && sed -n '130,155p' supabase/fase-3.sql && echo \"\" && echo \"=== does frontend call the view RPC? ===\" && grep -rn \"register_listing_view\\\\|record_view\\\\|listing_view\\\\|rpc\\(\" frontend/app frontend/components frontend/lib 2>/dev/null && echo \"\" && echo \"=== listing detail WA area \\(225-250\\) ===\" && sed -n '225,250p' frontend/app/listings/[id]/page.tsx)",
+      "Bash(git commit -m ' *)",
+      "Bash(cd \"/Users/leo.cufone/Desktop/IA/Mercado Ilha/frontend\" && cat package.json && echo \"===category page top===\" && sed -n '1,40p' app/category/[slug]/page.tsx)",
+      "Bash(grep -E \"\\(✓|✗|error|Error|Failed|/api/revalidate|^┌|^├ ○ /  |^├ ○ /$| / \\)\")",
+      "Bash(CLAUDE_CODE_TMPDIR=/tmp grep -rl \"textarea\" \"/Users/leo.cufone/Desktop/IA/Mercado Ilha/frontend\" --include=\"*.tsx\")",
+      "Bash(git -C \"/Users/leo.cufone/Desktop/IA/Mercado Ilha\" log --oneline -3)",
+      "Bash(git -C \"/Users/leo.cufone/Desktop/IA/Mercado Ilha\" add frontend/app/globals.css)",
+      "Bash(git -C '/Users/leo.cufone/Desktop/IA/Mercado Ilha' commit -m ' *)",
+      "Bash(export CLAUDE_CODE_TMPDIR=\"$HOME/.claude-tmp\")",
+      "Bash(mkdir -p /Users/leo.cufone/.claude-tmp)",
+      "Bash(df -h /tmp /Users/leo.cufone)",
+      "Bash(curl -s -o /dev/null -w \"Home %{http_code} \\(%{time_total}s\\)\\\\n\" https://mercadoilha.vercel.app/)",
+      "Bash(curl -s -o /dev/null -w \"Publicar %{http_code}\\\\n\" https://mercadoilha.vercel.app/publish)",
+      "Bash(find ~/.claude -iname \"*btw*\" 2>/dev/null; find \"/Users/leo.cufone/Desktop/IA/Mercado Ilha/.claude\" -iname \"*btw*\" 2>/dev/null)",
+      "Read(//Users/leo.cufone/.claude/**)",
+      "Bash(python3 -c \"import json,sys; print\\(len\\(json.load\\(sys.stdin\\)\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -n \"categoryHref\\\\|/category/\\\\${cat\" components/HomeClient.tsx)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(grep -rliE \"cron\" frontend/app frontend/lib)",
+      "Bash(find frontend *)",
+      "Bash(cat frontend/vercel.json)",
+      "Bash(grep -rln \"reports\" supabase/*.sql frontend/app/admin)",
+      "Bash(find frontend/app/admin -type d)",
+      "Bash(node \"/private/tmp/claude-501/-Users-leo-cufone-Desktop-IA-Mercado-Ilha/0189ec6a-3828-481c-8352-8144a866bb47/scratchpad/check-diego.mjs\")",
+      "Bash(node check-diego-tmp.mjs)",
+      "Bash(node check-categories-tmp.mjs)"
+    ],
+    "additionalDirectories": [
+      "/Users/leo.cufone/Desktop/IA/Mercado Ilha/frontend/app/listings/[id]",
+      "/Users/leo.cufone/Desktop/IA/Mercado Ilha/frontend/app/category/[slug]"
+    ]
+  }
+}

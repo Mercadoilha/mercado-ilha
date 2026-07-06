@@ -42,6 +42,7 @@ export default memo(function ListingCard({
         background: "#fff",
         minWidth: 0,
         overflow: "hidden",
+        borderRadius: 0,
       }}
     >
       <Link
@@ -53,13 +54,13 @@ export default memo(function ListingCard({
           color: "inherit",
         }}
       >
-        {/* Imagem grande no topo (full-bleed, preenche o quadro) */}
+        {/* Imagem grande no topo (moldura estilo Mercado Livre) */}
         <div
           style={{
             position: "relative",
             width: "100%",
             aspectRatio: "1 / 1",
-            background: "#f1f5f9",
+            background: "#fafbfc",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -80,7 +81,7 @@ export default memo(function ListingCard({
         </div>
 
         {/* Conteúdo */}
-        <div style={{ padding: "0.4rem 0.55rem 0.55rem" }}>
+        <div style={{ padding: "0.4rem 0.55rem 0.55rem", textAlign: "center" }}>
           <div
             style={{
               fontWeight: 600,
@@ -134,7 +135,7 @@ export default memo(function ListingCard({
                 textOverflow: "ellipsis",
               }}
             >
-              📍 {locationText}
+              {locationText}
             </div>
           )}
           {listing.condition && (

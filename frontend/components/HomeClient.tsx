@@ -74,26 +74,28 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const quickBtnStyle: CSSProperties = {
+  // Botões de acesso rápido: só texto, cada um com um tom da paleta da marca.
+  const quickBtnBase: CSSProperties = {
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    aspectRatio: "1 / 1",
-    padding: "0.5rem 0.35rem",
-    background: "#fff",
+    minHeight: 54,
+    padding: "0.6rem 0.4rem",
     borderRadius: 12,
-    border: "1px solid var(--border)",
+    border: "1px solid transparent",
     textDecoration: "none",
-    color: "#1e293b",
     cursor: "pointer",
     textAlign: "center",
     minWidth: 0,
-    font: "inherit",
+    fontFamily: "inherit",
+    fontSize: "0.78rem",
+    fontWeight: 700,
+    lineHeight: 1.2,
+    letterSpacing: "-0.01em",
   };
-  const quickBtnIcon: CSSProperties = { fontSize: "1.6rem", lineHeight: 1 };
-  const quickBtnLabel: CSSProperties = { fontSize: "0.72rem", fontWeight: 600, lineHeight: 1.2 };
+  const quickBtnTodos: CSSProperties = { ...quickBtnBase, background: "var(--blue-main)", color: "#fff" };
+  const quickBtnCategoria: CSSProperties = { ...quickBtnBase, background: "var(--blue-xlight)", color: "var(--blue-main)", borderColor: "var(--blue-light)" };
+  const quickBtnInfo: CSSProperties = { ...quickBtnBase, background: "var(--green-sea)", color: "var(--green-dark)" };
 
   return (
     <div className="page-body">
@@ -141,23 +143,14 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
       {/* ── Acesso rápido: 3 botões ── */}
       <nav style={{ padding: "1rem 1rem 0.5rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-        <Link href="/listings" style={quickBtnStyle}>
-          <span style={quickBtnIcon}>🛍️</span>
-          <span style={quickBtnLabel}>Todos os anúncios</span>
-        </Link>
-        <button type="button" onClick={() => scrollToSection("secao-categorias")} style={quickBtnStyle}>
-          <span style={quickBtnIcon}>🗂️</span>
-          <span style={quickBtnLabel}>Anúncios por categoria</span>
-        </button>
-        <button type="button" onClick={() => scrollToSection("secao-info")} style={quickBtnStyle}>
-          <span style={quickBtnIcon}>ℹ️</span>
-          <span style={quickBtnLabel}>Informação útil</span>
-        </button>
+        <Link href="/listings" style={quickBtnTodos}>Todos os anúncios</Link>
+        <button type="button" onClick={() => scrollToSection("secao-categorias")} style={quickBtnCategoria}>Anúncios por categoria</button>
+        <button type="button" onClick={() => scrollToSection("secao-info")} style={quickBtnInfo}>Informação útil</button>
       </nav>
 
       {/* ── Anúncios destacados ── */}
-      <section style={{ padding: "0.75rem 1rem 0.5rem" }}>
-        <div style={{ marginBottom: "0.75rem" }}>
+      <section style={{ padding: "0.75rem 0 0.5rem" }}>
+        <div style={{ marginBottom: "0.75rem", padding: "0 1rem" }}>
           <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios destacados</h2>
         </div>
 
@@ -165,6 +158,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           <div
             style={{
               textAlign: "center",
+              margin: "0 1rem",
               padding: "2rem 1rem",
               background: "#fff",
               borderRadius: 12,
@@ -177,7 +171,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "1px", rowGap: "0.5rem", margin: "0 -1rem" }}>
+        <div className="listing-grid">
           {listings.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}
@@ -185,7 +179,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
       </section>
 
       {/* ── Categorias ── */}
-      <section id="secao-categorias" style={{ padding: "0 1rem", scrollMarginTop: "0.75rem" }}>
+      <section id="secao-categorias" style={{ padding: "0.75rem 1rem 0", scrollMarginTop: "0.75rem" }}>
 
         {/* Bloque 1: Categorias Destacadas */}
         {(() => {

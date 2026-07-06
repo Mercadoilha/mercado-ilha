@@ -40,6 +40,21 @@ body {
   min-height: calc(100vh - var(--nav-height));
 }
 
+/* Grid de anúncios edge-to-edge (home destacados, /listings, /store) */
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Ambas columnas reservan 1px de borde derecho (mismo ancho de contenido en las 2);
+   en la columna derecha ese borde es transparente, así solo se ve la línea central. */
+.listing-grid > * {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.listing-grid > *:nth-child(2n) {
+  border-right-color: transparent;
+}
+
 /* Generic page header (non-home) */
 .page-header {
   background: var(--blue-main);

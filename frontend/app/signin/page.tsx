@@ -70,11 +70,23 @@ function SignInContent() {
 
     setLoading(false);
     if (authErr) {
-      // Mensagem genérica: não revela se o e-mail existe (evita enumeração).
-      // A partir de 3 tentativas, mostramos um card com botão para o fluxo de
-      // recuperação por código (/forgot-password), que envia o código de 8 dígitos.
-      setLoginAttempts((n) => n + 1);
-      setError("Email ou senha incorretos. Tente novamente.");
+      // Só tratamos como "senha incorreta" quando o Supabase confirma
+      // credenciais inválidas. Qualquer outro erro (rede instável, timeout —
+      // comum no primeiro load após reinstalar o PWA) não deve contar como
+      // tentativa nem sugerir troca de senha ao usuário.
+      const isInvalidCredentials = authErr.message
+        ?.toLowerCase()
+        .includes("invalid login credentials");
+
+      if (isInvalidCredentials) {
+        // Mensagem genérica: não revela se o e-mail existe (evita enumeração).
+        // A partir de 3 tentativas, mostramos um card com botão para o fluxo de
+        // recuperação por código (/forgot-password), que envia o código de 8 dígitos.
+        setLoginAttempts((n) => n + 1);
+        setError("Email ou senha incorretos. Tente novamente.");
+      } else {
+        setError("Erro de conexão. Verifique sua internet e tente novamente.");
+      }
       return;
     }
     router.push("/");

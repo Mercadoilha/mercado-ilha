@@ -1,4 +1,20 @@
-# Prompt para Claude Code — Mercado Ilha
+# PROMPT_CLAUDE_CODE.md — Registro histórico (build inicial)
+
+> ⚠️ **DOCUMENTO HISTÓRICO — NO es fuente de verdad.**
+> Este es el prompt original con el que se construyó la app (Fases 1-8, ya completadas y en
+> producción). Se conserva solo como referencia del arranque.
+>
+> **Los datos de aquí abajo son del build inicial y NO reflejan el estado actual.** En
+> particular, la lista de categorías (10 categorías con nombres como *Gastronomia, Translados,
+> Envios, Beleza e bem-estar*) fue reemplazada: hoy hay **31 categorías** distintas. Para todo
+> lo vigente —categorías, geografía, rutas, diseño, decisiones técnicas, optimizaciones—
+> **usar siempre `MEMORY.md`**, nunca este archivo.
+>
+> El resto del documento queda tal como se escribió, únicamente por valor histórico.
+
+---
+
+## (Contenido histórico original — no editar)
 
 Este archivo tiene dos partes:
 1. **Notas para vos** (el dueño del proyecto) — cómo usar el prompt.

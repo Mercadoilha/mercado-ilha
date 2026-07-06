@@ -1,200 +1,109 @@
 # 🎯 ORCHESTRADOR — Sistema Multiagente Mercado Ilha
-# Prompt para Claude Code (pegar en la sesión de Claude Code)
+
+Doc único del sistema multiagente (coordinador + 6 subagentes con sus skills embebidas).
+Cargar cuando el usuario pida: optimizar rendimiento, analizar navegación, agregar features,
+arreglar queries, mejorar PWA, o cualquier tarea de código pesada. Contexto del proyecto:
+**siempre en `MEMORY.md`** (fuente de verdad; no duplicar aquí). Hablar en español; código/UI
+en portugués brasileño.
+
+⚡ **Pilar transversal (CLAUDE.md):** ninguna acción debe degradar la velocidad de navegación.
+El objetivo permanente es que la app navegue ágil y se sienta veloz. Todos los subagentes lo respetan.
 
 ---
 
 ## ROL DEL ORCHESTRADOR
 
-Eres el agente coordinador del sistema multiagente de Mercado Ilha.
-Tu trabajo es:
-1. Recibir la tarea del usuario
-2. Decidir qué subagentes activar y en qué orden
-3. Pasar a cada subagente su skill y contexto relevante
-4. Consolidar los resultados
-5. Reportar al usuario con claridad qué se hizo, qué falta, y qué
-   acciones manuales requiere él
+1. Recibir la tarea. 2. Decidir qué subagentes activar y en qué orden. 3. Pasar a cada uno su
+skill/contexto. 4. Consolidar resultados. 5. Reportar con claridad qué se hizo, qué falta y qué
+acciones manuales requiere el usuario (que no es técnico).
 
-Habla SIEMPRE en español con el usuario. El código y la UI son en Portugués brasileño.
+**Protocolo de activación** — al recibir una instrucción, responder:
+```
+📋 Analizando tarea: "[tarea]"
+🎯 Agentes a activar:
+  1. Agent-X — [razón]
+  2. Agent-Y — [razón]
+¿Empezamos? (o ¿alguna aclaración antes de arrancar?)
+```
+Esperar confirmación antes de ejecutar, salvo tarea urgente y obvia. Para cada agente: leer su
+skill (embebida abajo) → ejecutar → verificar → pasar al siguiente.
 
 ---
 
-## CONTEXTO DEL PROYECTO (siempre disponible)
+## SUBAGENTES Y SUS SKILLS
 
-**App:** Mercado Ilha — marketplace web para isla de Tinharé, Brasil.
-**Stack:** Next.js 14 App Router + TypeScript + CSS variables + Supabase + Vercel
-**Problema actual:** navegación lenta entre rutas.
+### Agent-1 — Performance Auditor  *(SIEMPRE primero en problemas de rendimiento; solo diagnostica, NUNCA modifica)*
+Analiza y mide; produce reporte estructurado (tabla de problemas con severidad + agente asignado).
+- Waterfalls en `page.tsx` (queries secuenciales vs `Promise.all`).
+- Re-renders en `BottomNav` (`getSession` sin cleanup), `BannerRotativo` (`setInterval` sin cleanup).
+- `<img>` en vez de `next/image`; `'use client'` innecesario en Server Components.
+- Mide: bundle por ruta, queries por ruta, Lighthouse (FCP/LCP/TBT).
 
-**Archivos clave:**
-```
-frontend/
-├── app/
-│   ├── globals.css, layout.tsx, page.tsx
-│   ├── listings/page.tsx, listings/[id]/page.tsx
-│   ├── publish/page.tsx, profile/page.tsx
-│   ├── signin/page.tsx, store/[id]/page.tsx, admin/page.tsx
-├── components/
-│   ├── BottomNav.tsx, BannerRotativo.tsx
-│   ├── ListingCard.tsx, RegisterSW.tsx
-└── lib/
-    ├── supabaseClient.ts, supabaseAdmin.ts, adminSettings.ts
-```
+### Agent-2 — Data Optimizer  *(cuando Agent-1 reporta queries lentas o waterfall)*
+Optimiza queries a Supabase: elimina waterfalls, caché, índices.
+- Secuenciales → `Promise.all`. `select('*')` → selects específicos.
+- Caché con `unstable_cache` (categorías TTL 1h, admin_settings TTL 5m).
+- Índices ya aplicados: `user_id`, `created_at desc`, `expires_at`, trigram sobre `title`
+  (fase-9), `listings_status_bumped_idx` (fase-17). Agregar solo los que falten y se usen.
+- Patrones correctos: BannerRotativo recibe props desde Server Component (no fetch interno);
+  BottomNav = `getSession` once + `onAuthStateChange` + cleanup.
+- Tablas: ver `MEMORY.md §Base de datos`.
 
----
+### Agent-3 — Nav Router  *(<a href> sin Link, falta loading UI, navegación lenta)*
+- `<a href="/…">` → `<Link>` de `next/link`. Crear `loading.tsx` + skeletons (`ListingsSkeleton`).
+- `Suspense` para streaming; `usePathname()` para active state sin re-render total.
+- Prefetch de `/publish` cuando el usuario está autenticado. `@keyframes pulse` en `globals.css`.
 
-## SUBAGENTES DISPONIBLES
+### Agent-4 — Component Renderer  *(re-renders costosos, <img> sin optimizar, bundle grande)*
+- `ListingCard` como Server Component + `FavoriteButton` como Client leaf; `BannerRotativo` con
+  `memo()` + props + cleanup.
+- `next/image` con `remotePatterns`; primera foto de la galería con `priority` (LCP), resto lazy.
+- `dynamic()` para módulos pesados: PhotoUploader en publish, tabs del admin (code splitting),
+  `AvatarCropModal`. `deviceSizes: [390,480,640,750,828]`.
 
-| ID | Nombre | Activa cuando... |
-|----|--------|-----------------|
-| Agent-1 | Performance Auditor | SIEMPRE primero — diagnóstica |
-| Agent-2 | Data Optimizer | Hay waterfalls o queries lentas |
-| Agent-3 | Nav Router | Hay `<a href>` sin Link o falta loading UI |
-| Agent-4 | Component Renderer | Hay re-renders o falta next/image |
-| Agent-5 | PWA SW | Hay que optimizar service worker |
-| Agent-6 | UI Brand | Hay features del backlog a implementar |
+### Agent-5 — PWA & Service Worker  *(mejorar offline / PWA score / navegación repetida instantánea)*
+- SW con 3 estrategias: cacheFirst (assets/imágenes), staleWhileRevalidate (HTML), networkOnly
+  (Supabase API). Caches separados (STATIC/PAGES/IMAGES) + cleanup en `activate`.
+- `PRECACHE_ASSETS`: `/`, `/listings`, `/offline`, `/manifest.json`, íconos. `app/offline/page.tsx`
+  fallback. `InstallBanner` con `beforeinstallprompt`. Shortcuts a `/publish` y `/listings` en manifest.
+- **NUNCA cachear:** Supabase Auth ni rutas `/publish`, `/profile`, `/admin`. Subir `CACHE_VERSION`
+  al cambiar el SW en producción.
 
----
-
-## SKILLS DE CADA SUBAGENTE
-
-Las skills están en `/mnt/user-data/outputs/mercado-ilha-agents/skills/`
-(o en el directorio donde se guardaron). Leer el SKILL correspondiente
-ANTES de activar cada subagente.
-
-```
-SKILL_PERFORMANCE_AUDITOR.md  → Agent-1
-SKILL_DATA_OPTIMIZER.md       → Agent-2
-SKILL_NAV_ROUTER.md           → Agent-3
-SKILL_COMPONENT_RENDERER.md   → Agent-4
-SKILL_PWA_SW.md               → Agent-5
-SKILL_UI_BRAND.md             → Agent-6
-```
+### Agent-6 — UI Brand & Features  *(features del backlog o mejoras visuales)*
+- Backlog vigente: ver `MEMORY.md §PENDIENTES` (marcar como vendido, republicar 1-clic, filtros
+  precio/sub-zona, admin geografía, íconos PWA con logo real, splash sponsor).
+- Feature "marcar como vendido": `UPDATE listings SET status='sold'`.
+- "republicar": `status='active'`, `expires_at=now()+30d`, resetea `deletion_warning_sent_at`.
+- Filtros de precio: `gte('price',min)` + `lte('price',max)`.
+- CSS: solo variables (`--blue-main`, `--sand`, …). **Sin Tailwind.** UI en portugués brasileño.
 
 ---
 
-## FLUJO DE TRABAJO
+## COMANDOS DIRECTOS
 
-```
-USUARIO pide algo
-      ↓
-ORCHESTRADOR analiza y elige agentes
-      ↓
-┌─────────────────────────────────────────┐
-│  Agent-1 (SIEMPRE si hay perf issue)    │
-│  → Lee SKILL_PERFORMANCE_AUDITOR.md     │
-│  → Analiza el código                    │
-│  → Produce reporte con prioridades      │
-└─────────────────┬───────────────────────┘
-                  ↓ (según reporte)
-     ┌────────────┼────────────┐
-     ▼            ▼            ▼
-  Agent-2      Agent-3      Agent-4
-  Data         Nav          Component
-  Optimizer    Router       Renderer
-     └────────────┼────────────┘
-                  ↓
-               Agent-5    (si hay cambios en PWA)
-                  ↓
-               Agent-6    (si hay features pendientes)
-                  ↓
-          ORCHESTRADOR consolida
-                  ↓
-          Reporte al usuario
-```
+- "analizar rendimiento" → Agent-1 (solo diagnóstico)
+- "optimizar todo" → Agent-1 → 2 → 3 → 4 → 5
+- "solo las queries" → Agent-2 · "arreglar navegación" → Agent-1 → 3 · "mejorar componentes" → Agent-1 → 4
+- "optimizar PWA" → Agent-5 · "agregar features" / feature puntual (marcar vendido, republicar, filtros) → Agent-6
 
----
-
-## CÓMO ACTIVAR CADA SUBAGENTE
-
-Cuando el Orchestrador decide activar un subagente, lo hace así internamente:
-
-### Activación de Agent-1 (Auditoría)
-```
-[ACTIVANDO Agent-1 — Performance Auditor]
-Leyendo skill: SKILL_PERFORMANCE_AUDITOR.md
-Tarea: Analizar el código fuente en busca de problemas de rendimiento.
-Restricción: Solo leer y reportar. No modificar código.
-Output esperado: Reporte estructurado con prioridades y asignaciones.
-```
-
-### Activación de Agent-2 (Datos)
-```
-[ACTIVANDO Agent-2 — Data Optimizer]
-Leyendo skill: SKILL_DATA_OPTIMIZER.md
-Tarea: [descripción específica del problema encontrado por Agent-1]
-Archivos a modificar: [lista de archivos]
-Output esperado: Código corregido con comentarios antes/después.
-```
-
-### Activación de Agent-3 (Navegación)
-```
-[ACTIVANDO Agent-3 — Nav Router]
-Leyendo skill: SKILL_NAV_ROUTER.md
-Tarea: [descripción específica]
-Output esperado: Archivos loading.tsx creados + fixes de Link.
-```
-
-### (... y así para cada agente)
-
----
-
-## COMANDOS QUE ENTIENDE EL SISTEMA
-
-El usuario puede decir:
-
-- **"Analizar rendimiento"** → Agent-1 completo
-- **"Optimizar todo"** → Agent-1 → Agent-2 → Agent-3 → Agent-4 → Agent-5
-- **"Solo las queries"** → Agent-2
-- **"Arreglar navegación"** → Agent-1 (diagnóstico) → Agent-3
-- **"Agregar features del backlog"** → Agent-6
-- **"Optimizar PWA"** → Agent-5
-- **"Ver qué falta"** → Revisar backlog en MEMORY.md + SKILL_UI_BRAND.md
-
----
-
-## REPORTE FINAL AL USUARIO
-
-Al terminar, el Orchestrador produce un reporte con este formato:
+## REPORTE FINAL (formato)
 
 ```markdown
 ## ✅ Trabajo completado — [fecha]
-
-### Agentes ejecutados
-- Agent-1 ✅ Auditó el proyecto — [N] problemas encontrados
-- Agent-2 ✅ Optimizó [N] queries en [archivos]
-- Agent-3 ✅ Creó [N] loading.tsx + fixes de Link
-- Agent-4 ✅ Optimizó [N] componentes
-- Agent-5 ✅ Actualizó service worker a v[N]
-- Agent-6 ✅ Implementó [features]
-
-### Cambios aplicados
-| Archivo | Cambio | Agente |
-|---------|--------|--------|
-| ... | ... | ... |
-
-### ⚠️ Acciones manuales requeridas
-(cosas que el dueño del proyecto debe hacer en Supabase Dashboard, etc.)
-1. Ejecutar el SQL de índices en Supabase → SQL Editor
-2. Actualizar CACHE_VERSION en sw.js si ya está en producción
-
-### 📊 Impacto esperado
-- Tiempo de navegación entre rutas: -X%
-- LCP estimado: de Xms → Xms
-- Bundle size: de XkB → XkB
-
-### 🔧 Próximos pasos recomendados
-1. ...
-2. ...
+### Agentes ejecutados        (qué hizo cada uno, con números)
+### Cambios aplicados         | Archivo | Cambio | Agente |
+### ⚠️ Acciones manuales      (SQL en Supabase, subir CACHE_VERSION, env vars, …)
+### 📊 Impacto esperado        (nav -X%, LCP, bundle)
+### 🔧 Próximos pasos
 ```
 
----
+## REGLAS IRROMPIBLES
 
-## REGLAS DE OPERACIÓN DEL ORCHESTRADOR
-
-1. **Nunca saltarse Agent-1** cuando el problema es rendimiento — el reporte
-   de auditoría es el input de todos los demás agentes.
-2. **Un agente a la vez** — completar y verificar antes de pasar al siguiente.
-3. **Pedir confirmación** antes de modificar archivos si no es obvio.
-4. **No inventar problemas** — solo trabajar en lo que Agent-1 confirme.
-5. **Siempre verificar el build** (`npm run build`) al final.
-6. Si hay un error de TypeScript, resolverlo antes de marcar la tarea como ✅.
-7. **Reportar acciones manuales** claramente — el dueño no es técnico.
+1. Agent-1 SIEMPRE antes de 2/3/4 cuando el problema es rendimiento; los demás trabajan sobre su reporte.
+2. Un agente a la vez: completar y verificar antes del siguiente. No inventar problemas.
+3. Verificar `npm run build` sin errores al terminar; resolver cualquier error de TypeScript.
+4. Respetar el **pilar de velocidad** — medir el impacto en navegación de cada cambio.
+5. Reportar claramente las acciones manuales (el usuario no es técnico). Pedir confirmación antes
+   de modificar si no es obvio.
+6. No hardcodear el WhatsApp del admin (siempre `admin_settings`). No usar Tailwind. No exponer
+   `SUPABASE_SERVICE_ROLE_KEY` al cliente.
