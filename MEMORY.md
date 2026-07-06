@@ -374,9 +374,8 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fase 1 completada (ver changelog 2026-07-06, commit
-  `fd32be8`). Quedan Fase 2 (`/listings` instantáneo: caché de resultados + scroll, desarmar
-  waterfall, caché de sesión — Opus 4.8), Fase 3 (detalle instantáneo: render optimista +
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-2 completadas (ver changelog 2026-07-06, commits
+  `fd32be8` y `de86814`). Quedan Fase 3 (detalle instantáneo: render optimista +
   shells estáticos — Opus 4.8), Fase 4 (reescritura del Service Worker + página offline —
   Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, edit server-side, store con SessionContext,
   splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
@@ -412,6 +411,32 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 2 completada** (navegación instantánea
+  en `/listings`, T6-T8; ejecutada con Opus 4.8 · `xhigh`). Tres helpers nuevos en `lib/`:
+  (T6) `listingsCache.ts` — caché de resultados por clave de filtros (categoría|q|subcat|condición|zona;
+  el orden NO entra en la clave por ser client-side) con stale-while-revalidate, LRU (máx 10
+  claves) y TTL 3 min: volver del detalle pinta la lista al instante (sin spinner) y revalida en
+  2º plano. Restauración de scroll: la posición se graba en la **fase de captura del click**
+  (antes del scroll-to-top del App Router, que si no pisaba el valor con 0) y se **reafirma** tras
+  el remount en un loop `requestAnimationFrame` de 500 ms cancelable por interacción del usuario
+  (wheel/touch/tecla) — necesario porque el reset de Next tiene timing variable. El estado de
+  filtros (sort/condición/zona) se persiste por `baseKey` de URL para sobrevivir al remount que
+  hace la navegación (los `useState` se pierden). Los efectos de reset de zona/condición se
+  reestructuraron para NO dispararse en el primer mount (comparación con ref del valor previo),
+  así no borran la selección restaurada. (T7) `catalogCache.ts` — catálogo de categorías
+  (slug→id,name,icon) y localidades en módulo + `sessionStorage` con TTL 5 min: en visitas
+  repetidas el slug se resuelve **sin RTT** (verificado: `categories?`=0 en la 2ª visita). Además
+  se desarmó el waterfall de categoría: las queries de categoría **principal** y **secundaria**
+  (`listing_extra_categories!inner`, filtrando el padre por la categoría) se disparan en
+  **paralelo** y se fusionan/deduplican en el cliente (antes: extras → principal encadenadas);
+  localidades salieron del `Promise.all` de la lista a un efecto propio no bloqueante. (T8)
+  `favoritesCache.ts` — Set de favoritos por usuario cargado 1 sola vez por sesión (los toggles lo
+  actualizan localmente, sobreviven al cambio de pantalla); usado en `/listings` y `/store/[id]`;
+  se limpia al hacer logout. Verificado: `npm run build` mantiene `/` `○`, `/category/[slug]` `●`,
+  `/listings` `○` (168 kB); navegación real con Chromium headless confirma back instantáneo con
+  scroll restaurado (471→471 estable), orden sin request de red, extras inner-join sin errores,
+  catálogo cacheado y filtros sin vaciar la pantalla — 0 errores de consola, 0 respuestas ≥400.
+  Quedan pendientes las Fases 3-6 (ver §19). Commit: `de86814`.
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` (auditoría de velocidad de navegación, 15
   problemas priorizados en 6 fases) → **Fase 1 completada** (quick wins de percepción, T1-T5):
   (T1) `priority` de `next/image` en el banner del home y en las primeras 4 cards de destacados
