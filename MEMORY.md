@@ -376,10 +376,12 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 - **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-3 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
   Vercel, `5ef6493`, código en `fd32be8` y `de86814`; Fase 3: detalle instantáneo T9-T11, push a
-  `main` → deploy Vercel, `f202fed`, código en `76dc20f`). Quedan Fase 4 (reescritura del Service Worker
-  + página offline — Opus 4.8, `xhigh`), Fase 5 (uploads en paralelo, **edit server-side + shell
-  estático de `/listings/[id]/edit`, aún ƒ**, store con SessionContext, splash sponsor liviano —
-  Sonnet), Fase 6 (Web Vitals reales — Sonnet).
+  `main` → deploy Vercel, `f202fed`, código en `76dc20f`). **Fase 4 completada** (SW reescrito v5 +
+  offline, T12-T13 — commit `cc02242`; **falta desplegar**). Quedan Fase 5 (uploads en paralelo,
+  **edit server-side + shell estático de `/listings/[id]/edit`, aún ƒ**, store con SessionContext,
+  splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
+  ⚠️ Al desplegar Fase 4: probar el PWA instalado real (Android) el ciclo instalar → navegar →
+  actualizar SW (v4→v5) — el SW afecta a todos los dispositivos y es difícil de revertir.
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -412,6 +414,26 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 4 completada** (Service Worker correcto +
+  offline, T12-T13; Opus 4.8 · `xhigh`). (T12) **Reescritura del SW** (`public/sw.js`, `v4`→`v5`):
+  se reemplazó el cache-first-para-todo (que congelaba `/api/mares` y los payloads RSC, y crecía sin
+  tope) por estrategias explícitas por tipo de request con caches separados **STATIC/PAGES/IMAGES/DATA**
+  y `trimCache` (LRU por orden de inserción): Supabase y `/api/*` (salvo `/api/mares`) y `/api/auth`
+  **no se interceptan**; `/api/mares` **network-first** (las mareas vuelven a actualizarse sin
+  reinstalar el PWA); **payloads RSC** (`?_rsc`/header `RSC`) **network-first, nunca cache-first** (el
+  ISR de 60s vuelve a ser efectivo dentro del PWA — deja de mostrar anuncios viejos al navegar);
+  `/_next/static` cache-first (hash inmutable); `/_next/image`+fotos R2 stale-while-revalidate con
+  tope (IMAGES 60); navegación HTML network-first → cache → `/offline.html`; rutas privadas
+  (`/publish`, `/profile`, `/admin`) network-only, **nunca desde caché**; `activate` limpia versiones
+  viejas. (T13) **Página offline de marca**: `public/offline.html` — **HTML estático puro, sin JS ni
+  hidratación de Next** (primero se hizo como `app/offline/page.tsx` pero offline crasheaba con
+  ChunkLoadError al intentar hidratar; un `.html` suelto no depende de chunks → funciona en modo
+  avión); precache del shell (offline.html, manifest, logo, íconos). `RegisterSW.tsx`:
+  `updateViaCache: "none"` para propagar rápido el bump de versión. Verificado con `npm run build`
+  (rutas estáticas/ISR intactas) y navegación real con Chromium: el SW activa y borra los caches `v4`,
+  `/api/mares` network-first, imágenes cacheadas con tope, y el modo avión muestra la página offline de
+  marca sin crash; online sin errores de consola. Commit: `cc02242`. **Falta desplegar a producción**
+  (al hacerlo, probar el ciclo instalar→navegar→actualizar SW en un PWA instalado real).
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 3 completada** (detalle de anuncio
   instantáneo, T9-T11; Opus 4.8). (T9) **Render optimista**: nuevo `lib/listingPreview.ts` (Map
   de módulo, cap 30) donde la card guarda al hacer click los datos que ya tiene (título, precio,
