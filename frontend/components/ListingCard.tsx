@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { setListingPreview } from "../lib/listingPreview";
 
 type ListingCardProps = {
   listing: any;
@@ -49,6 +50,17 @@ export default memo(function ListingCard({
     >
       <Link
         href={`/listings/${listing.id}`}
+        onClick={() =>
+          setListingPreview({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price ?? null,
+            price_text: listing.price_text ?? null,
+            condition: listing.condition ?? null,
+            firstPhoto,
+            localityName: locationText,
+          })
+        }
         style={{
           display: "flex",
           flexDirection: "column",
