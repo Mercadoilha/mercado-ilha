@@ -408,7 +408,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
 
 - **2026-07-06** — Fix del error de hidratación de React en `SplashScreen` detectado en la sesión
   anterior (ver entrada de abajo): el script inline removía `#mi-splash` del DOM antes de que React
-  hidrate. Ver detalle en §18. Commit: _(pendiente)_.
+  hidrate. Ver detalle en §18. Commit: `47bcbbf`.
 - **2026-07-06** — Cierre de la refactorización de `.listing-grid` (`globals.css` +
   `ListingCard.tsx`): se corrigió un desfasaje de 1px entre las columnas de imagen (causado por
   `border-right` en una sola columna + `box-sizing: border-box`) usando `border-right` en ambas
