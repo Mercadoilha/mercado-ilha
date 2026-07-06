@@ -1,0 +1,101 @@
+// Caché de sesión para datos casi-estáticos usados por /listings (T7 del plano):
+//   - catálogo de categorías (slug → id, name, icon): resuelve el slug sin RTT
+//     en visitas repetidas, desarmando el primer escalón del waterfall.
+//   - localidades activas para el filtro de zona.
+// Módulo + espejo en sessionStorage con TTL. El admin revalida el home al editar
+// categorías; aquí un TTL corto alcanza para no servir catálogos viejos.
+
+import { supabase } from "./supabaseClient";
+
+const TTL = 5 * 60 * 1000; // 5 min
+
+export type CatalogCategory = { id: number; slug: string; name: string; icon: string | null };
+export type CatalogLocality = { id: number; name: string };
+
+type Cached<T> = { data: T; ts: number };
+
+function readSS<T>(key: string): Cached<T> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.data) || typeof parsed.ts !== "number") return null;
+    return parsed as Cached<T>;
+  } catch {
+    return null;
+  }
+}
+
+function writeSS<T>(key: string, value: Cached<T>): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // storage lleno / modo privado: ignorar, el caché de módulo sigue sirviendo.
+  }
+}
+
+// ---------------- Categorías ----------------
+const CAT_SS = "mi_cat_catalog_v1";
+let catMem: Cached<CatalogCategory[]> | null = null;
+let catInFlight: Promise<CatalogCategory[]> | null = null;
+
+export function getCategoriesSync(): CatalogCategory[] | null {
+  const now = Date.now();
+  if (catMem && now - catMem.ts < TTL) return catMem.data;
+  const ss = readSS<CatalogCategory[]>(CAT_SS);
+  if (ss && now - ss.ts < TTL) {
+    catMem = ss;
+    return ss.data;
+  }
+  return null;
+}
+
+export async function loadCategories(): Promise<CatalogCategory[]> {
+  const sync = getCategoriesSync();
+  if (sync) return sync;
+  if (catInFlight) return catInFlight;
+  catInFlight = (async () => {
+    const { data } = await supabase.from("categories").select("id, slug, name, icon");
+    const rows = (data ?? []) as CatalogCategory[];
+    const entry = { data: rows, ts: Date.now() };
+    catMem = entry;
+    writeSS(CAT_SS, entry);
+    catInFlight = null;
+    return rows;
+  })();
+  return catInFlight;
+}
+
+// ---------------- Localidades ----------------
+const LOC_SS = "mi_localities_v1";
+let locMem: Cached<CatalogLocality[]> | null = null;
+let locInFlight: Promise<CatalogLocality[]> | null = null;
+
+export function getLocalitiesSync(): CatalogLocality[] | null {
+  const now = Date.now();
+  if (locMem && now - locMem.ts < TTL) return locMem.data;
+  const ss = readSS<CatalogLocality[]>(LOC_SS);
+  if (ss && now - ss.ts < TTL) {
+    locMem = ss;
+    return ss.data;
+  }
+  return null;
+}
+
+export async function loadLocalities(): Promise<CatalogLocality[]> {
+  const sync = getLocalitiesSync();
+  if (sync) return sync;
+  if (locInFlight) return locInFlight;
+  locInFlight = (async () => {
+    const { data } = await supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order");
+    const rows = (data ?? []) as CatalogLocality[];
+    const entry = { data: rows, ts: Date.now() };
+    locMem = entry;
+    writeSS(LOC_SS, entry);
+    locInFlight = null;
+    return rows;
+  })();
+  return locInFlight;
+}

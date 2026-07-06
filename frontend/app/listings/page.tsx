@@ -7,6 +7,24 @@ import { supabase } from "../../lib/supabaseClient";
 import ListingCard from "../../components/ListingCard";
 import { useSession } from "../../contexts/SessionContext";
 import { trackSearch } from "../../lib/tracking";
+import {
+  getListingsCache,
+  setListingsCache,
+  saveScroll,
+  getScroll,
+  saveFilterUi,
+  getFilterUi,
+  LISTINGS_RESULTS_TTL,
+  type ListingsCacheEntry,
+} from "../../lib/listingsCache";
+import { getCategoriesSync, loadCategories, getLocalitiesSync, loadLocalities } from "../../lib/catalogCache";
+import {
+  getCachedFavorites,
+  loadFavorites,
+  addFavorite,
+  removeFavorite,
+  clearFavoritesCache,
+} from "../../lib/favoritesCache";
 
 const SORT_OPTIONS = [
   { key: "recent", label: "🕐 Recentes" },
@@ -42,24 +60,68 @@ function ListingsContent() {
   const subcategoryIdParam = searchParams.get("subcategory_id") ?? "";
 
   const { session } = useSession();
-  const [listings, setListings] = useState<any[]>([]);
+
+  // Clave de "identidad" de la vista según la URL (categoría + búsqueda + subcategoría).
+  const baseKey = `${categorySlug}|${searchQuery}|${subcategoryIdParam}`;
+  // Estado de filtros restaurado al volver del detalle (la página remonta y pierde useState).
+  const restoredUi = getFilterUi(baseKey);
+
+  const [sortBy, setSortBy] = useState<string>(restoredUi?.sortBy ?? "recent");
+  const [conditionFilter, setConditionFilter] = useState<string>(restoredUi?.conditionFilter ?? "");
+  const [zoneFilter, setZoneFilter] = useState<number | null>(restoredUi?.zoneFilter ?? null);
+
+  // Clave completa del caché de resultados (los que dependen de red). El orden es
+  // client-side, así que NO forma parte de la clave.
+  const cacheKey = `${baseKey}|${conditionFilter}|${zoneFilter ?? ""}`;
+
+  // Snapshot inicial del caché (calculado una sola vez, en el primer render).
+  const initRef = useRef<{ key: string; entry: ListingsCacheEntry | null } | null>(null);
+  if (initRef.current === null) {
+    const entry = getListingsCache(cacheKey);
+    const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL ? entry : null;
+    initRef.current = { key: cacheKey, entry: fresh };
+  }
+
+  const [listings, setListings] = useState<any[]>(initRef.current.entry?.data ?? []);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initRef.current.entry);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [categoryLabel, setCategoryLabel] = useState("");
   const [subcategoryLabel, setSubcategoryLabel] = useState("");
-  const [sortBy, setSortBy] = useState("recent");
-  const [conditionFilter, setConditionFilter] = useState("");
   const [localities, setLocalities] = useState<{ id: number; name: string }[]>([]);
-  const [zoneFilter, setZoneFilter] = useState<number | null>(null);
   // Evita registrar la misma búsqueda dos veces (al cambiar orden/zona).
   const loggedTermRef = useRef<string>("");
 
-  // Reset filters when category/search changes
-  useEffect(() => { setZoneFilter(null); }, [categorySlug, searchQuery]);
+  // Refs auxiliares: leer valores actuales dentro de efectos sin re-suscribir.
+  const listingsRef = useRef(listings);
+  listingsRef.current = listings;
+  const keyRef = useRef(cacheKey);
+  keyRef.current = cacheKey;
+  const lastScrollRef = useRef(0);
+
+  // Persistir el estado de filtros por baseKey para restaurarlo al volver del detalle.
   useEffect(() => {
+    saveFilterUi(baseKey, { sortBy, conditionFilter, zoneFilter });
+  }, [baseKey, sortBy, conditionFilter, zoneFilter]);
+
+  // Reset de zona cuando cambia la categoría/búsqueda EN VIVO (no en el primer mount,
+  // así se preserva la selección restaurada al volver del detalle).
+  const prevBaseRef = useRef<{ cat: string; q: string } | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevBaseRef.current;
+    prevBaseRef.current = { cat: categorySlug, q: searchQuery };
+    if (prev === undefined) return; // primer mount
+    if (prev.cat !== categorySlug || prev.q !== searchQuery) setZoneFilter(null);
+  }, [categorySlug, searchQuery]);
+
+  // Reset de condición según la categoría (misma salvedad del primer mount).
+  const prevCatRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevCatRef.current;
+    prevCatRef.current = categorySlug;
+    if (prev === undefined) return; // primer mount
     if (!categorySlug) { setCategoryLabel(""); setConditionFilter(""); return; }
     if (categorySlug !== "produtos") setConditionFilter("");
   }, [categorySlug]);
@@ -71,96 +133,131 @@ function ListingsContent() {
       .then(({ data }) => setSubcategoryLabel(data?.name ?? ""));
   }, [subcategoryIdParam]);
 
+  // Localidades para el filtro de zona: caché de sesión, carga única, no bloquea la lista.
+  useEffect(() => {
+    const sync = getLocalitiesSync();
+    if (sync) { setLocalities(sync); return; }
+    let mounted = true;
+    loadLocalities().then((locs) => { if (mounted) setLocalities(locs); });
+    return () => { mounted = false; };
+  }, []);
+
+  // Carga principal de anuncios. Depende solo de cacheKey (categoría/q/subcat/condición/zona).
   useEffect(() => {
     let mounted = true;
-    setRefreshing(true);
+
+    // Render inmediato desde caché (stale-while-revalidate) o mantener lo anterior visible.
+    const entry = getListingsCache(cacheKey);
+    const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL ? entry : null;
+    if (fresh) {
+      setListings(fresh.data);
+      setLoading(false);
+      setRefreshing(true);
+    } else if (listingsRef.current.length > 0) {
+      setRefreshing(true);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      setRefreshing(false);
+    }
     setError(null);
 
     async function load() {
       // 1 foto por anúncio (a primeira por sort_order); subzones não é usado pelo card.
       const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
+      const extraSelect = selectBase + ", listing_extra_categories!inner(category_id)";
 
-      // Resolver categoría por slug (id + etiqueta del encabezado).
+      // Lookups independientes en paralelo: catálogo de categorías (sync si está
+      // cacheado) + ids de anuncios que atienden la zona filtrada.
+      const catsPromise = categorySlug
+        ? (getCategoriesSync() ? Promise.resolve(getCategoriesSync()!) : loadCategories())
+        : Promise.resolve(null);
+      const zonePromise = zoneFilter
+        ? supabase.from("listing_service_zones").select("listing_id, subzones!inner(locality_id)").eq("subzones.locality_id", zoneFilter)
+        : Promise.resolve({ data: [] as any[] });
+
+      const [catsData, zoneRes] = await Promise.all([catsPromise, zonePromise] as const);
+
       let catId: number | null = null;
       if (categorySlug) {
-        const { data: cat } = await supabase.from("categories").select("id, name, icon").eq("slug", categorySlug).maybeSingle();
-        if (mounted && cat) {
-          catId = (cat as any).id;
-          const icon = (cat as any).icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
-          setCategoryLabel(`${icon} ${(cat as any).name}`);
-        }
+        const cat = (catsData ?? []).find((c) => c.slug === categorySlug);
         // Slug inválido: sin categoría → no mostrar nada.
         if (!cat) {
-          if (mounted) { setListings([]); setLoading(false); setRefreshing(false); }
+          if (mounted) { setListings([]); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
           return;
+        }
+        catId = cat.id;
+        if (mounted) {
+          const icon = cat.icon || SLUG_ICON_FALLBACK[categorySlug] || "📌";
+          setCategoryLabel(`${icon} ${cat.name}`);
         }
       }
 
-      // Anuncios que tienen esta categoría (y subcategoría) como SECUNDARIA.
-      let extraIds: number[] = [];
+      // Filtro de zona (OR sobre columnas del anuncio): base en la localidad,
+      // "toda a ilha", o que atienda alguna sub-zona de la localidad.
+      const zoneOr = zoneFilter
+        ? (() => {
+            const ids = Array.from(new Set(((zoneRes as any).data ?? []).map((r: any) => r.listing_id)));
+            const ors = [`locality_id.eq.${zoneFilter}`, "covers_all_island.eq.true"];
+            if (ids.length) ors.push(`id.in.(${ids.join(",")})`);
+            return ors.join(",");
+          })()
+        : null;
+
+      // Aplica los filtros comunes (status, búsqueda, condición, zona, orden, límite,
+      // y 1 foto por anuncio) a cualquier query base de listings.
+      const decorate = (q: any) => {
+        q = q
+          .order("sort_order", { referencedTable: "listing_photos" })
+          .limit(1, { referencedTable: "listing_photos" })
+          .eq("status", "active");
+        if (searchQuery) q = q.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        if (conditionFilter) q = q.eq("condition", conditionFilter);
+        if (zoneOr) q = q.or(zoneOr);
+        return q.order("created_at", { ascending: false }).limit(60);
+      };
+
+      let data: any[] = [];
+      let fetchErr: any = null;
+
       if (catId) {
-        let ex = supabase.from("listing_extra_categories").select("listing_id").eq("category_id", catId);
-        if (subcategoryIdParam) ex = ex.eq("subcategory_id", Number(subcategoryIdParam));
-        const { data: exRows } = await ex;
-        extraIds = Array.from(new Set((exRows ?? []).map((r: any) => r.listing_id)));
+        // Concurrente: anuncios con esta categoría como PRINCIPAL ‖ como SECUNDARIA
+        // (antes: extras y luego principal, encadenados). Se fusiona en el cliente.
+        let primary = decorate(supabase.from("listings").select(selectBase)).eq("category_id", catId);
+        let extras = decorate(supabase.from("listings").select(extraSelect)).eq("listing_extra_categories.category_id", catId);
+        if (subcategoryIdParam) {
+          primary = primary.eq("subcategory_id", Number(subcategoryIdParam));
+          extras = extras.eq("listing_extra_categories.subcategory_id", Number(subcategoryIdParam));
+        }
+        const [primRes, extraRes] = await Promise.all([primary, extras]);
+        fetchErr = primRes.error || extraRes.error;
+        const map = new Map<number, any>();
+        for (const r of (primRes.data ?? [])) map.set(r.id, r);
+        for (const r of (extraRes.data ?? [])) if (!map.has(r.id)) map.set(r.id, r);
+        data = Array.from(map.values())
+          .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0))
+          .slice(0, 60);
+      } else {
+        const res = await decorate(supabase.from("listings").select(selectBase));
+        fetchErr = res.error;
+        data = (res.data as any[]) ?? [];
       }
-
-      let query = supabase
-        .from("listings")
-        .select(selectBase)
-        .order("sort_order", { referencedTable: "listing_photos" })
-        .limit(1, { referencedTable: "listing_photos" })
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(60);
-
-      // Incluir: categoría PRINCIPAL coincidente O anuncios con esta categoría SECUNDARIA.
-      if (catId) {
-        const primary = subcategoryIdParam
-          ? `and(category_id.eq.${catId},subcategory_id.eq.${Number(subcategoryIdParam)})`
-          : `category_id.eq.${catId}`;
-        const ors = [primary];
-        if (extraIds.length) ors.push(`id.in.(${extraIds.join(",")})`);
-        query = query.or(ors.join(","));
-      }
-      if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-      if (conditionFilter) query = query.eq("condition", conditionFilter);
-      if (zoneFilter) {
-        // Incluye: base en la localidad, "toda a ilha", o que atienda alguna sub-zona de la localidad
-        const { data: zoneRows } = await supabase
-          .from("listing_service_zones")
-          .select("listing_id, subzones!inner(locality_id)")
-          .eq("subzones.locality_id", zoneFilter);
-        const ids = Array.from(new Set((zoneRows ?? []).map((r: any) => r.listing_id)));
-        const ors = [`locality_id.eq.${zoneFilter}`, "covers_all_island.eq.true"];
-        if (ids.length) ors.push(`id.in.(${ids.join(",")})`);
-        query = query.or(ors.join(","));
-      }
-
-      const [listingsResult, localitiesResult] = await Promise.all([
-        query,
-        localities.length === 0
-          ? supabase.from("localities").select("id, name").eq("is_active", true).order("sort_order")
-          : Promise.resolve({ data: null, error: null }),
-      ] as const);
 
       if (!mounted) return;
 
-      if (localitiesResult.data) setLocalities(localitiesResult.data as { id: number; name: string }[]);
-
-      if (listingsResult.error) {
-        setError(listingsResult.error.message);
-        setListings([]);
+      if (fetchErr) {
+        setError(fetchErr.message);
+        // Mantener lo anterior visible en vez de vaciar la pantalla.
       } else {
-        setListings(listingsResult.data ?? []);
+        setListings(data);
+        setListingsCache(cacheKey, data);
       }
 
-      // Registrar la búsqueda de texto (una vez por término) con su cantidad
-      // de resultados. Alimenta la detección de búsquedas sin resultados.
+      // Registrar la búsqueda de texto (una vez por término) con su cantidad de
+      // resultados. Alimenta la detección de búsquedas sin resultados.
       if (searchQuery && loggedTermRef.current !== searchQuery) {
         loggedTermRef.current = searchQuery;
-        const count = listingsResult.error ? 0 : (listingsResult.data?.length ?? 0);
-        trackSearch(searchQuery, count);
+        trackSearch(searchQuery, fetchErr ? 0 : data.length);
       }
 
       setLoading(false);
@@ -170,20 +267,64 @@ function ListingsContent() {
     load();
 
     return () => { mounted = false; };
-  }, [categorySlug, subcategoryIdParam, searchQuery, conditionFilter, zoneFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey]);
 
-  // Favoritos: efecto propio dependiente solo de la sesión, para que resolverla
-  // no dispare un segundo fetch de la lista completa (evita la doble carga).
+  // Restaurar posición de scroll al montar con contenido cacheado (volver del detalle).
+  // El App Router hace scroll-to-top tras el remount (con timing variable), así que
+  // reafirmamos la posición cada frame durante una ventana corta, pero paramos apenas
+  // el usuario interactúa (scroll/tap/tecla) para no pisar su intención.
   useEffect(() => {
-    if (!session) { setFavoriteIds(new Set()); return; }
+    if (!initRef.current?.entry) return;
+    const y = getScroll(initRef.current.key);
+    if (y <= 0) return;
+
+    let done = false;
+    let rafId = 0;
+    const start = performance.now();
+    const cancel = () => { done = true; };
+    const tick = () => {
+      if (done) return;
+      if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+      if (performance.now() - start < 500) rafId = requestAnimationFrame(tick);
+    };
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("touchstart", cancel, { passive: true });
+    window.addEventListener("keydown", cancel);
+    tick();
+    return () => {
+      done = true;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchstart", cancel);
+      window.removeEventListener("keydown", cancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guardar la posición de scroll. El scroll solo actualiza un ref; se persiste en la
+  // fase de captura del click (antes de que el App Router haga scroll-to-top al navegar),
+  // de modo que el reset de la navegación no pise la posición real.
+  useEffect(() => {
+    const onScroll = () => { lastScrollRef.current = window.scrollY; };
+    const onClickCapture = () => { saveScroll(keyRef.current, lastScrollRef.current); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("click", onClickCapture, true);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("click", onClickCapture, true);
+    };
+  }, []);
+
+  // Favoritos: efecto propio dependiente solo de la sesión (no recarga la lista).
+  // Caché de sesión: se lee del caché si existe, se carga una vez y se limpia al salir.
+  useEffect(() => {
+    if (!session) { setFavoriteIds(new Set()); clearFavoritesCache(); return; }
+    const uid = session.user.id;
+    const cached = getCachedFavorites(uid);
+    if (cached) { setFavoriteIds(new Set(cached)); return; }
     let mounted = true;
-    supabase
-      .from("favorites")
-      .select("listing_id")
-      .eq("profile_id", session.user.id)
-      .then(({ data }) => {
-        if (mounted && data) setFavoriteIds(new Set((data as any[]).map((f) => f.listing_id)));
-      });
+    loadFavorites(uid).then((ids) => { if (mounted) setFavoriteIds(new Set(ids)); });
     return () => { mounted = false; };
   }, [session]);
 
@@ -204,6 +345,7 @@ function ListingsContent() {
 
   const toggleFavorite = useCallback(async (listingId: number) => {
     if (!session) { setError("Entre para guardar favoritos."); return; }
+    const uid = session.user.id;
     const isFav = favoriteIds.has(listingId);
     setBusyIds((c) => [...c, listingId]);
     setError(null);
@@ -212,15 +354,21 @@ function ListingsContent() {
         .from("favorites")
         .delete()
         .eq("listing_id", listingId)
-        .eq("profile_id", session.user.id);
+        .eq("profile_id", uid);
       if (e) setError(e.message);
-      else setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; });
+      else {
+        removeFavorite(uid, listingId);
+        setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; });
+      }
     } else {
       const { error: e } = await supabase
         .from("favorites")
-        .insert({ listing_id: listingId, profile_id: session.user.id });
+        .insert({ listing_id: listingId, profile_id: uid });
       if (e) setError(e.message);
-      else setFavoriteIds((c) => new Set([...c, listingId]));
+      else {
+        addFavorite(uid, listingId);
+        setFavoriteIds((c) => new Set([...c, listingId]));
+      }
     }
     setBusyIds((c) => c.filter((id) => id !== listingId));
   }, [session, favoriteIds]);

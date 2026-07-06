@@ -10,6 +10,7 @@ import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
 import ShareIcon from "../../../components/ShareIcon";
 import ListingCard from "../../../components/ListingCard";
+import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
 
 export default function StorePage() {
   const params = useParams();
@@ -39,7 +40,7 @@ export default function StorePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const activeSession = sessionData?.session ?? null;
 
-      const [sellerRes, listingsRes, favRes] = await Promise.all([
+      const [sellerRes, listingsRes] = await Promise.all([
         supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
@@ -49,9 +50,6 @@ export default function StorePage() {
           .eq("user_id", sellerId)
           .eq("status", "active")
           .order("created_at", { ascending: false }),
-        activeSession
-          ? supabase.from("favorites").select("listing_id").eq("profile_id", activeSession.user.id)
-          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (!mounted) return;
@@ -64,8 +62,12 @@ export default function StorePage() {
       }
       setSeller(sellerRes.data);
       setListings(listingsRes.data ?? []);
-      if (favRes?.data) {
-        setFavoriteIds(new Set((favRes.data as any[]).map((f) => f.listing_id)));
+      // Favoritos desde el caché de sesión (T8): 0 red si ya se cargaron en otra pantalla.
+      if (activeSession) {
+        const uid = activeSession.user.id;
+        const cached = getCachedFavorites(uid);
+        if (cached) setFavoriteIds(new Set(cached));
+        else loadFavorites(uid).then((ids) => { if (mounted) setFavoriteIds(new Set(ids)); });
       }
       setLoading(false);
     }
@@ -87,10 +89,10 @@ export default function StorePage() {
     setBusyIds((c) => [...c, listingId]);
     if (isFav) {
       const { error: e } = await supabase.from("favorites").delete().eq("listing_id", listingId).eq("profile_id", session.user.id);
-      if (!e) setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; });
+      if (!e) { removeFavorite(session.user.id, listingId); setFavoriteIds((c) => { const next = new Set(c); next.delete(listingId); return next; }); }
     } else {
       const { error: e } = await supabase.from("favorites").insert({ listing_id: listingId, profile_id: session.user.id });
-      if (!e) setFavoriteIds((c) => new Set([...c, listingId]));
+      if (!e) { addFavorite(session.user.id, listingId); setFavoriteIds((c) => new Set([...c, listingId])); }
     }
     setBusyIds((c) => c.filter((id) => id !== listingId));
   }, [session, favoriteIds, router]);
