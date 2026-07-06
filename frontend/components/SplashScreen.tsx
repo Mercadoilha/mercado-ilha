@@ -128,7 +128,10 @@ export default function SplashScreen() {
       var done = false;
       function hide() {
         if (done) return; done = true;
-        var wait = Math.max(0, 1100 - (Date.now() - start));
+        // Mínimo de 600ms: alcanza para insinuar la animación del logo sin
+        // frenar la app cuando ya cargó rápido (cacheada). Antes eran 1100ms,
+        // que en cargas veloces agregaban ~700ms de espera artificial.
+        var wait = Math.max(0, 600 - (Date.now() - start));
         setTimeout(function () {
           el.classList.add('mi-hide');
         }, wait);
