@@ -425,7 +425,7 @@ function ListingsContent() {
       {/* Sort & Filtros */}
       <div style={{ borderBottom: "1px solid var(--border)", background: "#fff" }}>
         {/* Ordenar */}
-        <div style={{ display: "flex", gap: 6, padding: "0.5rem 1rem 0", overflowX: "auto" }}>
+        <div className="no-scrollbar" style={{ display: "flex", gap: 6, padding: "0.5rem 1rem 0", overflowX: "auto" }}>
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.key}
@@ -449,7 +449,7 @@ function ListingsContent() {
         </div>
         {/* Condição — solo para Produtos */}
         {categorySlug === "produtos" && (
-          <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0", overflowX: "auto" }}>
+          <div className="no-scrollbar" style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0", overflowX: "auto" }}>
             {CONDITION_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
@@ -474,7 +474,7 @@ function ListingsContent() {
         )}
         {/* Zona */}
         {localities.length > 0 && (
-          <div style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0.5rem", overflowX: "auto" }}>
+          <div className="no-scrollbar" style={{ display: "flex", gap: 6, padding: "0.4rem 1rem 0.5rem", overflowX: "auto" }}>
             <button
               type="button"
               onClick={() => setZoneFilter(null)}

@@ -212,3 +212,11 @@ body {
   color: #fff;
 }
 .btn-whatsapp:hover { background: #1ebe5d; }
+
+/* Filas con scroll horizontal (filtros): ocultar la barra sin perder el scroll.
+   En mobile la barra ya es overlay y no molesta; en desktop quedaba dibujada fija. */
+.no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge legacy */
+}
+.no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari/Edge */
