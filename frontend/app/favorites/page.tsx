@@ -163,7 +163,7 @@ export default function FavoritesPage() {
                     </div>
                     {locationText && (
                       <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        📍 {locationText}
+                        {locationText}
                       </div>
                     )}
                     {l.condition && (

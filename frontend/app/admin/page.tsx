@@ -793,11 +793,12 @@ function Categories() {
   const [newCatIcon, setNewCatIcon] = useState("");
   const [newCatType, setNewCatType] = useState("fija");
   const [newCatBtn, setNewCatBtn] = useState("Contatar");
+  const [newCatIsProduct, setNewCatIsProduct] = useState(false);
   const [newCatSaving, setNewCatSaving] = useState(false);
   const [pickingNewCatIcon, setPickingNewCatIcon] = useState(false);
 
   // Edit category
-  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string; description: string; sectionId: number | null } | null>(null);
+  const [editingCat, setEditingCat] = useState<{ id: number; name: string; slug: string; type: string; btn: string; description: string; sectionId: number | null; isProduct: boolean } | null>(null);
   const [editingCatSaving, setEditingCatSaving] = useState(false);
 
   // New subcategory form
@@ -822,7 +823,7 @@ function Categories() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description,sort_order,home_section_id").order("sort_order"),
+      supabase.from("categories").select("id,name,slug,icon,is_active,location_type,contact_button_text,description,sort_order,home_section_id,is_product").order("sort_order"),
       supabase.from("home_sections").select("id,title,sort_order,is_featured_block").order("sort_order"),
     ]).then(([{ data: cats }, { data: secs }]) => {
       setCategories(cats ?? []);
@@ -964,11 +965,11 @@ function Categories() {
     const { data, error } = await supabase.from("categories").insert({
       name: newCatName.trim(), slug: newCatSlug.trim(), icon: newCatIcon || null,
       location_type: newCatType, contact_button_text: newCatBtn || "Contatar",
-      is_active: true, sort_order: categories.length,
+      is_active: true, sort_order: categories.length, is_product: newCatIsProduct,
     }).select().single();
     if (!error && data) {
       setCategories((p) => [...p, data]);
-      setShowNewCat(false); setNewCatName(""); setNewCatSlug(""); setNewCatIcon(""); setNewCatType("fija"); setNewCatBtn("Contatar");
+      setShowNewCat(false); setNewCatName(""); setNewCatSlug(""); setNewCatIcon(""); setNewCatType("fija"); setNewCatBtn("Contatar"); setNewCatIsProduct(false);
       flash("Categoria criada.");
       revalidateHome();
     } else flash("Erro: " + error?.message);
@@ -1012,6 +1013,7 @@ function Categories() {
       contact_button_text: editingCat.btn || "Contatar",
       description: editingCat.description.trim() || null,
       home_section_id: editingCat.sectionId,
+      is_product: editingCat.isProduct,
     };
     setCategories((p) => p.map((c) => c.id === editingCat!.id ? { ...c, ...updated } : c));
     setEditingCat(null);
@@ -1148,6 +1150,10 @@ function Categories() {
             <input className="form-input" type="text" placeholder="Botão (ex: Contatar)" value={newCatBtn}
               onChange={(e) => setNewCatBtn(e.target.value)} style={{ flex: 1 }} />
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#374151", cursor: "pointer" }}>
+            <input type="checkbox" checked={newCatIsProduct} onChange={(e) => setNewCatIsProduct(e.target.checked)} />
+            Produto vendável (mostra o botão "Vendido" no perfil de quem publicar)
+          </label>
           <button type="button" className="btn btn-primary" disabled={newCatSaving} onClick={addCategory}>
             {newCatSaving ? "Salvando..." : "✅ Criar categoria"}
           </button>
@@ -1177,6 +1183,11 @@ function Categories() {
                   ) : (
                     <span style={{ fontSize: "0.65rem", fontWeight: 700, background: "#fef9c3", color: "#a16207", borderRadius: 4, padding: "0px 5px" }}>
                       sem seção
+                    </span>
+                  )}
+                  {cat.is_product && (
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, background: "#dcfce7", color: "#059669", borderRadius: 4, padding: "0px 5px" }}>
+                      produto
                     </span>
                   )}
                 </div>
@@ -1231,6 +1242,10 @@ function Categories() {
                       </select>
                       <input className="form-input" type="text" placeholder="Botão" value={editingCat.btn} onChange={(e) => setEditingCat((p) => p ? { ...p, btn: e.target.value } : p)} style={{ flex: 1 }} />
                     </div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.78rem", color: "#374151", cursor: "pointer" }}>
+                      <input type="checkbox" checked={editingCat.isProduct} onChange={(e) => setEditingCat((p) => p ? { ...p, isProduct: e.target.checked } : p)} />
+                      Produto vendável (mostra o botão "Vendido" no perfil de quem publicar)
+                    </label>
                     <select className="form-select" value={editingCat.sectionId ?? ""} onChange={(e) => setEditingCat((p) => p ? { ...p, sectionId: e.target.value ? Number(e.target.value) : null } : p)}>
                       <option value="">— Sem seção (não aparece no home) —</option>
                       {sections.map((s) => (
@@ -1248,7 +1263,7 @@ function Categories() {
                   </div>
                 ) : (
                   <button type="button"
-                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar", description: cat.description ?? "", sectionId: cat.home_section_id ?? null })}
+                    onClick={() => setEditingCat({ id: cat.id, name: cat.name, slug: cat.slug, type: cat.location_type ?? "fija", btn: cat.contact_button_text ?? "Contatar", description: cat.description ?? "", sectionId: cat.home_section_id ?? null, isProduct: cat.is_product ?? false })}
                     style={{ width: "100%", padding: "0.5rem 0.75rem", background: "none", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 600, textAlign: "left" }}>
                     ✏️ Editar categoria
                   </button>

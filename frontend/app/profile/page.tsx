@@ -23,6 +23,8 @@ export default function ProfilePage() {
   const [toggling, setToggling] = useState<number | null>(null);
   const [bumping, setBumping] = useState<number | null>(null);
   const [bumpMsg, setBumpMsg] = useState<{ id: number; text: string; ok: boolean } | null>(null);
+  const [soldModal, setSoldModal] = useState<{ id: number; title: string } | null>(null);
+  const [soldStep, setSoldStep] = useState<"confirm" | "processing" | "done">("confirm");
 
   // Edit profile
   const [editMode, setEditMode] = useState(false);
@@ -57,7 +59,7 @@ export default function ProfilePage() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
       const [profileRes, listRes, statsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).single(),
-        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at,listing_photos(photo_url,sort_order)")
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at,categories(is_product),listing_photos(photo_url,sort_order)")
           .order("sort_order", { referencedTable: "listing_photos" })
           .limit(1, { referencedTable: "listing_photos" })
           .eq("user_id", uid)
@@ -127,8 +129,9 @@ export default function ProfilePage() {
     setSaving(false);
   };
 
-  const deleteListing = async (id: number) => {
-    if (!confirm("Deletar este anúncio permanentemente?")) return;
+  // Elimina o anúncio e tudo relacionado (fotos no R2 + linha na tabela).
+  // Usado tanto pelo botão 🗑 (com confirm nativo) quanto pelo fluxo "Vendido" (modal próprio).
+  const performDelete = async (id: number) => {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData?.session?.access_token ?? "";
 
@@ -156,6 +159,18 @@ export default function ProfilePage() {
       if (session) setCachedProfile(session.user.id, { listings: next });
       return next;
     });
+  };
+
+  const deleteListing = async (id: number) => {
+    if (!confirm("Deletar este anúncio permanentemente?")) return;
+    await performDelete(id);
+  };
+
+  const confirmSold = async () => {
+    if (!soldModal) return;
+    setSoldStep("processing");
+    await performDelete(soldModal.id);
+    setSoldStep("done");
   };
 
   const toggleStatus = async (id: number, currentStatus: string) => {
@@ -467,6 +482,27 @@ export default function ProfilePage() {
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
+                  {l.categories?.is_product && l.status !== "blocked" && l.status !== "sold" && (
+                    <button
+                      type="button"
+                      onClick={() => { setSoldModal({ id: l.id, title: l.title }); setSoldStep("confirm"); }}
+                      title="Marcar como vendido e remover o anúncio"
+                      style={{
+                        background: "#0F6E56",
+                        border: "none",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        color: "#fff",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        padding: "0.25rem 0.5rem",
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Vendido
+                    </button>
+                  )}
                   {l.status === "active" && (
                     <button
                       type="button"
@@ -589,6 +625,58 @@ export default function ProfilePage() {
         </button>
 
       </div>
+
+      {/* Modal "Vendido" — confirmação com experiência de conquista + exclusão permanente */}
+      {soldModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 200,
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "1.25rem",
+          }}
+        >
+          <div className="card" style={{ maxWidth: 360, width: "100%", padding: "1.5rem", textAlign: "center" }}>
+            {soldStep === "confirm" && (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>🎉</div>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#1e293b", marginBottom: 8 }}>
+                  Parabéns pela venda!
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.5 }}>
+                  Ao confirmar que <strong>{soldModal.title}</strong> foi vendido, o anúncio será excluído
+                  permanentemente do site — fotos, estatísticas e tudo relacionado a ele. Essa ação não pode ser desfeita.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <button type="button" className="btn btn-block" style={{ background: "#0F6E56", color: "#fff" }} onClick={confirmSold}>
+                    ✅ Sim, foi vendido!
+                  </button>
+                  <button type="button" className="btn btn-outline btn-block" onClick={() => setSoldModal(null)}>
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+            {soldStep === "processing" && (
+              <div style={{ padding: "1.75rem 0" }}>
+                <div className="spinner" />
+              </div>
+            )}
+            {soldStep === "done" && (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>🏆</div>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#0F6E56", marginBottom: 8 }}>
+                  Muito bem!
+                </h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 20 }}>
+                  Seu anúncio foi removido com sucesso. Continue vendendo no Mercado Ilha!
+                </p>
+                <button type="button" className="btn btn-primary btn-block" onClick={() => setSoldModal(null)}>
+                  Fechar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

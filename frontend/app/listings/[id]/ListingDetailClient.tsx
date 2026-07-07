@@ -574,7 +574,17 @@ export default function ListingDetailPage() {
             </div>
             <Link
               href={`/store/${seller.id}`}
-              style={{ fontSize: "0.78rem", color: "var(--blue-main)", fontWeight: 700, textDecoration: "none" }}
+              style={{
+                fontSize: "0.8rem",
+                color: "#fff",
+                fontWeight: 700,
+                textDecoration: "none",
+                background: "var(--blue-main)",
+                padding: "0.45rem 0.9rem",
+                borderRadius: 999,
+                flexShrink: 0,
+                whiteSpace: "nowrap",
+              }}
             >
               Ver loja →
             </Link>
@@ -636,19 +646,20 @@ export default function ListingDetailPage() {
             }}
           >
             <span style={{ fontSize: "0.875rem", color: "var(--blue-main)", fontWeight: 700 }}>
-              ✏️ Este é o seu anúncio
+              Este é o seu anúncio
             </span>
             <Link
               href={`/listings/${listingId}/edit`}
               style={{
-                background: "var(--blue-main)",
+                background: "var(--sand)",
                 color: "#fff",
                 borderRadius: 10,
-                padding: "0.4rem 0.9rem",
-                fontSize: "0.82rem",
+                padding: "0.5rem 1.05rem",
+                fontSize: "0.85rem",
                 fontWeight: 700,
                 textDecoration: "none",
                 flexShrink: 0,
+                boxShadow: "0 2px 6px rgba(239, 159, 39, 0.45)",
               }}
             >
               Editar anúncio

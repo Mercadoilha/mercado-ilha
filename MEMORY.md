@@ -97,6 +97,11 @@ Se gestiona desde el tab Categorias del admin. **Fuente de verdad = DB en vivo +
 1 principal + hasta 4 secundarias (tabla `listing_extra_categories`). Doc: `MULTI_CATEGORIA.md`
 y memoria `project_multi_categoria`.
 
+**Produto vendável (`categories.is_product`, fase-18, corrida 2026-07-07):** columna boolean,
+default `false` para todas. Se activa por categoría desde `/admin` → tab Categorias → editar
+categoría → checkbox "Produto vendável" (badge verde "produto" en la fila cuando está activo).
+Controla si el anuncio de esa categoría muestra el botón "Vendido" en `/profile` (ver §8 y §15).
+
 ## 5. SECCIONES DEL HOME (tabla `home_sections`, fase-11 ✅)
 
 Controla cómo se agrupan las categorías en el home. `home_section_id = null` → no aparece.
@@ -148,6 +153,10 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 - **Bottom nav fijo:** Início | Anúncios | ➕ (arena, circular) | 🍽️ Comida | Perfil/Entrar.
 - **OG image:** `/icon-192.png` para preview compacto en WhatsApp.
 - **Favoritos:** sección eliminada del perfil. Ya no existe en la UI.
+- **Botones que "pasaban desapercibidos" (2026-07-07):** en `/listings/[id]`, "Ver loja" pasó de
+  link de texto a píldora sólida azul (`--blue-main`, fondo, blanco); "Editar anúncio" (dueño) pasó
+  de azul a arena (`--sand`) con sombra. Sin emojis de lápiz (se sacaron a pedido del usuario) ni
+  el 📍 antes de la localidad en `/favorites`.
 
 ## 7. PUBLICIDAD (BANNERS)
 
@@ -169,7 +178,8 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 Acceso desde perfil (botón "⚙️ Painel de administração", solo admins). **8 tabs:**
 - **Dashboard** — contadores (anúncios activos/total, denúncias, usuarios, banners).
 - **Categorias** — CRUD completo: nombre, ícono (EmojiPicker), slug, `location_type`, texto del
-  botón, descripción, orden (flechas ↑↓ reasignan `sort_order` secuencial a TODAS). Subcategorías:
+  botón, descripción, orden (flechas ↑↓ reasignan `sort_order` secuencial a TODAS), checkbox
+  "Produto vendável" (`is_product`, fase-18, ver §4 y §15). Subcategorías:
   agregar/editar/reordenar/eliminar (⚠️ al crear requiere enviar `slug = toSlug(nombre)`; ícono
   default 🌊). En público y admin las subcategorías muestran viñeta `•` azul, no el ícono guardado.
   IconPicker con grupos Esportes / Cuidados infantis / Eletrodomésticos & Conserto. Reorden con
@@ -310,6 +320,18 @@ re-postar del grupo de WhatsApp). **Gratis por ahora; será pago más adelante.*
 - **Frontend:** home ordena destacados por `bumped_at` desc (sube en ≤60s por ISR); perfil con botón
   dorado ⭐ (deshabilitado en cooldown, muestra `⭐ Nmin`); `bumped_at` en los `select` de perfil y
   `profileCache`.
+
+## 15.1 BOTÃO "VENDIDO" (2026-07-07, fase-18, en producción)
+
+Solo para anuncios de categorías marcadas `is_product=true` en `/admin` (ver §4, §8). En
+`/profile`, junto a Pausar/Destacar, aparece botón "Vendido" (sin emoji, verde `#0F6E56`) cuando
+`categories.is_product && status !== 'blocked' && status !== 'sold'`. Al tocarlo abre un modal
+propio (no `confirm()` nativo) con 3 pasos: confirmación ("Parabéns pela venda!" + advertencia de
+que es permanente) → procesando (spinner) → éxito ("Muito bem!"). Al confirmar **elimina el
+anuncio por completo** (fotos en R2 + fila en `listings`), mismo circuito que el botón 🗑
+(`performDelete()` en `frontend/app/profile/page.tsx`, factorizada para ambos flujos). No es un
+cambio de estado a `sold` — es borrado permanente con UX de logro, tal como lo pidió el usuario.
+Query de `/profile` trae `categories(is_product)` embebido en el `select` de `listings`.
 - **Futuro:** gatear el cobro **dentro** de la RPC (único punto de entrada); el orden no cambia.
 - Detalle: memoria `project_destacar_anuncio`.
 
@@ -390,15 +412,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   `layout.tsx`, gratis en plan Hobby, habilitado por el usuario en el panel de Vercel), push a `main`
   → deploy Vercel, `a7b72bf` — desplegada 2026-07-07. **`OPTIMIZATION_MASTER_PLAN.md` completo
   (Fases 1-6), no quedan fases pendientes del plan.**
-- (Confirmadas ✅: fase-9, 10, 11-delivery-zonas, 12, 13, 14, 17, monetizacion-tracking, splash-sponsor
-  — las tres últimas corridas por el usuario 2026-07-07.)
+- (Confirmadas ✅: fase-9, 10, 11-delivery-zonas, 12, 13, 14, 17, 18-produto-vendavel,
+  monetizacion-tracking, splash-sponsor — corridas por el usuario 2026-07-07.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
   Logo real + slot "Oferecido por" vía banners position `splash`. Código en
   `SplashScreen.tsx`/`SplashSponsorSync.tsx`. Posición `splash` habilitada en DB (`fase-splash-sponsor.sql`
   corrida 2026-07-07).
 - Íconos PWA con el logo real (reemplazar placeholders).
 - Republicar anuncio vencido con 1 clic desde el perfil.
-- Botón "Marcar como vendido".
 - Filtros adicionales en listados: precio, sub-zona.
 - Panel admin: gestión de localidades y sub-zonas.
 - WhatsApp de Maria Agustina: confirmar si tiene número en metadata; si no, que lo cargue.
@@ -422,6 +443,18 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-07** — 4 ajustes de UX pedidos por el usuario, **desplegado** (commit pendiente de
+  completar tras el push). (1) `/favorites`: sacado el 📍 antes de la localidad. (2)
+  `/listings/[id]`: "Ver loja" ahora es píldora sólida azul (antes link de texto que pasaba
+  desapercibido); "Editar anúncio" (dueño) pasó a color arena con sombra; se sacaron los emojis de
+  lápiz de ambos ("Este é o seu anúncio" y "Editar anúncio") a pedido explícito del usuario. (3)
+  Nuevo campo `categories.is_product` (fase-18, SQL corrida por el usuario) + checkbox "Produto
+  vendável" en `/admin` → Categorias, default `false` en todas — el usuario decide qué categorías
+  activar. (4) Botón "Vendido" en `/profile` (sin emoji, a pedido del usuario) para anuncios de
+  categorías `is_product=true`: modal propio de 3 pasos (confirmación con advertencia → procesando
+  → éxito) que termina en **borrado permanente** del anuncio (fotos R2 + fila), reusando la lógica
+  del botón 🗑 vía `performDelete()` factorizada. Detalle completo en §15.1. Verificado con `tsc
+  --noEmit` + `npm run build` (52 páginas, ninguna ruta perdió su condición estática/ISR).
 - **2026-07-07** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 6 completada y desplegada, plan cerrado**
   (T18 Web Vitals reales de producción; Sonnet · `high`). Se instaló `@vercel/speed-insights` (único
   paquete nuevo del plan, con OK explícito del usuario antes de agregarlo) y se montó
