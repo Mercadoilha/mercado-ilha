@@ -374,14 +374,17 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-4 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-5 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
   Vercel, `5ef6493`, código en `fd32be8` y `de86814`; Fase 3: detalle instantáneo T9-T11, push a
   `main` → deploy Vercel, `f202fed`, código en `76dc20f`; Fase 4: SW reescrito v5 + offline, T12-T13,
   push a `main` → deploy Vercel, `e319409`, código en `cc02242` — desplegada 2026-07-07 sin probar en
   Android real, decisión consciente al no haber usuarios activos aún; verificado sí con Playwright/
-  Chromium en local + build de producción manual del usuario, ver detalle en `project_state.md`).
-  Quedan Fase 5 (uploads en paralelo, **edit server-side + shell estático de `/listings/[id]/edit`,
-  aún ƒ**, store con SessionContext, splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
+  Chromium en local + build de producción manual del usuario, ver detalle en `project_state.md`;
+  Fase 5: uploads en paralelo + edit server-side + store con SessionContext + splash sponsor
+  liviano, T14-T17, push a `main` → deploy Vercel, `4f53c12` — desplegada 2026-07-07, verificada con
+  `tsc --noEmit` tras cada tarea + `npm run build` final sin errores, **falta probar a mano en el
+  navegador** publish/edit con fotos reales, `/store/[id]` y el slot del splash con un banner activo).
+  Queda Fase 6 (Web Vitals reales — Sonnet).
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -414,6 +417,37 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-07** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 5 completada y desplegada** (uploads
+  paralelos + edit server-side + store sin waterfall + splash liviano, T14-T17; Sonnet · `high`).
+  (T14) **Uploads de fotos en paralelo** en `publish/PublishForm.tsx` y
+  `listings/[id]/edit/EditListingForm.tsx`: el `for` serial (comprimir→subir→insertar una foto a la
+  vez) pasó a `Promise.all(photos.map(...))` — el tiempo total pasa a ser el de la foto más lenta, no
+  la suma; cada foto devuelve `{listing_id, photo_url, storage_path, sort_order: i}` o `null` si falla
+  (se preserva el orden por el índice original, no por orden de llegada), un solo `insert` en lote
+  filtrando los `null`. Se sacó el `setTimeout` artificial de 1.5s antes del redirect (ahora inmediato
+  tras `setSuccess(true)`). (T15) **`/listings/[id]/edit` dividida** igual que `/publish`: `page.tsx`
+  pasó a Server Component async (`revalidate=300`) que trae categorías/localidades/subzonas con
+  `getSupabaseAdmin` y las pasa como props a un nuevo `EditListingForm.tsx` (client) — los desplegables
+  quedan listos al instante, sin fetch propio. La carga del anúncio a editar y el guard de dueño (`
+  user_id !== session.user.id`) siguen client-side en `EditListingForm`. La ruta queda `ƒ Dynamic`
+  igual (el plan lo permite: lo que importa es que los datos estáticos ya no bloquean con fetch
+  propio). (T16) **`/store/[id]` sin waterfall de sesión**: `StoreClient.tsx` reemplazó su propio
+  listener de `supabase.auth.getSession()`/`onAuthStateChange` por `useSession()` del
+  `SessionContext` global; la consulta de vendedor+anúncios (`Promise.all` de `profiles_public` +
+  `listings`) se dispara de inmediato sin esperar la sesión (no depende de ella); favoritos se
+  resuelven en un efecto propio keyed en `session`, reusando el caché de T8 (`getCachedFavorites`/
+  `loadFavorites`). (T17) **Splash sponsor liviano**: `SplashSponsorSync.tsx` pide la imagen del
+  banner vía el optimizador de Next (`/_next/image?url=...&w=384&q=75`, con
+  `NEXT_PUBLIC_SITE_URL` de fallback) antes de convertirla a data-URL para el caché de
+  `localStorage` — el PWA ya no descarga el original completo al abrir; si el blob pasa 400KB el
+  fallback ahora también apunta a la URL ya optimizada, no al original pesado. Además se
+  recomprimió el asset `public/banners/banner-institucional.png` (2.1MB → 250KB con
+  `sips -Z 600`, mismo nombre de archivo, mismo formato PNG) y se documentó el límite de 300KB en
+  `SKILL_BANNER_INSTITUCIONAL.md`. Verificado con `tsc --noEmit` tras cada tarea + `npm run build`
+  final: 52 páginas, sin errores de tipos. Commits: `e436b1f` (T14), `d41a18c` (T15), `d845171`
+  (T16), `4f53c12` (T17) — push a `main`, deploy Vercel. **Pendiente**: probar a mano en el
+  navegador publish/edit con fotos reales, `/store/[id]` y el splash con un banner `position=splash`
+  activo (no se hizo verificación manual en browser en esta sesión, solo build/tipos).
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 4 completada** (Service Worker correcto +
   offline, T12-T13; Opus 4.8 · `xhigh`). (T12) **Reescritura del SW** (`public/sw.js`, `v4`→`v5`):
   se reemplazó el cache-first-para-todo (que congelaba `/api/mares` y los payloads RSC, y crecía sin
