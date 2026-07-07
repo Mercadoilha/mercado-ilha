@@ -8,6 +8,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl } from "../../../lib/whatsappUrl";
 import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
+import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import ListingCard from "../../../components/ListingCard";
 import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
@@ -16,30 +17,23 @@ export default function StorePage() {
   const params = useParams();
   const router = useRouter();
   const sellerId = params?.id as string;
+  const { session } = useSession();
 
   const [seller, setSeller] = useState<any>(null);
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<any>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data?.session ?? null));
-    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => setSession(s ?? null));
-    return () => l?.subscription.unsubscribe();
-  }, []);
-
+  // Vendedor + anúncios não dependem da sessão: disparam de imediato, em
+  // uma única tanda concorrente (sem esperar getSession()).
   useEffect(() => {
     if (!sellerId) { setError("Vendedor não encontrado."); setLoading(false); return; }
     let mounted = true;
 
     async function load() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const activeSession = sessionData?.session ?? null;
-
       const [sellerRes, listingsRes] = await Promise.all([
         supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
@@ -62,19 +56,24 @@ export default function StorePage() {
       }
       setSeller(sellerRes.data);
       setListings(listingsRes.data ?? []);
-      // Favoritos desde el caché de sesión (T8): 0 red si ya se cargaron en otra pantalla.
-      if (activeSession) {
-        const uid = activeSession.user.id;
-        const cached = getCachedFavorites(uid);
-        if (cached) setFavoriteIds(new Set(cached));
-        else loadFavorites(uid).then((ids) => { if (mounted) setFavoriteIds(new Set(ids)); });
-      }
       setLoading(false);
     }
 
     load();
     return () => { mounted = false; };
   }, [sellerId]);
+
+  // Favoritos desde o caché de sessão (T8): resolve em efeito próprio quando
+  // há sessão, sem bloquear o load de vendedor+anúncios acima.
+  useEffect(() => {
+    if (!session) { setFavoriteIds(new Set()); return; }
+    const uid = session.user.id;
+    const cached = getCachedFavorites(uid);
+    if (cached) { setFavoriteIds(new Set(cached)); return; }
+    let mounted = true;
+    loadFavorites(uid).then((ids) => { if (mounted) setFavoriteIds(new Set(ids)); });
+    return () => { mounted = false; };
+  }, [session]);
 
   // Pre-fetch seller phone so the contact button is fully synchronous (avoids mobile popup blocker)
   useEffect(() => {
