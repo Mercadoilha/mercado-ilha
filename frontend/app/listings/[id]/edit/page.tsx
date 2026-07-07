@@ -296,38 +296,41 @@ export default function EditListingPage() {
       await supabase.from("listing_photos").delete().in("id", removedPhotoIds);
     }
 
-    // Upload new photos
+    // Upload new photos en paralelo: el tiempo total es el de la foto más
+    // lenta, no la suma. sort_order se conserva por índice original.
     if (newPhotos.length > 0) {
       const token = session.access_token;
       const baseOrder = visibleExisting.length;
-      for (let i = 0; i < newPhotos.length; i++) {
-        try {
-          const compressed = await compressImage(newPhotos[i]);
-          const form = new FormData();
-          form.append("file", compressed);
-          form.append("folder", "listings");
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: form,
-          });
-          const data = await res.json();
-          if (res.ok && data.url) {
-            await supabase.from("listing_photos").insert({
-              listing_id: listingId,
-              photo_url: data.url,
-              storage_path: data.key ?? null,
-              sort_order: baseOrder + i,
+      const uploaded = await Promise.all(
+        newPhotos.map(async (photo, i) => {
+          try {
+            const compressed = await compressImage(photo);
+            const form = new FormData();
+            form.append("file", compressed);
+            form.append("folder", "listings");
+            const res = await fetch("/api/upload", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: form,
             });
+            const data = await res.json();
+            if (res.ok && data.url) {
+              return { listing_id: listingId, photo_url: data.url, storage_path: data.key ?? null, sort_order: baseOrder + i };
+            }
+          } catch {
+            // esta foto falla, las demás siguen
           }
-        } catch {
-          // continue
-        }
+          return null;
+        })
+      );
+      const rows = uploaded.filter((r): r is NonNullable<typeof r> => r !== null);
+      if (rows.length > 0) {
+        await supabase.from("listing_photos").insert(rows);
       }
     }
 
     setSuccess(true);
-    setTimeout(() => router.push(`/listings/${listingId}`), 1500);
+    router.push(`/listings/${listingId}`);
   };
 
   if (authLoading || dataLoading) {

@@ -250,33 +250,37 @@ export default function PublishForm({ categories, localities, allSubzones, islan
       );
     }
 
-    // Upload photos to R2
+    // Upload photos to R2 en paralelo: el tiempo total es el de la foto más
+    // lenta, no la suma. sort_order se conserva por índice original, no por
+    // orden de llegada. Una foto que falla no aborta las demás.
     if (photos.length > 0) {
-      for (let i = 0; i < photos.length; i++) {
-        try {
-          const compressed = await compressImage(photos[i]);
-          const form = new FormData();
-          form.append("file", compressed);
-          form.append("folder", "listings");
+      const uploaded = await Promise.all(
+        photos.map(async (photo, i) => {
+          try {
+            const compressed = await compressImage(photo);
+            const form = new FormData();
+            form.append("file", compressed);
+            form.append("folder", "listings");
 
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${session.access_token}` },
-            body: form,
-          });
-          const data = await res.json();
-
-          if (res.ok && data.url) {
-            await supabase.from("listing_photos").insert({
-              listing_id: listing.id,
-              photo_url: data.url,
-              storage_path: data.key ?? null,
-              sort_order: i,
+            const res = await fetch("/api/upload", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              body: form,
             });
+            const data = await res.json();
+
+            if (res.ok && data.url) {
+              return { listing_id: listing.id, photo_url: data.url, storage_path: data.key ?? null, sort_order: i };
+            }
+          } catch {
+            // esta foto falla, las demás siguen
           }
-        } catch {
-          // continue uploading remaining photos even if one fails
-        }
+          return null;
+        })
+      );
+      const rows = uploaded.filter((r): r is NonNullable<typeof r> => r !== null);
+      if (rows.length > 0) {
+        await supabase.from("listing_photos").insert(rows);
       }
     }
 
@@ -288,7 +292,7 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     }).catch(() => {});
 
     setSuccess(true);
-    setTimeout(() => router.push(`/listings/${listing.id}`), 1500);
+    router.push(`/listings/${listing.id}`);
   };
 
   // ── Auth loading ──
