@@ -374,14 +374,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 19. PENDIENTES / IDEAS
 
-- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-3 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
+- **`OPTIMIZATION_MASTER_PLAN.md`:** Fases 1-4 **EN PRODUCCIÓN** (Fases 1-2: push a `main` → deploy
   Vercel, `5ef6493`, código en `fd32be8` y `de86814`; Fase 3: detalle instantáneo T9-T11, push a
-  `main` → deploy Vercel, `f202fed`, código en `76dc20f`). **Fase 4 completada** (SW reescrito v5 +
-  offline, T12-T13 — commit `cc02242`; **falta desplegar**). Quedan Fase 5 (uploads en paralelo,
-  **edit server-side + shell estático de `/listings/[id]/edit`, aún ƒ**, store con SessionContext,
-  splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
-  ⚠️ Al desplegar Fase 4: probar el PWA instalado real (Android) el ciclo instalar → navegar →
-  actualizar SW (v4→v5) — el SW afecta a todos los dispositivos y es difícil de revertir.
+  `main` → deploy Vercel, `f202fed`, código en `76dc20f`; Fase 4: SW reescrito v5 + offline, T12-T13,
+  push a `main` → deploy Vercel, `e319409`, código en `cc02242` — desplegada 2026-07-07 sin probar en
+  Android real, decisión consciente al no haber usuarios activos aún; verificado sí con Playwright/
+  Chromium en local + build de producción manual del usuario, ver detalle en `project_state.md`).
+  Quedan Fase 5 (uploads en paralelo, **edit server-side + shell estático de `/listings/[id]/edit`,
+  aún ƒ**, store con SessionContext, splash sponsor liviano — Sonnet), Fase 6 (Web Vitals reales — Sonnet).
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -432,8 +432,15 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   `updateViaCache: "none"` para propagar rápido el bump de versión. Verificado con `npm run build`
   (rutas estáticas/ISR intactas) y navegación real con Chromium: el SW activa y borra los caches `v4`,
   `/api/mares` network-first, imágenes cacheadas con tope, y el modo avión muestra la página offline de
-  marca sin crash; online sin errores de consola. Commit: `cc02242`. **Falta desplegar a producción**
-  (al hacerlo, probar el ciclo instalar→navegar→actualizar SW en un PWA instalado real).
+  marca sin crash; online sin errores de consola. Commit: `cc02242`.
+- **2026-07-07** — Fase 4 **desplegada a producción** (push `main`→Vercel, `e319409`). Antes del
+  push: build de producción local (`npm run build && npm start`) probado a mano por el usuario en
+  su compu (Chrome DevTools → Application → Service Workers, toggle offline) y desde el celular vía
+  IP local en la misma wifi — offline mostró la página de marca sin crash, navegación normal sin
+  cambios perceptibles. No se probó en un PWA instalado real en Android (el usuario no tiene uno a
+  mano); decisión consciente de desplegar igual porque el proyecto aún no tiene usuarios activos, así
+  que el riesgo de un SW roto cacheado en dispositivos reales es nulo por ahora. Si en el futuro se
+  detecta algo raro en el PWA instalado (splash, offline, mareas viejas), revisar primero `sw.js`.
 - **2026-07-06** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 3 completada** (detalle de anuncio
   instantáneo, T9-T11; Opus 4.8). (T9) **Render optimista**: nuevo `lib/listingPreview.ts` (Map
   de módulo, cap 30) donde la card guarda al hacer click los datos que ya tiene (título, precio,
