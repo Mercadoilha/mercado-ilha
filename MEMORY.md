@@ -443,8 +443,8 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-07** — 4 ajustes de UX pedidos por el usuario, **desplegado** (commit pendiente de
-  completar tras el push). (1) `/favorites`: sacado el 📍 antes de la localidad. (2)
+- **2026-07-07** — 4 ajustes de UX pedidos por el usuario, **desplegado** (commit `50d4549`,
+  push a `main`). (1) `/favorites`: sacado el 📍 antes de la localidad. (2)
   `/listings/[id]`: "Ver loja" ahora es píldora sólida azul (antes link de texto que pasaba
   desapercibido); "Editar anúncio" (dueño) pasó a color arena con sombra; se sacaron los emojis de
   lápiz de ambos ("Este é o seu anúncio" y "Editar anúncio") a pedido explícito del usuario. (3)
