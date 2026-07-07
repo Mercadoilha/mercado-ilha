@@ -17,13 +17,24 @@ import { supabase } from "../lib/supabaseClient";
 
 const CACHE_KEY = "mi_splash_sponsor";
 
-async function toDataUrl(url: string): Promise<string | null> {
+// El slot del splash mide max-width: 170px — se pide la imagen ya redimensionada
+// vía el optimizador de Next (ancho fijo soportado por next.config.mjs) en vez
+// del original, así el data-URL sale chico y el fallback de URL remota nunca
+// apunta al archivo pesado.
+const OPTIMIZED_WIDTH = 384;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mercadoilha.vercel.app";
+
+function optimizedImageUrl(originalUrl: string): string {
+  return `${SITE_URL}/_next/image?url=${encodeURIComponent(originalUrl)}&w=${OPTIMIZED_WIDTH}&q=75`;
+}
+
+async function toDataUrl(originalUrl: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { cache: "force-cache" });
+    const res = await fetch(optimizedImageUrl(originalUrl), { cache: "force-cache" });
     if (!res.ok) return null;
     const blob = await res.blob();
     // Evitar cachear archivos grandes en localStorage (~límite 5MB).
-    if (blob.size > 400_000) return url; // usa la URL directa como fallback
+    if (blob.size > 400_000) return optimizedImageUrl(originalUrl); // fallback: URL ya optimizada, no el original pesado
     return await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);

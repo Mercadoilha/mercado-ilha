@@ -143,6 +143,12 @@ Logo top-left. Category name bold. Wide cinematic format.
 - Dimensión generada: 1584 × 672 px (21:9). Se recorta verticalmente → diseñar con
   el contenido importante centrado verticalmente.
 - Formato aceptado: JPG, PNG, WebP. PNG recomendado para calidad.
+- **Tamaño máximo recomendado: 300 KB.** Si el PNG generado pesa más (suele pasar
+  con fondos fotográficos ~2MB+), redimensionar el ancho hasta bajar de ese límite
+  (ej. `sips -Z 600 archivo.png --out archivo.png` suele bastar) antes de subirlo —
+  el banner del home se ve a 130px de alto, no necesita más resolución. El slot del
+  splash pide la imagen redimensionada vía `/_next/image` (ver `SplashSponsorSync.tsx`),
+  pero el peso del archivo fuente igual importa para el repo y para el fallback.
 - git push puede fallar con archivos >1MB sin el buffer aumentado. Siempre ejecutar
   `git config http.postBuffer 524288000` antes del push.
 - La URL de Higgsfield (cloudfront) es temporal. Siempre descargar y hostear en Vercel.
