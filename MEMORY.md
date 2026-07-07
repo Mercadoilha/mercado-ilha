@@ -147,6 +147,14 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   memoria por query, consultas paralelas (listings+categories+subcategories), skeleton, navegación
   ↑↓ Enter Esc, ARIA. Sugerencias: máx 5 anuncios + máx 3 categorías (sin anuncios en el dropdown
   tras el rework — ver `project_buscador_rework`; midiendo búsquedas con fase-16 → revisar sinónimos).
+  **Sin acentos + completar barra (2026-07-07, fase-19, commit `c132a18`):** columnas generadas
+  `title_norm`/`description_norm`/`name_norm` (minúsculas + `unaccent`, `fase-19-busca-sem-acentos.sql`,
+  corrida por el usuario) en `listings`/`categories`/`subcategories`, con índices GIN trigram; "pao"
+  ahora encuentra "Pão". Búsqueda multi-palabra por AND sobre esas columnas (`lib/searchNorm.ts` en
+  frontend, `fold()`/`foldWords()`), tanto en el autocomplete como en `/listings`. Tocar una
+  sugerencia de **término** ya no navega: completa la barra (con espacio final, ícono ↖) para
+  que el usuario agregue más texto antes de tocar Buscar; sugerencias de **categoría/subcategoría**
+  siguen navegando directo. Enter con una sugerencia resaltada por teclado sí busca/navega directo.
 - **Botón compartir:** Web Share API + fallback WhatsApp. Ícono en `ShareIcon.tsx`. En 4 lugares:
   header global, detalle del anuncio (outline azul, visible siempre), tienda (outline blanco),
   perfil propio (outline azul, URL `origin + '/store/' + userId`).
@@ -425,6 +433,7 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 - WhatsApp de Maria Agustina: confirmar si tiene número en metadata; si no, que lo cargue.
 - Buscador: extender cache a `sessionStorage`; revisar sinónimos tras 15 días de medición
   (`SIGUIENTES_PASOS_BUSCADOR.md`).
+- (Confirmada ✅ fase-19-busca-sem-acentos: corrida por el usuario 2026-07-07 — ver §6.)
 
 ## 20. CORRER LOCALMENTE
 
@@ -443,6 +452,10 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-07** — Buscador: sin acentos + sugestão completa a barra, **desplegado** (commit
+  `c132a18`, push a `main`). Fase-19 SQL (`fase-19-busca-sem-acentos.sql`, columnas generadas
+  `*_norm` + índices trigram) corrida por el usuario en Supabase antes del deploy. Detalle
+  completo en §6.
 - **2026-07-07** — 4 ajustes de UX pedidos por el usuario, **desplegado** (commit `50d4549`,
   push a `main`). (1) `/favorites`: sacado el 📍 antes de la localidad. (2)
   `/listings/[id]`: "Ver loja" ahora es píldora sólida azul (antes link de texto que pasaba
