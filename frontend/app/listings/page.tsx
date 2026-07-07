@@ -18,6 +18,7 @@ import {
   type ListingsCacheEntry,
 } from "../../lib/listingsCache";
 import { getCategoriesSync, loadCategories, getLocalitiesSync, loadLocalities } from "../../lib/catalogCache";
+import { foldWords } from "../../lib/searchNorm";
 import {
   getCachedFavorites,
   loadFavorites,
@@ -211,7 +212,12 @@ function ListingsContent() {
           .order("sort_order", { referencedTable: "listing_photos" })
           .limit(1, { referencedTable: "listing_photos" })
           .eq("status", "active");
-        if (searchQuery) q = q.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        // Sin acentos y por palabra (AND): "pao caseiro" encuentra "Pão integral caseiro".
+        if (searchQuery) {
+          for (const w of foldWords(searchQuery)) {
+            q = q.or(`title_norm.ilike.%${w}%,description_norm.ilike.%${w}%`);
+          }
+        }
         if (conditionFilter) q = q.eq("condition", conditionFilter);
         if (zoneOr) q = q.or(zoneOr);
         return q.order("created_at", { ascending: false }).limit(60);

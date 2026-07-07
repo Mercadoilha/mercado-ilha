@@ -3,16 +3,19 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { fold, foldWords } from "../lib/searchNorm";
 
 // Tres tipos de sugerencia, en este orden de prioridad:
 //  - "term": la búsqueda particular (texto). Primera y más específica.
 //            Ej.: "iph" → "iphone" → muestra solo iphones.
-//  - "category" / "subcategory": relacionadas, para llevar a más anuncios
-//            (estimular el scroll). Se deducen de los anuncios que coinciden.
+//            Al elegirla NO navega: completa la barra para que el usuario
+//            pueda agregar más texto y recién ahí tocar Buscar.
+//  - "nav" (categoría/subcategoría): relacionadas, navegan directo.
 type Suggestion = {
   label: string;
   href: string;
   hint: string; // etiqueta a la derecha; "" = sin etiqueta (término particular)
+  kind: "term" | "nav";
 };
 
 const cache = new Map<string, Suggestion[]>();
@@ -21,63 +24,69 @@ function norm(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-// Ordena las palabras de los títulos que contienen `word`, mejores primero:
-// coincidencia exacta > más frecuente > más corta.
-// Ej.: títulos con "iPhone 13", "iPhone Pro" + word="iph" → ["iphone", ...].
+// Ordena las palabras de los títulos que contienen `word` (ya normalizada con
+// fold), mejores primero: coincidencia exacta > más frecuente > más corta.
+// Devuelve la grafía real más frecuente (con acentos): "pa" → "pão".
 function rankCompletions(titles: string[], word: string): string[] {
-  const count = new Map<string, number>();
+  const stats = new Map<string, { total: number; variants: Map<string, number> }>();
   for (const title of titles) {
     for (const raw of title.split(/[\s,.;:/()\-–—|@#!?"']+/)) {
-      const w = raw.toLowerCase();
+      const display = raw.toLowerCase();
+      const w = fold(display);
       if (w.length < 2 || w.length > 24) continue;
       if (/^\d+$/.test(w)) continue; // ignorar números sueltos
       if (!w.includes(word)) continue;
-      count.set(w, (count.get(w) ?? 0) + 1);
+      const e = stats.get(w) ?? { total: 0, variants: new Map<string, number>() };
+      e.total += 1;
+      e.variants.set(display, (e.variants.get(display) ?? 0) + 1);
+      stats.set(w, e);
     }
   }
-  return [...count.entries()]
+  return [...stats.entries()]
     .sort((a, b) => {
       const ea = a[0] === word ? 1 : 0;
       const eb = b[0] === word ? 1 : 0;
       if (ea !== eb) return eb - ea; // el término exacto primero
-      if (b[1] !== a[1]) return b[1] - a[1]; // luego el más frecuente
+      if (b[1].total !== a[1].total) return b[1].total - a[1].total; // luego el más frecuente
       return a[0].length - b[0].length; // luego el más corto
     })
-    .map((e) => e[0]);
+    .map(([, e]) => [...e.variants.entries()].sort((x, y) => y[1] - x[1])[0][0]);
 }
 
 async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggestion[]> {
-  const key = norm(q);
+  const key = fold(norm(q));
   if (cache.has(key)) return cache.get(key)!;
 
-  const ql = key;
-  const like = `%${q}%`;
+  const ql = norm(q);
+  // Cada palabra se filtra por separado (AND) sobre las columnas *_norm
+  // (fase-19): sin acentos y sin depender del orden de las palabras.
+  const words = foldWords(q);
+
+  let listQ = supabase
+    .from("listings")
+    .select("title, categories:category_id(name, slug), subcategories:subcategory_id(id, name, categories(name, slug))")
+    .eq("status", "active");
+  let catQ = supabase
+    .from("categories")
+    .select("name, slug")
+    .eq("is_active", true);
+  let subQ = supabase
+    .from("subcategories")
+    .select("id, name, categories(name, slug)");
+  for (const w of words) {
+    listQ = listQ.ilike("title_norm", `%${w}%`);
+    catQ = catQ.ilike("name_norm", `%${w}%`);
+    subQ = subQ.ilike("name_norm", `%${w}%`);
+  }
 
   const [listRes, catRes, subRes] = await Promise.all([
     // Anuncios que coinciden por título: de aquí salen los términos
     // particulares y las categorías/subcategorías relacionadas.
-    supabase
-      .from("listings")
-      .select("title, categories:category_id(name, slug), subcategories:subcategory_id(id, name, categories(name, slug))")
-      .eq("status", "active")
-      .ilike("title", like)
-      .limit(20)
-      .abortSignal(signal),
+    listQ.limit(20).abortSignal(signal),
     // Coincidencia directa por nombre de categoría (ej. escribir "celul").
-    supabase
-      .from("categories")
-      .select("name, slug")
-      .ilike("name", like)
-      .eq("is_active", true)
-      .limit(5)
-      .abortSignal(signal),
+    catQ.limit(5).abortSignal(signal),
     // Coincidencia directa por nombre de subcategoría.
-    supabase
-      .from("subcategories")
-      .select("id, name, categories(name, slug)")
-      .ilike("name", like)
-      .limit(5)
-      .abortSignal(signal),
+    subQ.limit(5).abortSignal(signal),
   ]);
 
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
@@ -140,37 +149,47 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
   const seen = new Set<string>();
   const result: Suggestion[] = [];
   const add = (s: Suggestion) => {
-    const k = norm(s.label);
+    const k = fold(norm(s.label));
     if (!k || seen.has(k)) return;
     seen.add(k);
     result.push(s);
   };
+  const addTerm = (label: string) =>
+    add({ label, href: `/listings?q=${encodeURIComponent(label)}`, hint: "", kind: "term" });
 
-  // 1) Búsqueda particular (primera y más específica).
-  const words = ql.split(/\s+/).filter((w) => w.length >= 2);
-  const firstWord = words[0] ?? ql;
-  const comps = rankCompletions(titles, firstWord);
-  if (words.length > 1) {
-    // Frase completa ("iphone 13") → resultados EXACTOS de lo escrito.
-    add({ label: ql, href: `/listings?q=${encodeURIComponent(q.trim())}`, hint: "" });
-    // Y la versión amplia ("iphone") para explorar más anuncios.
-    if (comps[0]) add({ label: comps[0], href: `/listings?q=${encodeURIComponent(comps[0])}`, hint: "" });
+  // 1) Búsqueda particular (primera y más específica). Se completa la ÚLTIMA
+  // palabra escrita con la grafía real de los títulos: "pão fr" → "pão francês".
+  const typedWords = ql.split(" ").filter(Boolean);
+  const lastWord = fold(typedWords[typedWords.length - 1] ?? "");
+  const comps = lastWord.length >= 2 ? rankCompletions(titles, lastWord) : [];
+  const prefix = typedWords.slice(0, -1).join(" ");
+  const withPrefix = (w: string) => (prefix ? `${prefix} ${w}` : w);
+  if (typedWords.length > 1) {
+    const completed = comps[0] ? withPrefix(comps[0]) : null;
+    if (completed && fold(completed) === fold(ql)) {
+      // Misma frase pero con los acentos reales ("pao frances" → "pao francês").
+      addTerm(completed);
+    } else {
+      // Frase completa tal cual se escribió → resultados EXACTOS.
+      addTerm(ql);
+      if (completed) addTerm(completed);
+    }
   } else {
-    // Fragmento ("iph") → completar al término real ("iphone").
-    const term = comps[0] ?? ql;
-    add({ label: term, href: `/listings?q=${encodeURIComponent(term)}`, hint: "" });
+    // Fragmento ("iph") → completar al término real ("iphone") + una alternativa.
+    addTerm(comps[0] ?? ql);
+    if (comps[1]) addTerm(comps[1]);
   }
 
   // 2) Categorías relacionadas (máx 3).
   const cats = [...catMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
   for (const c of cats) {
-    add({ label: c.label, href: `/listings?category=${c.slug}`, hint: "Categoria" });
+    add({ label: c.label, href: `/listings?category=${c.slug}`, hint: "Categoria", kind: "nav" });
   }
 
   // 3) Subcategorías relacionadas (máx 3).
   const subs = [...subMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
   for (const s of subs) {
-    add({ label: s.label, href: s.href, hint: s.hint });
+    add({ label: s.label, href: s.href, hint: s.hint, kind: "nav" });
   }
 
   const final = result.slice(0, 8);
@@ -178,11 +197,14 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
   return final;
 }
 
-// Resalta en negrita la parte del término que coincide con lo escrito.
+// Resalta en negrita la parte del término que coincide con lo escrito,
+// ignorando acentos ("pao" resalta "pão"). fold() preserva el largo, así que
+// los índices sobre el texto normalizado valen para el original.
 function highlight(term: string, q: string) {
-  const idx = term.toLowerCase().indexOf(q.trim().toLowerCase());
-  if (idx < 0 || !q.trim()) return <>{term}</>;
-  const end = idx + q.trim().length;
+  const nq = fold(q.trim());
+  const idx = nq ? fold(term).indexOf(nq) : -1;
+  if (idx < 0) return <>{term}</>;
+  const end = idx + nq.length;
   return (
     <>
       {term.slice(0, idx)}
@@ -257,10 +279,31 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
     router.push(`/listings?q=${encodeURIComponent(q)}`);
   }
 
+  // Tocar una sugerencia: categoría/subcategoría navega directo; un término
+  // completa la barra (con espacio final) para que el usuario pueda agregar
+  // más texto y recién ahí tocar Buscar. Si el término ya es exactamente lo
+  // escrito, completarlo no aportaría nada → busca directo.
+  function selectSuggestion(item: Suggestion) {
+    if (item.kind === "nav") {
+      goHref(item.href);
+      return;
+    }
+    if (fold(item.label) === fold(query.trim())) {
+      goFreeText(item.label);
+      return;
+    }
+    setQuery(item.label + " ");
+    setActiveIdx(-1);
+    inputRef.current?.focus();
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (activeIdx >= 0 && items[activeIdx]) {
-      goHref(items[activeIdx].href);
+    const active = activeIdx >= 0 ? items[activeIdx] : null;
+    if (active) {
+      // Enter con sugerencia resaltada (teclado): buscar/navegar directo.
+      if (active.kind === "nav") goHref(active.href);
+      else goFreeText(active.label);
       return;
     }
     goFreeText(query);
@@ -393,7 +436,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
               key={item.href}
               id={`busca-item-${i}`}
               active={activeIdx === i}
-              onSelect={() => goHref(item.href)}
+              onSelect={() => selectSuggestion(item)}
               onHover={() => setActiveIdx(i)}
             >
               <span aria-hidden="true" style={{ fontSize: "0.9rem", opacity: 0.5, flexShrink: 0 }}>🔍</span>
@@ -408,7 +451,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
               }}>
                 {highlight(item.label, query)}
               </span>
-              {item.hint && (
+              {item.hint ? (
                 <span style={{
                   fontSize: "0.72rem",
                   color: "var(--text-muted)",
@@ -416,6 +459,11 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
                   whiteSpace: "nowrap",
                 }}>
                   em {item.hint}
+                </span>
+              ) : (
+                // Señal de que el término completa la barra (estilo Mercado Livre).
+                <span aria-hidden="true" style={{ fontSize: "0.85rem", color: "#94a3b8", flexShrink: 0 }}>
+                  ↖
                 </span>
               )}
             </SuggestionItem>
