@@ -382,18 +382,20 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Chromium en local + build de producción manual del usuario, ver detalle en `project_state.md`;
   Fase 5: uploads en paralelo + edit server-side + store con SessionContext + splash sponsor
   liviano, T14-T17, push a `main` → deploy Vercel, `4f53c12` — desplegada 2026-07-07, verificada con
-  `tsc --noEmit` tras cada tarea + `npm run build` final sin errores, **falta probar a mano en el
-  navegador** publish/edit con fotos reales, `/store/[id]` y el slot del splash con un banner activo).
+  `tsc --noEmit` tras cada tarea + `npm run build` final sin errores. Probado a mano en producción
+  2026-07-07: publish/edit con fotos reales ✅, `/store/[id]` ✅. Slot del splash con banner activo
+  queda **pendiente de verificar** (el usuario no tenía banner de posición `splash` cargado aún;
+  lo hará más adelante).
   Fase 6: T18 Web Vitals reales de producción vía `@vercel/speed-insights` (`<SpeedInsights />` en
   `layout.tsx`, gratis en plan Hobby, habilitado por el usuario en el panel de Vercel), push a `main`
   → deploy Vercel, `a7b72bf` — desplegada 2026-07-07. **`OPTIMIZATION_MASTER_PLAN.md` completo
   (Fases 1-6), no quedan fases pendientes del plan.**
-- **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
-  (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
+- (Confirmadas ✅: fase-9, 10, 11-delivery-zonas, 12, 13, 14, 17, monetizacion-tracking, splash-sponsor
+  — las tres últimas corridas por el usuario 2026-07-07.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
   Logo real + slot "Oferecido por" vía banners position `splash`. Código en
-  `SplashScreen.tsx`/`SplashSponsorSync.tsx`. **Falta correr** `supabase/fase-splash-sponsor.sql`
-  para habilitar la posición `splash` en la DB.
+  `SplashScreen.tsx`/`SplashSponsorSync.tsx`. Posición `splash` habilitada en DB (`fase-splash-sponsor.sql`
+  corrida 2026-07-07).
 - Íconos PWA con el logo real (reemplazar placeholders).
 - Republicar anuncio vencido con 1 clic desde el perfil.
 - Botón "Marcar como vendido".
