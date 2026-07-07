@@ -384,7 +384,10 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   liviano, T14-T17, push a `main` → deploy Vercel, `4f53c12` — desplegada 2026-07-07, verificada con
   `tsc --noEmit` tras cada tarea + `npm run build` final sin errores, **falta probar a mano en el
   navegador** publish/edit con fotos reales, `/store/[id]` y el slot del splash con un banner activo).
-  Queda Fase 6 (Web Vitals reales — Sonnet).
+  Fase 6: T18 Web Vitals reales de producción vía `@vercel/speed-insights` (`<SpeedInsights />` en
+  `layout.tsx`, gratis en plan Hobby, habilitado por el usuario en el panel de Vercel), push a `main`
+  → deploy Vercel, `a7b72bf` — desplegada 2026-07-07. **`OPTIMIZATION_MASTER_PLAN.md` completo
+  (Fases 1-6), no quedan fases pendientes del plan.**
 - **Correr en Supabase:** `fase-monetizacion-tracking.sql` (tracking), `fase-11-delivery-zonas.sql`.
   (Confirmadas ✅: fase-9, 10, 12, 13, 14, 17.)
 - **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
@@ -417,6 +420,20 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-07** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 6 completada y desplegada, plan cerrado**
+  (T18 Web Vitals reales de producción; Sonnet · `high`). Se instaló `@vercel/speed-insights` (único
+  paquete nuevo del plan, con OK explícito del usuario antes de agregarlo) y se montó
+  `<SpeedInsights />` en `frontend/app/layout.tsx` dentro de `<body>`, después del `SessionProvider`.
+  Mide LCP/INP/CLS reales de usuarios de la isla (gama media + 4G), segmentable por ruta desde el
+  panel de Vercel — sin dashboard propio, tal como pedía el plan. El beacon de recolección es POST y
+  el SW (`sw.js`) solo intercepta GET, así que nunca lo cachea ni lo bloquea. Gratis en el plan
+  **Hobby** (confirmado por el usuario con capture de pantalla del modal de Vercel: "Monthly Fee:
+  Free on Hobby" y "Fee per 10k Data Points: Free on Hobby"; en Hobby no hay cobro por excedente, solo
+  se pausa la recolección hasta el próximo ciclo — el usuario vería el uso en el panel de
+  Speed Insights / Settings → Usage, o un aviso por email). Verificado con `tsc --noEmit` + `npm run
+  build` (52 páginas, ninguna ruta perdió su condición estática/ISR). Commit `a7b72bf`, push a `main`,
+  deploy Vercel — el usuario habilitó Speed Insights en el panel de Vercel antes del push. **Con esto
+  el `OPTIMIZATION_MASTER_PLAN.md` queda completo (Fases 1-6), no quedan fases del plan pendientes.**
 - **2026-07-07** — `OPTIMIZATION_MASTER_PLAN.md` → **Fase 5 completada y desplegada** (uploads
   paralelos + edit server-side + store sin waterfall + splash liviano, T14-T17; Sonnet · `high`).
   (T14) **Uploads de fotos en paralelo** en `publish/PublishForm.tsx` y
