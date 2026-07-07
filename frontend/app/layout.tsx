@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
 import SplashScreen from "../components/SplashScreen";
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <RegisterSW />
           <SplashSponsorSync />
         </SessionProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
