@@ -3,8 +3,6 @@ import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
-import SplashScreen from "../components/SplashScreen";
-import SplashSponsorSync from "../components/SplashSponsorSync";
 import { SessionProvider } from "../contexts/SessionContext";
 
 export const viewport: Viewport = {
@@ -71,12 +69,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-1290-2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
       </head>
       <body>
-        <SplashScreen />
         <SessionProvider>
           {children}
           <BottomNav />
           <RegisterSW />
-          <SplashSponsorSync />
         </SessionProvider>
         <SpeedInsights />
       </body>

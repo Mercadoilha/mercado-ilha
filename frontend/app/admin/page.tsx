@@ -600,7 +600,7 @@ function Banners() {
   const [bTitle, setBTitle] = useState("");
   const [bImageUrl, setBImageUrl] = useState("");
   const [bWhatsapp, setBWhatsapp] = useState("");
-  const [bPosition, setBPosition] = useState<"home" | "listado" | "splash">("home");
+  const [bPosition, setBPosition] = useState<"home" | "listado">("home");
   const [bSaving, setBSaving] = useState(false);
   const [bMsg, setBMsg] = useState("");
 
@@ -639,15 +639,10 @@ function Banners() {
 
   const saveBanner = async () => {
     if (!bImageUrl.trim()) { setBMsg("URL da imagem é obrigatória."); return; }
-    // O splash não é clicável: não precisa de WhatsApp / link.
-    const isSplash = bPosition === "splash";
-    if (!isSplash && !bWhatsapp.trim()) { setBMsg("WhatsApp do anunciante é obrigatório."); return; }
-    let linkUrl: string | null = null;
-    if (!isSplash) {
-      const raw = bWhatsapp.replace(/\D/g, "");
-      const number = raw.startsWith("55") ? raw : `55${raw}`;
-      linkUrl = `https://wa.me/${number}?text=${encodeURIComponent("Olá! Vi o anúncio no Mercado Ilha e gostaria de saber mais.")}`;
-    }
+    if (!bWhatsapp.trim()) { setBMsg("WhatsApp do anunciante é obrigatório."); return; }
+    const raw = bWhatsapp.replace(/\D/g, "");
+    const number = raw.startsWith("55") ? raw : `55${raw}`;
+    const linkUrl = `https://wa.me/${number}?text=${encodeURIComponent("Olá! Vi o anúncio no Mercado Ilha e gostaria de saber mais.")}`;
     setBSaving(true);
     setBMsg("");
     const { data, error } = await supabase.from("banners").insert({
@@ -707,27 +702,19 @@ function Banners() {
             <label className="form-label">URL da imagem *</label>
             <input className="form-input" type="url" placeholder="https://..." value={bImageUrl} onChange={(e) => setBImageUrl(e.target.value)} />
           </div>
-          {bPosition !== "splash" && (
-            <div className="form-group">
-              <label className="form-label">WhatsApp do anunciante *</label>
-              <input className="form-input" type="tel" placeholder="75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
-              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
-                Ao clicar no banner, o usuário será redirecionado a este número.
-              </p>
-            </div>
-          )}
+          <div className="form-group">
+            <label className="form-label">WhatsApp do anunciante *</label>
+            <input className="form-input" type="tel" placeholder="75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
+            <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
+              Ao clicar no banner, o usuário será redirecionado a este número.
+            </p>
+          </div>
           <div className="form-group">
             <label className="form-label">Posição</label>
-            <select className="form-select" value={bPosition} onChange={(e) => setBPosition(e.target.value as "home" | "listado" | "splash")}>
+            <select className="form-select" value={bPosition} onChange={(e) => setBPosition(e.target.value as "home" | "listado")}>
               <option value="home">Home</option>
               <option value="listado">Listado</option>
-              <option value="splash">Splash (abertura do app)</option>
             </select>
-            {bPosition === "splash" && (
-              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
-                Aparece na tela de abertura do app (PWA), como &quot;Oferecido por&quot;. Use um logo com fundo transparente. Não é clicável.
-              </p>
-            )}
           </div>
           {bMsg && <p className="text-error">{bMsg}</p>}
           <button type="button" className="btn btn-primary" disabled={bSaving} onClick={saveBanner}>

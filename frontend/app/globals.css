@@ -26,6 +26,13 @@ html {
   overscroll-behavior: none;
 }
 
+/* PWA instalado: fundo azul no html enquanto o primeiro frame não pinta —
+   evita qualquer flash branco entre o splash nativo do sistema e a home.
+   Depois do paint o body (fundo claro, 100vh) cobre tudo. */
+@media all and (display-mode: standalone), all and (display-mode: fullscreen) {
+  html { background: var(--blue-main); }
+}
+
 body {
   min-height: 100vh;
   padding-bottom: var(--nav-height);

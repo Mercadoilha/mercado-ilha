@@ -180,7 +180,10 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 ## 7. PUBLICIDAD (BANNERS)
 
 - Admin gestiona banners desde `/admin` tab "Banners": URL imagen, link, posición
-  (`home`/`listado`/`splash`), activo/inactivo.
+  (`home`/`listado`), activo/inactivo. (La posición `splash` existió hasta 2026-07-08:
+  se eliminó junto con el splash propio de la app — ver §13/§19. La DB aún acepta el valor
+  `splash` por la migración `fase-splash-sponsor.sql`, pero el admin ya no lo ofrece y
+  ningún código lo lee.)
 - Varios activos en misma posición → rotan cada 4s con dots. Sin banners → placeholder "Seu
   negócio aqui! + Fale conosco".
 - **Layout:** ancho completo, sin border-radius ni etiqueta "PUBLICIDADE", pegado al header.
@@ -258,7 +261,6 @@ frontend/
 │   ├── BottomNav.tsx (session-aware)   BannerRotativo.tsx   BuscaAutocomplete.tsx
 │   ├── HomeClient.tsx   MaresWidget.tsx   BarcosWidget.tsx   InstallAppBanner.tsx
 │   ├── ListingCard.tsx   RegisterSW.tsx   ShareIcon.tsx   AvatarUpload/AvatarCropModal
-│   ├── SplashScreen.tsx   SplashSponsorSync.tsx  (splash PWA — ver §pendientes)
 ├── lib/
 │   ├── supabaseClient.ts (anon)   supabaseAdmin.ts (service role, server-only)
 │   ├── adminSettings.ts   share.ts   whatsappUrl.ts   tracking.ts   visitorId.ts
@@ -346,8 +348,9 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
       offline con `/` cacheada abre desde caché, ruta no visitada → `offline.html`, `/profile`
       offline → `offline.html` (nunca caché), y con latencia simulada de 3000ms la apertura de
       `/` resolvió en ~946ms (el race funciona).
-    - `SplashScreen.tsx`: mínimo del splash CSS 600ms → **350ms** (con el SW v6 la apertura
-      cacheada es casi instantánea; el retén viejo pasaba a ser el piso artificial).
+    - `SplashScreen.tsx`: mínimo del splash CSS 600ms → **350ms**. (Superado: el 2026-07-08,
+      apenas desplegada la Fase 2, el splash propio se ELIMINÓ por completo — quedaban dos
+      pantallas azules encadenadas. Ver §19 "Splash propio + slot patrocinador: ELIMINADO".)
     - Íconos regenerados desde `Icono.svg` (nítidos): `icon-512/192.png` (variante `any`, casi a
       sangre) + **nuevos** `icon-maskable-512/192.png` (bolsa al 62% del lienzo, zona segura
       circular de Android) + `apple-touch-icon.png`. `manifest.json` con `purpose: "any"/"maskable"`
@@ -484,19 +487,24 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Fase 5: uploads en paralelo + edit server-side + store con SessionContext + splash sponsor
   liviano, T14-T17, push a `main` → deploy Vercel, `4f53c12` — desplegada 2026-07-07, verificada con
   `tsc --noEmit` tras cada tarea + `npm run build` final sin errores. Probado a mano en producción
-  2026-07-07: publish/edit con fotos reales ✅, `/store/[id]` ✅. Slot del splash con banner activo
-  queda **pendiente de verificar** (el usuario no tenía banner de posición `splash` cargado aún;
-  lo hará más adelante).
+  2026-07-07: publish/edit con fotos reales ✅, `/store/[id]` ✅. (El slot del splash con banner
+  activo nunca llegó a probarse: el splash propio se eliminó el 2026-07-08, ver abajo.)
   Fase 6: T18 Web Vitals reales de producción vía `@vercel/speed-insights` (`<SpeedInsights />` en
   `layout.tsx`, gratis en plan Hobby, habilitado por el usuario en el panel de Vercel), push a `main`
   → deploy Vercel, `a7b72bf` — desplegada 2026-07-07. **`OPTIMIZATION_MASTER_PLAN.md` completo
   (Fases 1-6), no quedan fases pendientes del plan.**
 - (Confirmadas ✅: fase-9, 10, 11-delivery-zonas, 12, 13, 14, 17, 18-produto-vendavel,
   monetizacion-tracking, splash-sponsor — corridas por el usuario 2026-07-07.)
-- **Splash PWA + slot patrocinador:** confirmado EN PRODUCCIÓN (commits `1beb9f1`, `99b1c8d`).
-  Logo real + slot "Oferecido por" vía banners position `splash`. Código en
-  `SplashScreen.tsx`/`SplashSponsorSync.tsx`. Posición `splash` habilitada en DB (`fase-splash-sponsor.sql`
-  corrida 2026-07-07).
+- **Splash propio + slot patrocinador: ELIMINADO 2026-07-08** (decisión del usuario). Tras la
+  Fase 2 del plan V2 (splash nativo del OS, T7/T8) el splash propio quedó redundante: el usuario
+  veía DOS pantallas azules con el logo en posiciones distintas al abrir el PWA. Se borraron
+  `SplashScreen.tsx` y `SplashSponsorSync.tsx`, se quitó la opción "Splash" del admin de banners,
+  y se movió a `globals.css` la única pieza que se conserva: `html { background: var(--blue-main) }`
+  en `display-mode: standalone/fullscreen` (seguro anti-flash-blanco). Beneficio extra: −350ms de
+  espera artificial por apertura. **Si el usuario vende un patrocinador de apertura**: el splash
+  nativo del OS no puede mostrar contenido dinámico → habrá que RECREAR una mini-cortina
+  "Oferecido por" (el usuario lo sabe y lo pedirá en su momento; la posición `splash` sigue
+  aceptada en la DB, referencia histórica en commits `1beb9f1`/`99b1c8d`).
 - (Confirmada ✅ Íconos PWA con el logo real + variante `maskable`: T7 de
   `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2, en producción 2026-07-08 — ver §13.)
 - Republicar anuncio vencido con 1 clic desde el perfil.
@@ -534,6 +542,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — **Splash propio eliminado** (commit pendiente de completar tras el push).
+  Tras el deploy de la Fase 2, el usuario reportó DOS pantallas azules encadenadas al abrir el
+  PWA (splash nativo del OS + splash propio, logos en posiciones distintas). Decisión del
+  usuario: quedarse solo con la nativa y limpiar el código del splash patrocinado. Borrados
+  `SplashScreen.tsx` y `SplashSponsorSync.tsx`; opción "Splash" quitada del admin de banners;
+  `html` azul en standalone movido a `globals.css` (anti-flash). −350ms por apertura. Si se
+  vende un patrocinador de apertura, la cortina "Oferecido por" se RECREA (detalle en §19).
+  Build verificado: 52 páginas, rutas sin cambios de estado.
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2 (T6-T9), **desplegado** (commit
   `ea078b1`, push a `main`). SW v6 (race red-vs-timeout 500ms + Navigation Preload +
   seed de `/`) para eliminar la pantalla blanca de apertura; splash CSS 600→350ms; íconos reales
