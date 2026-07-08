@@ -535,7 +535,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2 (T6-T9), **desplegado** (commit
-  pendiente de completar tras el push). SW v6 (race red-vs-timeout 500ms + Navigation Preload +
+  `ea078b1`, push a `main`). SW v6 (race red-vs-timeout 500ms + Navigation Preload +
   seed de `/`) para eliminar la pantalla blanca de apertura; splash CSS 600→350ms; íconos reales
   regenerados + variantes `maskable` nuevas (Android); 8 startup images para iOS (antes abría en
   blanco). Verificado con Chrome headless por CDP (sin agregar dependencias): versionado v5→v6,
