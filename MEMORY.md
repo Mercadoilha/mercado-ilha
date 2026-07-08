@@ -571,7 +571,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   `/listings` pinta las cards en el primer HTML, sin esperar hidratación. Verificado: build con
   `/listings` sigue `○ Static` (no `ƒ`), HTML prerenderizado con 10 cards reales, runtime con
   headers ISR correctos. Detalle técnico completo en §13. Con esto, el plan V2 solo deja pendientes
-  las Fases 4-5 (bajo esfuerzo). Commit: `PENDIENTE_HASH`.
+  las Fases 4-5 (bajo esfuerzo). Commit: `53ee2cc`.
 - **2026-07-08** — **Splash propio eliminado** (commit `2596e5a`, push a `main`).
   Tras el deploy de la Fase 2, el usuario reportó DOS pantallas azules encadenadas al abrir el
   PWA (splash nativo del OS + splash propio, logos en posiciones distintas). Decisión del
