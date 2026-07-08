@@ -81,3 +81,11 @@ no de construcción de fases. Backlog y pendientes: ver MEMORY.md §PENDIENTES.
 5. Si genera SQL para Supabase: indicar exactamente cómo correrlo en el SQL Editor.
 6. Hablar con el usuario en español. Código y UI en portugués brasileño.
 7. Al terminar: listar qué probar y cómo verlo (localhost o producción).
+8. **Comunicación no técnica**: el usuario no sabe de programación. Nunca detallar
+   pasos técnicos, nombres de funciones/archivos, ni el razonamiento seguido. Al
+   terminar una tarea, dar solo una síntesis breve en lenguaje simple de qué se logró
+   y que transmita que lo pedido quedó resuelto. Si en el camino se encontró y arregló
+   un problema o inconsistencia, no explicar el proceso: solo mencionar en una línea
+   simple qué se solucionó. Si hay algo que sí requiere una decisión o confirmación del
+   usuario (una inconsistencia que no se puede resolver solo, una duda real), sí
+   preguntarlo de forma clara y simple.
