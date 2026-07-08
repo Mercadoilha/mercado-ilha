@@ -331,9 +331,34 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   - Verificado: `npm run build` (52 páginas, todas las rutas iguales a la línea de base, ninguna
     pasó a dinámica) + smoke test de `/` y `/listings` en runtime.
   - **Hallazgo nuevo detectado con Speed Insights (no estaba en la auditoría V2 original): CLS
-    0.47 (Poor) en mobile**, ver §19 — pendiente investigar, probablemente en `/store/[id]`.
-  - Próxima fase del plan (Fase 2, T6-T9: SW v6 + splash real) requiere avisar `/effort xhigh`
-    antes de tocar el Service Worker — no arrancar sin confirmar con el usuario.
+    0.47 (Poor) en mobile**, ver `ERRORES_PENDIENTES.md` — pendiente investigar, probablemente en
+    `/store/[id]`.
+  - **Fase 2 (T6-T9) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — la entrada de la app:
+    - `public/sw.js` → **v6**: la navegación deja de ser network-first puro. Con documento
+      cacheado, la red compite contra un timeout de 500ms (`NAV_TIMEOUT_MS`); si no llega a
+      tiempo se sirve el caché al instante y la red sigue refrescándolo de fondo
+      (`handleNavigation` + `fetchNavigation`). + Navigation Preload
+      (`registration.navigationPreload.enable()` en `activate`) + seed del documento `/` en
+      install/activate (primera apertura standalone ya tiene algo que pintar). Reglas intocables
+      preservadas: Supabase nunca interceptado, `/publish|/profile|/admin` siempre red (nunca
+      caché), RSC sigue network-first puro (el race es SOLO para documentos HTML de apertura).
+      Verificado con Chrome headless por CDP (sin agregar Playwright): versionado v5→v6 OK,
+      offline con `/` cacheada abre desde caché, ruta no visitada → `offline.html`, `/profile`
+      offline → `offline.html` (nunca caché), y con latencia simulada de 3000ms la apertura de
+      `/` resolvió en ~946ms (el race funciona).
+    - `SplashScreen.tsx`: mínimo del splash CSS 600ms → **350ms** (con el SW v6 la apertura
+      cacheada es casi instantánea; el retén viejo pasaba a ser el piso artificial).
+    - Íconos regenerados desde `Icono.svg` (nítidos): `icon-512/192.png` (variante `any`, casi a
+      sangre) + **nuevos** `icon-maskable-512/192.png` (bolsa al 62% del lienzo, zona segura
+      circular de Android) + `apple-touch-icon.png`. `manifest.json` con `purpose: "any"/"maskable"`
+      en los 4 íconos PWA. Aprobados visualmente por el usuario antes del deploy (artefacto con
+      los 13 assets a tamaño real).
+    - `app/layout.tsx`: 8 `<link rel="apple-touch-startup-image">` (PNGs en `public/splash/`,
+      logo.svg centrado sobre `#185FA5`, generados con `sharp`) cubriendo las resoluciones de
+      iPhone vigentes — antes iOS abría el PWA en blanco puro.
+  - Próxima fase del plan: **Fase 3 (T10-T11, /listings instantáneo desde cualquier entrada)** —
+    requiere `/effort xhigh` (T11 toca la arquitectura de la ruta más usada del sitio); avisar
+    explícitamente al usuario antes de arrancar.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -472,8 +497,8 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Logo real + slot "Oferecido por" vía banners position `splash`. Código en
   `SplashScreen.tsx`/`SplashSponsorSync.tsx`. Posición `splash` habilitada en DB (`fase-splash-sponsor.sql`
   corrida 2026-07-07).
-- Íconos PWA con el logo real (reemplazar placeholders) — pasa a ser T7 de
-  `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2 (además de agregar variante `maskable`).
+- (Confirmada ✅ Íconos PWA con el logo real + variante `maskable`: T7 de
+  `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2, en producción 2026-07-08 — ver §13.)
 - Republicar anuncio vencido con 1 clic desde el perfil.
 - Filtros adicionales en listados: precio, sub-zona.
 - Panel admin: gestión de localidades y sub-zonas.
@@ -487,10 +512,10 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Ruta con peor score: `/store/[id]` ("Needs Improvement", 52). Pendiente: investigar qué elemento
   salta el layout (candidatos: banner rotativo, imágenes sin dimensiones reservadas, fuentes) y
   corregirlo en una fase futura del plan V2.
-- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fase 1 (T1-T5) en producción desde 2026-07-08 — ver §13.
-  Fases 2 (T6-T9, entrada/arranque del PWA), 3 (T10-T11, /listings instantáneo), 4 (T12-T13,
-  payload) y 5 (T14, validación) siguen pendientes. Fase 2 requiere avisar `/effort xhigh` antes
-  de tocar el Service Worker.
+- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5) y 2 (T6-T9) **en producción** desde
+  2026-07-08 — ver §13. Fase 3 (T10-T11, /listings instantáneo desde cualquier entrada) es la
+  próxima: requiere avisar `/effort xhigh` antes de arrancar (T11 toca la arquitectura de
+  `/listings`). Fases 4 (T12-T13, payload) y 5 (T14, validación) siguen pendientes después.
 
 ## 20. CORRER LOCALMENTE
 
@@ -509,6 +534,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2 (T6-T9), **desplegado** (commit
+  pendiente de completar tras el push). SW v6 (race red-vs-timeout 500ms + Navigation Preload +
+  seed de `/`) para eliminar la pantalla blanca de apertura; splash CSS 600→350ms; íconos reales
+  regenerados + variantes `maskable` nuevas (Android); 8 startup images para iOS (antes abría en
+  blanco). Verificado con Chrome headless por CDP (sin agregar dependencias): versionado v5→v6,
+  matriz offline completa, y race probado con latencia simulada de 3000ms (abrió en ~946ms).
+  Assets de marca aprobados visualmente por el usuario antes del deploy. Próximo: Fase 3
+  (T10-T11) — avisar `/effort xhigh` antes de arrancar (T11 toca la arquitectura de `/listings`).
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 1 (T1-T5), **desplegado** (commit
   `d647c96`, push a `main`). `minimumCacheTTL` 31 días en imágenes; prewarm del
   listado default de `/listings` desde el home (`lib/listingsApi.ts` nuevo); detalle reutiliza

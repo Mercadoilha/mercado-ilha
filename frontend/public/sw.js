@@ -1,10 +1,21 @@
 // Service Worker — Mercado Ilha
-// Reescrito en la Fase 4 del plano de otimização (T12 + T13).
-// Estrategias explícitas por tipo de request, caches separados con tope, y página offline.
-// Reglas irrompibles: NUNCA interceptar Supabase (auth + datos), NUNCA cachear rutas
-// privadas (/publish, /profile, /admin) ni /api/auth. Subir CACHE_VERSION en cada cambio.
+// v5 (Fase 4 V1): estrategias por tipo de request, caches separados con tope, offline.html.
+// v6 (Fase 2 V2 · T6): la NAVEGACIÓN deja de ser network-first puro y pasa a
+//   "race red-vs-timeout": si hay copia cacheada del documento, la red fresca compite
+//   contra un timeout corto (NAV_TIMEOUT_MS). Si la red no llegó a tiempo, se sirve el
+//   caché AL INSTANTE y la red sigue en segundo plano refrescando el caché para la
+//   próxima apertura. En conexión buena gana la red (contenido fresco, sin cambios); en
+//   4G lenta la app abre al toque con la última versión vista — comportamiento
+//   Instagram/Mercado Livre. Con ISR de 60s en el server, tolerar unos segundos de stale
+//   al abrir es parte del diseño; la apertura siguiente ya trae el contenido refrescado.
+//   Además: Navigation Preload (la request parte en paralelo al boot del SW) + seed del
+//   documento '/' en install/activate (la 1ª apertura standalone ya tiene algo que pintar).
+// Reglas irrompibles (intactas): NUNCA interceptar Supabase (auth + datos), NUNCA cachear
+//   rutas privadas (/publish, /profile, /admin) ni /api/auth; los payloads RSC siguen
+//   network-first (el race aplica SOLO a documentos HTML de apertura, no a la navegación
+//   client-side, para respetar el ISR de 60s). Subir CACHE_VERSION en cada cambio.
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const STATIC_CACHE = `mi-static-${CACHE_VERSION}`; // shell, íconos, /_next/static (inmutable)
 const PAGES_CACHE = `mi-pages-${CACHE_VERSION}`;   // navegaciones HTML + payloads RSC
 const IMAGES_CACHE = `mi-images-${CACHE_VERSION}`; // /_next/image + fotos R2
@@ -17,6 +28,11 @@ const PAGES_LIMIT = 30;
 const IMAGES_LIMIT = 60;
 const DATA_LIMIT = 16;
 
+// Cuánto espera una navegación CON caché a que la red fresca gane antes de servir el
+// caché. Corto para que en 4G lenta abra al instante; suficiente para que en buena
+// conexión gane la red casi siempre y se sirva contenido fresco.
+const NAV_TIMEOUT_MS = 500;
+
 // Precache del shell offline: la página offline + marca. Best-effort: si un asset falla,
 // no aborta la instalación (evita que un 404 puntual deje al SW sin instalar).
 const PRECACHE = [
@@ -25,30 +41,52 @@ const PRECACHE = [
   '/logo.svg',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
   '/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(STATIC_CACHE).then(async (cache) => {
+    (async () => {
+      const staticCache = await caches.open(STATIC_CACHE);
       await Promise.all(
-        PRECACHE.map((url) => cache.add(url).catch(() => {/* asset opcional ausente */}))
+        PRECACHE.map((url) => staticCache.add(url).catch(() => {/* asset opcional ausente */}))
       );
+      // Seed del documento raíz en PAGES_CACHE: la PRIMERA apertura standalone tras
+      // instalar el PWA ya tiene algo que pintar al instante (best-effort: si falla, la
+      // navegación cae al comportamiento sin caché, que espera la red).
+      const pagesCache = await caches.open(PAGES_CACHE);
+      await pagesCache.add('/').catch(() => {/* sin conexión al instalar: se sembrará al 1er visit */});
       await self.skipWaiting();
-    })
+    })()
   );
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys.filter((k) => !CURRENT_CACHES.includes(k)).map((k) => caches.delete(k))
-        )
-      )
-      .then(() => self.clients.claim())
+    (async () => {
+      // Navigation Preload: al abrir, la request de navegación parte en paralelo al boot
+      // del SW → la red fresca llega antes y tiene más chances de ganar el race.
+      if (self.registration.navigationPreload) {
+        try { await self.registration.navigationPreload.enable(); } catch (err) {/* no soportado */}
+      }
+      // Borrar caches de versiones anteriores (v5 → v6 limpia mi-*-v5).
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => !CURRENT_CACHES.includes(k)).map((k) => caches.delete(k))
+      );
+      // Refrescar el seed de '/' (el precacheado en install puede quedar viejo tras un
+      // update del SW). Best-effort: si no hay red, queda el seed de install.
+      try {
+        const res = await fetch('/');
+        if (res && res.ok) {
+          const cache = await caches.open(PAGES_CACHE);
+          await cache.put('/', res.clone());
+        }
+      } catch (err) {/* sin conexión: se refresca en la próxima apertura */}
+      await self.clients.claim();
+    })()
   );
 });
 
@@ -133,30 +171,76 @@ async function networkFirst(request, cacheName, limit, event) {
   }
 }
 
-// Navegación HTML: network-first con fallback a la página cacheada y, en última instancia,
-// a la página offline de marca.
-async function handleNavigation(request, isPrivate, event) {
-  try {
-    const res = await fetch(request);
-    if (res && res.ok && !isPrivate) {
-      const clone = res.clone();
-      event.waitUntil(
+// Red para una navegación: usa el navigation preload si está disponible (request ya
+// disparada en paralelo al boot del SW), sino un fetch normal. Al llegar una respuesta ok
+// refresca PAGES_CACHE al vuelo (fire-and-forget, mismo patrón que staleWhileRevalidate).
+// Devuelve la Response de red (o rechaza si la red falla).
+function fetchNavigation(request, event) {
+  return Promise.resolve(event.preloadResponse)
+    .then((preload) => preload || fetch(request))
+    .then((res) => {
+      if (res && res.ok) {
         caches.open(PAGES_CACHE).then((cache) =>
-          cache.put(request, clone).then(() => trimCache(PAGES_CACHE, PAGES_LIMIT))
-        )
-      );
+          cache.put(request, res.clone()).then(() => trimCache(PAGES_CACHE, PAGES_LIMIT))
+        );
+      }
+      return res;
+    });
+}
+
+// Navegación HTML (apertura de documento / refresh / deep link).
+//  - Rutas privadas: SIEMPRE red, NUNCA caché (regla irrompible). Fallback offline.
+//  - Sin caché del documento: se espera la red; si falla → offline.
+//  - Con caché: la red fresca compite contra un timeout corto. Si la red no llegó a
+//    tiempo (o falló), se sirve el caché al instante y la red sigue refrescándolo.
+async function handleNavigation(request, isPrivate, event) {
+  if (isPrivate) {
+    try {
+      const preload = await event.preloadResponse;
+      return preload || (await fetch(request));
+    } catch (err) {
+      const offline = await caches.match('/offline.html');
+      if (offline) return offline;
+      throw err;
     }
-    return res;
-  } catch (err) {
-    // Rutas privadas nunca se sirven desde caché: solo offline.
-    if (!isPrivate) {
-      const cached = await caches.match(request);
-      if (cached) return cached;
-    }
-    const offline = await caches.match('/offline.html');
-    if (offline) return offline;
-    throw err;
   }
+
+  const pagesCache = await caches.open(PAGES_CACHE);
+  const cached = await pagesCache.match(request);
+  const network = fetchNavigation(request, event);
+
+  // Sin caché: comportamiento clásico — esperar la red; si falla, página offline.
+  if (!cached) {
+    try {
+      const res = await network;
+      event.waitUntil(network.catch(() => {})); // dejar terminar la escritura del caché
+      return res;
+    } catch (err) {
+      const offline = await caches.match('/offline.html');
+      if (offline) return offline;
+      throw err;
+    }
+  }
+
+  // Con caché: race red-vs-timeout. `outcome` NUNCA rechaza (así no quedan rechazos
+  // flotando cuando gana el timeout): { res } si la red trajo algo ok, {} si falló/no-ok.
+  const outcome = network.then(
+    (res) => (res && res.ok ? { res } : {}),
+    () => ({})
+  );
+  let timeoutId;
+  const timeout = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve('timeout'), NAV_TIMEOUT_MS);
+  });
+
+  const winner = await Promise.race([outcome, timeout]);
+  clearTimeout(timeoutId);
+  // Sea quien sea el ganador, la red sigue viva para refrescar el caché de la próxima vez.
+  event.waitUntil(outcome);
+
+  if (winner === 'timeout') return cached; // red lenta → caché al instante
+  if (winner.res) return winner.res;        // red fresca ganó → contenido fresco
+  return cached;                            // red falló/no-ok antes del timeout → caché
 }
 
 self.addEventListener('fetch', (e) => {

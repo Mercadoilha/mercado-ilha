@@ -128,10 +128,11 @@ export default function SplashScreen() {
       var done = false;
       function hide() {
         if (done) return; done = true;
-        // Mínimo de 600ms: alcanza para insinuar la animación del logo sin
-        // frenar la app cuando ya cargó rápido (cacheada). Antes eran 1100ms,
-        // que en cargas veloces agregaban ~700ms de espera artificial.
-        var wait = Math.max(0, 600 - (Date.now() - start));
+        // Mínimo de 350ms: apenas para insinuar la animación del logo sin flash.
+        // Con el SW v6 (T6) la apertura cacheada es casi instantánea, así que este
+        // retén pasó a ser el piso real de la apertura → se bajó de 600ms a 350ms
+        // (antes 1100ms) para no agregar espera artificial en cargas veloces.
+        var wait = Math.max(0, 350 - (Date.now() - start));
         setTimeout(function () {
           el.classList.add('mi-hide');
         }, wait);
