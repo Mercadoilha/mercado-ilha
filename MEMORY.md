@@ -359,9 +359,25 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
     - `app/layout.tsx`: 8 `<link rel="apple-touch-startup-image">` (PNGs en `public/splash/`,
       logo.svg centrado sobre `#185FA5`, generados con `sharp`) cubriendo las resoluciones de
       iPhone vigentes — antes iOS abría el PWA en blanco puro.
-  - Próxima fase del plan: **Fase 3 (T10-T11, /listings instantáneo desde cualquier entrada)** —
-    requiere `/effort xhigh` (T11 toca la arquitectura de la ruta más usada del sitio); avisar
-    explícitamente al usuario antes de arrancar.
+  - **Fase 3 (T10-T11) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — `/listings` instantáneo
+    desde cualquier entrada:
+    - `lib/listingsCache.ts` (T10): el `Map` de resultados/scroll/filtros se espeja en
+      `sessionStorage` (`mi_listings_cache_v1`), hidratado una vez de forma perezosa. Persiste solo
+      las últimas 4 claves y hasta ~200 kB (si excede, solo la vista default); quota llena degrada
+      en silencio. Recargar (F5) `/listings` ya no vuelve al spinner.
+    - `app/listings/page.tsx` (T11): pasó de client a **Server Component con `revalidate = 60`**
+      (mismo patrón ISR que el home) que trae el listado default (60 anuncios activos, `LISTINGS_SELECT`)
+      y lo pasa como `initialDefault`. La parte interactiva se mudó a `app/listings/ListingsClient.tsx`
+      (client). Las cards del primer HTML se renderizan en el *fallback* del `Suspense` (mismo
+      `initialDefault`, mismo markup que la vista real) y `initRef` siembra el estado con ese
+      listado solo en la vista default (sin filtros en la URL) y solo si no hay caché de sesión más
+      fresco — sin mismatch de hidratación. **No se lee `searchParams` en el server** (rompería el
+      ISR). Verificado: `npm run build` con `/listings` sigue `○ Static` (no pasó a `ƒ`); HTML
+      prerenderizado con 10 `<article>`/`<a href="/listings/N">` reales (antes: 0, solo spinner);
+      runtime (`next start`) sirviendo las mismas cards con `x-nextjs-cache: STALE` +
+      `Cache-Control: s-maxage=60, stale-while-revalidate`.
+  - Plan V2 completo salvo **Fase 4 (T12-T13, pulido de payload)** y **Fase 5 (T14, validación con
+    datos reales)** — ambas de esfuerzo bajo, no requieren `/effort` especial.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -520,10 +536,16 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Ruta con peor score: `/store/[id]` ("Needs Improvement", 52). Pendiente: investigar qué elemento
   salta el layout (candidatos: banner rotativo, imágenes sin dimensiones reservadas, fuentes) y
   corregirlo en una fase futura del plan V2.
-- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5) y 2 (T6-T9) **en producción** desde
-  2026-07-08 — ver §13. Fase 3 (T10-T11, /listings instantáneo desde cualquier entrada) es la
-  próxima: requiere avisar `/effort xhigh` antes de arrancar (T11 toca la arquitectura de
-  `/listings`). Fases 4 (T12-T13, payload) y 5 (T14, validación) siguen pendientes después.
+- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5), 2 (T6-T9) y **3 (T10-T11) en producción**
+  desde 2026-07-08 — detalle técnico en §13. Quedan **Fase 4 (T12-T13, pulido de payload)** y
+  **Fase 5 (T14, validación con datos reales)**, ambas de esfuerzo bajo (no requieren `/effort`
+  especial).
+- **Splash azul al abrir desde el NAVEGADOR (no instalado): pendiente** (pedido del usuario
+  2026-07-08, "para después de terminar la optimización"). Desde el ícono instalado ya está
+  resuelto (splash nativo del OS). Desde el navegador NO hay splash nativo posible; la mejora es
+  una cortina liviana propia de la app que pinte azul (opcionalmente con logo) **solo cuando NO
+  está en `display-mode: standalone`** — así los instalados conservan el splash nativo sin
+  reintroducir el "salto" de dos pantallas. Implementar al cerrar el plan de optimización.
 
 ## 20. CORRER LOCALMENTE
 
@@ -542,6 +564,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 3 (T10-T11)**, **desplegado** (commit
+  ver hash abajo, push a `main`). T10: caché de `/listings` espejado en `sessionStorage` — recargar
+  ya no vuelve al spinner. T11: `app/listings/page.tsx` pasó a Server Component con ISR (60s) que
+  renderiza el listado default y lo pasa a `ListingsClient.tsx` (nuevo) — entrar directo a
+  `/listings` pinta las cards en el primer HTML, sin esperar hidratación. Verificado: build con
+  `/listings` sigue `○ Static` (no `ƒ`), HTML prerenderizado con 10 cards reales, runtime con
+  headers ISR correctos. Detalle técnico completo en §13. Con esto, el plan V2 solo deja pendientes
+  las Fases 4-5 (bajo esfuerzo). Commit: `PENDIENTE_HASH`.
 - **2026-07-08** — **Splash propio eliminado** (commit `2596e5a`, push a `main`).
   Tras el deploy de la Fase 2, el usuario reportó DOS pantallas azules encadenadas al abrir el
   PWA (splash nativo del OS + splash propio, logos en posiciones distintas). Decisión del
