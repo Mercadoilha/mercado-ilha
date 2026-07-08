@@ -155,6 +155,17 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   sugerencia de **término** ya no navega: completa la barra (con espacio final, ícono ↖) para
   que el usuario agregue más texto antes de tocar Buscar; sugerencias de **categoría/subcategoría**
   siguen navegando directo. Enter con una sugerencia resaltada por teclado sí busca/navega directo.
+  **Ajustes (2026-07-08, commit `80181f1`):** el filtro pasó de substring (`%pa%`, coincidía en
+  cualquier parte del texto — "pa" traía casi todos los anuncios por el "para" de una descripción)
+  a **inicio de palabra** (`prefixFilter()` en `searchNorm.ts`: `col.ilike.w*` OR `col.ilike.* w*`).
+  Palabras de 1–2 letras (`MIN_WORD_DESC=3`) buscan solo en el título, no en la descripción, para
+  evitar coincidencias ruidosas. Aplica en el autocomplete y en `/listings` (incluido el fallback
+  "sin resultado con todas las palabras → relajar a OR", que muestra "resultados parecidos" cuando
+  ninguna publicación tiene TODAS las palabras, ordenado por cantidad de coincidencias — ver
+  `relaxedSearch` en `listings/page.tsx`). También: panel de sugerencias separado 8px de la barra
+  (antes quedaba pegado, esquinas rectas) y `RegisterSW.tsx` ya no registra el service worker en
+  desarrollo (`process.env.NODE_ENV !== "production"` corta el registro) — en dev cacheaba
+  `/_next/static` cache-first y servía JS viejo tras cada cambio, sin relación con el build real.
 - **Botón compartir:** Web Share API + fallback WhatsApp. Ícono en `ShareIcon.tsx`. En 4 lugares:
   header global, detalle del anuncio (outline azul, visible siempre), tienda (outline blanco),
   perfil propio (outline azul, URL `origin + '/store/' + userId`).
@@ -401,6 +412,16 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   fade-out en el caso PWA (se deja el nodo oculto por clase, nunca se remueve) y se agregó
   `suppressHydrationWarning` en `#mi-splash`/`#mi-sponsor` como refuerzo. Verificado con Playwright
   en local: sin mensajes de "hydration" en consola en `/` ni `/listings`.
+- **Búsqueda "pa" traía casi todos los anuncios (2026-07-08):** el filtro fase-19 usaba
+  substring (`%w%`) sobre `title_norm`/`description_norm`, que coincide en cualquier parte del
+  texto — "pa" matcheaba el "para" dentro de descripciones no relacionadas. Fix: `prefixFilter()`
+  en `searchNorm.ts` exige inicio de palabra; palabras de 1–2 letras solo buscan en el título. Ver
+  §6, commit `80181f1`.
+- **Cambios no se veían en `localhost:3000` (2026-07-08):** `RegisterSW.tsx` registraba el service
+  worker también en desarrollo; como los chunks de `/_next/static` en dev no tienen hash de
+  contenido estable, el SW los servía cache-first y el navegador mostraba JS de un build viejo pese
+  a que el código fuente ya estaba actualizado. Fix: registro del SW gateado a
+  `NODE_ENV === "production"`. Commit `80181f1`.
 
 ## 19. PENDIENTES / IDEAS
 
@@ -452,6 +473,10 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — Buscador: fix de falsos positivos (substring → inicio de palabra) + fix de SW
+  cacheando dev, **desplegado** (commit `80181f1`, push a `main`). "pa" ya no traía casi todos los
+  anuncios; `RegisterSW.tsx` ya no registra el service worker fuera de producción. Detalle en §6 y
+  §18. Sin SQL pendiente (usa las columnas `*_norm` de fase-19, ya corrida).
 - **2026-07-07** — Buscador: sin acentos + sugestão completa a barra, **desplegado** (commit
   `c132a18`, push a `main`). Fase-19 SQL (`fase-19-busca-sem-acentos.sql`, columnas generadas
   `*_norm` + índices trigram) corrida por el usuario en Supabase antes del deploy. Detalle
