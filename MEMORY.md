@@ -510,7 +510,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 1 (T1-T5), **desplegado** (commit
-  pendiente de completar tras el push). `minimumCacheTTL` 31 días en imágenes; prewarm del
+  `d647c96`, push a `main`). `minimumCacheTTL` 31 días en imágenes; prewarm del
   listado default de `/listings` desde el home (`lib/listingsApi.ts` nuevo); detalle reutiliza
   `favoritesCache` en vez de query propia; `listingsCache` con TTL soft(3min)/hard(30min); caché
   del buscador espejado en `sessionStorage`. Build verificado (52 páginas, rutas intactas).
