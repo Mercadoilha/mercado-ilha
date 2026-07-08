@@ -18,7 +18,7 @@ import {
   type ListingsCacheEntry,
 } from "../../lib/listingsCache";
 import { getCategoriesSync, loadCategories, getLocalitiesSync, loadLocalities } from "../../lib/catalogCache";
-import { foldWords } from "../../lib/searchNorm";
+import { fold, foldWords, prefixFilter, MIN_WORD_DESC } from "../../lib/searchNorm";
 import {
   getCachedFavorites,
   loadFavorites,
@@ -84,6 +84,8 @@ function ListingsContent() {
   }
 
   const [listings, setListings] = useState<any[]>(initRef.current.entry?.data ?? []);
+  // true cuando ningún anuncio tiene TODAS las palabras y se muestran parecidos.
+  const [relaxedSearch, setRelaxedSearch] = useState(!!initRef.current.entry?.relaxed);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(!initRef.current.entry);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,6 +154,7 @@ function ListingsContent() {
     const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL ? entry : null;
     if (fresh) {
       setListings(fresh.data);
+      setRelaxedSearch(!!fresh.relaxed);
       setLoading(false);
       setRefreshing(true);
     } else if (listingsRef.current.length > 0) {
@@ -184,7 +187,7 @@ function ListingsContent() {
         const cat = (catsData ?? []).find((c) => c.slug === categorySlug);
         // Slug inválido: sin categoría → no mostrar nada.
         if (!cat) {
-          if (mounted) { setListings([]); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
+          if (mounted) { setListings([]); setRelaxedSearch(false); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
           return;
         }
         catId = cat.id;
@@ -207,15 +210,26 @@ function ListingsContent() {
 
       // Aplica los filtros comunes (status, búsqueda, condición, zona, orden, límite,
       // y 1 foto por anuncio) a cualquier query base de listings.
-      const decorate = (q: any) => {
+      // Búsqueda sin acentos, por INICIO de palabra: primero exige que TODAS
+      // coincidan (AND); relaxWords pide CUALQUIERA (OR) — el fallback estilo
+      // Mercado Livre de abajo. Las palabras cortas se buscan solo en el título.
+      const words = searchQuery ? foldWords(searchQuery) : [];
+      const wordFilter = (w: string) =>
+        w.length >= MIN_WORD_DESC
+          ? `${prefixFilter("title_norm", w)},${prefixFilter("description_norm", w)}`
+          : prefixFilter("title_norm", w);
+      const decorate = (q: any, relaxWords: boolean) => {
         q = q
           .order("sort_order", { referencedTable: "listing_photos" })
           .limit(1, { referencedTable: "listing_photos" })
           .eq("status", "active");
-        // Sin acentos y por palabra (AND): "pao caseiro" encuentra "Pão integral caseiro".
-        if (searchQuery) {
-          for (const w of foldWords(searchQuery)) {
-            q = q.or(`title_norm.ilike.%${w}%,description_norm.ilike.%${w}%`);
+        if (words.length) {
+          if (relaxWords) {
+            q = q.or(words.map(wordFilter).join(","));
+          } else {
+            for (const w of words) {
+              q = q.or(wordFilter(w));
+            }
           }
         }
         if (conditionFilter) q = q.eq("condition", conditionFilter);
@@ -223,30 +237,44 @@ function ListingsContent() {
         return q.order("created_at", { ascending: false }).limit(60);
       };
 
-      let data: any[] = [];
-      let fetchErr: any = null;
-
-      if (catId) {
-        // Concurrente: anuncios con esta categoría como PRINCIPAL ‖ como SECUNDARIA
-        // (antes: extras y luego principal, encadenados). Se fusiona en el cliente.
-        let primary = decorate(supabase.from("listings").select(selectBase)).eq("category_id", catId);
-        let extras = decorate(supabase.from("listings").select(extraSelect)).eq("listing_extra_categories.category_id", catId);
-        if (subcategoryIdParam) {
-          primary = primary.eq("subcategory_id", Number(subcategoryIdParam));
-          extras = extras.eq("listing_extra_categories.subcategory_id", Number(subcategoryIdParam));
+      async function fetchPage(relaxWords: boolean): Promise<{ data: any[]; error: any }> {
+        if (catId) {
+          // Concurrente: anuncios con esta categoría como PRINCIPAL ‖ como SECUNDARIA
+          // (antes: extras y luego principal, encadenados). Se fusiona en el cliente.
+          let primary = decorate(supabase.from("listings").select(selectBase), relaxWords).eq("category_id", catId);
+          let extras = decorate(supabase.from("listings").select(extraSelect), relaxWords).eq("listing_extra_categories.category_id", catId);
+          if (subcategoryIdParam) {
+            primary = primary.eq("subcategory_id", Number(subcategoryIdParam));
+            extras = extras.eq("listing_extra_categories.subcategory_id", Number(subcategoryIdParam));
+          }
+          const [primRes, extraRes] = await Promise.all([primary, extras]);
+          const map = new Map<number, any>();
+          for (const r of (primRes.data ?? [])) map.set(r.id, r);
+          for (const r of (extraRes.data ?? [])) if (!map.has(r.id)) map.set(r.id, r);
+          const merged = Array.from(map.values())
+            .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0))
+            .slice(0, 60);
+          return { data: merged, error: primRes.error || extraRes.error };
         }
-        const [primRes, extraRes] = await Promise.all([primary, extras]);
-        fetchErr = primRes.error || extraRes.error;
-        const map = new Map<number, any>();
-        for (const r of (primRes.data ?? [])) map.set(r.id, r);
-        for (const r of (extraRes.data ?? [])) if (!map.has(r.id)) map.set(r.id, r);
-        data = Array.from(map.values())
-          .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0))
-          .slice(0, 60);
-      } else {
-        const res = await decorate(supabase.from("listings").select(selectBase));
-        fetchErr = res.error;
-        data = (res.data as any[]) ?? [];
+        const res = await decorate(supabase.from("listings").select(selectBase), relaxWords);
+        return { data: (res.data as any[]) ?? [], error: res.error };
+      }
+
+      let { data, error: fetchErr } = await fetchPage(false);
+      let relaxed = false;
+
+      // Fallback estilo Mercado Livre: si ninguna publicación tiene TODAS las
+      // palabras ("pao gt"), mostrar las que tengan ALGUNA, mejores primero.
+      if (!fetchErr && data.length === 0 && words.length > 1) {
+        const retry = await fetchPage(true);
+        if (!retry.error && retry.data.length > 0) {
+          const hits = (title: string) => {
+            const t = fold(title ?? "");
+            return words.reduce((n, w) => n + (t.startsWith(w) || t.includes(` ${w}`) ? 1 : 0), 0);
+          };
+          data = [...retry.data].sort((a, b) => hits(b.title) - hits(a.title));
+          relaxed = true;
+        }
       }
 
       if (!mounted) return;
@@ -256,7 +284,8 @@ function ListingsContent() {
         // Mantener lo anterior visible en vez de vaciar la pantalla.
       } else {
         setListings(data);
-        setListingsCache(cacheKey, data);
+        setRelaxedSearch(relaxed);
+        setListingsCache(cacheKey, data, relaxed);
       }
 
       // Registrar la búsqueda de texto (una vez por término) con su cantidad de
@@ -565,6 +594,13 @@ function ListingsContent() {
             >
               + Publicar anúncio
             </Link>
+          </div>
+        )}
+
+        {/* Aviso del fallback: se muestran coincidencias parciales de la búsqueda */}
+        {!loading && relaxedSearch && searchQuery && listings.length > 0 && (
+          <div style={{ padding: "0.6rem 1rem 0", fontSize: "0.8rem", color: "var(--text-muted)", textAlign: "center" }}>
+            Nenhum anúncio tem todas as palavras — mostrando resultados parecidos.
           </div>
         )}
 

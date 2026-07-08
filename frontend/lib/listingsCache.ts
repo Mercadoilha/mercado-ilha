@@ -5,7 +5,9 @@
 //     volver del detalle restaure la selección aunque la página remonte.
 // Mismo espíritu que lib/profileCache.ts (ya aprobado en el proyecto).
 
-export type ListingsCacheEntry = { data: any[]; ts: number };
+// relaxed: la búsqueda no encontró anuncios con TODAS las palabras y se
+// muestran coincidencias parciales (ver fallback en app/listings/page.tsx).
+export type ListingsCacheEntry = { data: any[]; ts: number; relaxed?: boolean };
 
 // TTL corto: pasado esto, no se muestra el caché sin spinner (evita datos muy viejos).
 export const LISTINGS_RESULTS_TTL = 3 * 60 * 1000; // 3 min
@@ -22,9 +24,9 @@ export function getListingsCache(key: string): ListingsCacheEntry | null {
   return e;
 }
 
-export function setListingsCache(key: string, data: any[]): void {
+export function setListingsCache(key: string, data: any[], relaxed = false): void {
   results.delete(key);
-  results.set(key, { data, ts: Date.now() });
+  results.set(key, { data, ts: Date.now(), relaxed });
   while (results.size > MAX_KEYS) {
     const oldest = results.keys().next().value as string | undefined;
     if (oldest === undefined) break;

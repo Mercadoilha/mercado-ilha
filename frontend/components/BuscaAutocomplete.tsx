@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
-import { fold, foldWords } from "../lib/searchNorm";
+import { fold, foldWords, prefixFilter } from "../lib/searchNorm";
 
 // Tres tipos de sugerencia, en este orden de prioridad:
 //  - "term": la búsqueda particular (texto). Primera y más específica.
@@ -24,8 +24,8 @@ function norm(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-// Ordena las palabras de los títulos que contienen `word` (ya normalizada con
-// fold), mejores primero: coincidencia exacta > más frecuente > más corta.
+// Ordena las palabras de los títulos que EMPIEZAN por `word` (ya normalizada
+// con fold), mejores primero: coincidencia exacta > más frecuente > más corta.
 // Devuelve la grafía real más frecuente (con acentos): "pa" → "pão".
 function rankCompletions(titles: string[], word: string): string[] {
   const stats = new Map<string, { total: number; variants: Map<string, number> }>();
@@ -35,7 +35,7 @@ function rankCompletions(titles: string[], word: string): string[] {
       const w = fold(display);
       if (w.length < 2 || w.length > 24) continue;
       if (/^\d+$/.test(w)) continue; // ignorar números sueltos
-      if (!w.includes(word)) continue;
+      if (!w.startsWith(word)) continue;
       const e = stats.get(w) ?? { total: 0, variants: new Map<string, number>() };
       e.total += 1;
       e.variants.set(display, (e.variants.get(display) ?? 0) + 1);
@@ -59,7 +59,7 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
 
   const ql = norm(q);
   // Cada palabra se filtra por separado (AND) sobre las columnas *_norm
-  // (fase-19): sin acentos y sin depender del orden de las palabras.
+  // (fase-19): sin acentos, por inicio de palabra, sin depender del orden.
   const words = foldWords(q);
 
   let listQ = supabase
@@ -74,9 +74,9 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
     .from("subcategories")
     .select("id, name, categories(name, slug)");
   for (const w of words) {
-    listQ = listQ.ilike("title_norm", `%${w}%`);
-    catQ = catQ.ilike("name_norm", `%${w}%`);
-    subQ = subQ.ilike("name_norm", `%${w}%`);
+    listQ = listQ.or(prefixFilter("title_norm", w));
+    catQ = catQ.or(prefixFilter("name_norm", w));
+    subQ = subQ.or(prefixFilter("name_norm", w));
   }
 
   const [listRes, catRes, subRes] = await Promise.all([
@@ -91,6 +91,21 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
 
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
 
+  let listRows = (listRes.data ?? []) as any[];
+  // Ninguna publicación tiene TODAS las palabras → relajar a CUALQUIERA
+  // (estilo Mercado Livre), para seguir sugiriendo lo relacionado.
+  if (listRows.length === 0 && words.length > 1) {
+    const relaxed = await supabase
+      .from("listings")
+      .select("title, categories:category_id(name, slug), subcategories:subcategory_id(id, name, categories(name, slug))")
+      .eq("status", "active")
+      .or(words.map((w) => prefixFilter("title_norm", w)).join(","))
+      .limit(20)
+      .abortSignal(signal);
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    listRows = (relaxed.data ?? []) as any[];
+  }
+
   // Títulos que coinciden → de aquí sale la búsqueda particular.
   const titles: string[] = [];
   // Categorías relacionadas (por los anuncios que coinciden + match directo).
@@ -98,7 +113,7 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
   // Subcategorías relacionadas.
   const subMap = new Map<string, { label: string; href: string; hint: string; count: number }>();
 
-  for (const row of listRes.data ?? []) {
+  for (const row of listRows) {
     const r = row as any;
     titles.push((r.title as string) ?? "");
     const cat = r.categories;
@@ -359,13 +374,12 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
             style={{
               width: "100%",
               padding: "0.7rem 0.875rem 0.7rem 2.5rem",
-              borderRadius: open ? "12px 12px 0 0" : 12,
+              borderRadius: 12,
               border: "none",
               fontSize: "0.95rem",
               background: "rgba(255,255,255,0.95)",
               color: "#0f172a",
               outline: "none",
-              transition: "border-radius 0.1s",
             }}
           />
         </div>
@@ -394,12 +408,12 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
           role="listbox"
           style={{
             position: "absolute",
-            top: "100%",
+            top: "calc(100% + 8px)",
             left: 0,
             right: 0,
             background: "#fff",
-            borderRadius: "0 0 14px 14px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            borderRadius: 14,
+            boxShadow: "0 10px 28px rgba(0,0,0,0.18)",
             zIndex: 100,
             overflow: "hidden",
             maxHeight: "70vh",
