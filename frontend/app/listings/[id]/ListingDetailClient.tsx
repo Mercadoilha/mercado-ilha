@@ -11,6 +11,7 @@ import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import { getListingPreview } from "../../../lib/listingPreview";
+import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -257,32 +258,37 @@ export default function ListingDetailPage() {
     return () => { active = false; };
   }, [session, listing?.user_id]);
 
-  // Load favorite status whenever session or listing changes
+  // Estado de favorito desde el caché de sesión (T3 V2): mismo Set que /listings y
+  // /store ya cargaron. Con caché caliente: 0 RTT por detalle. Sin caché (deep link):
+  // se carga el Set completo 1 vez y sirve para todos los detalles siguientes.
   useEffect(() => {
     if (!session || !listingId || Number.isNaN(listingId)) { setIsFavorite(false); return; }
-    supabase
-      .from("favorites")
-      .select("id")
-      .eq("profile_id", session.user.id)
-      .eq("listing_id", listingId)
-      .maybeSingle()
-      .then(({ data }) => setIsFavorite(!!data));
+    const uid = session.user.id;
+    const cached = getCachedFavorites(uid);
+    if (cached) { setIsFavorite(cached.has(listingId)); return; }
+    let mounted = true;
+    loadFavorites(uid).then((ids) => { if (mounted) setIsFavorite(ids.has(listingId)); });
+    return () => { mounted = false; };
   }, [session, listingId]);
 
   const toggleFavorite = async () => {
     if (!session) { router.push("/signin?msg=fav"); return; }
+    const uid = session.user.id;
     setFavBusy(true);
     if (isFavorite) {
       await supabase
         .from("favorites")
         .delete()
         .eq("listing_id", listingId)
-        .eq("profile_id", session.user.id);
+        .eq("profile_id", uid);
+      // Actualizar el caché para que el cambio se refleje al volver a la lista/loja.
+      removeFavorite(uid, listingId);
       setIsFavorite(false);
     } else {
       await supabase
         .from("favorites")
-        .insert({ listing_id: listingId, profile_id: session.user.id });
+        .insert({ listing_id: listingId, profile_id: uid });
+      addFavorite(uid, listingId);
       setIsFavorite(true);
     }
     setFavBusy(false);

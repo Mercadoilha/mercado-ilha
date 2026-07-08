@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
@@ -12,6 +13,8 @@ import MaresWidget from "./MaresWidget";
 import BarcosWidget from "./BarcosWidget";
 import InstallAppCard from "./InstallAppCard";
 import ListingCard from "./ListingCard";
+import { getListingsCache, setListingsCache, LISTINGS_RESULTS_TTL } from "../lib/listingsCache";
+import { fetchDefaultListings, DEFAULT_LISTINGS_KEY } from "../lib/listingsApi";
 
 // Nomes com palavra única muito longa que não cabe em 3 colunas no tamanho padrão
 const LONG_NAME_SLUGS = new Set(["bioconstrucao", "electrodomesticos"]);
@@ -45,6 +48,40 @@ type Props = {
 
 export default function HomeClient({ listings, categories, adminWa, banners, bannerInterval }: Props) {
   const { session } = useSession();
+
+  // Prewarm del listado default de /listings en idle: tocar "Todos os anúncios" o
+  // la pestaña "Anúncios" pinta la lista al instante, sin spinner ni RTT. Corre
+  // DESPUÉS del render principal del home (requestIdleCallback / fallback 2 s) y
+  // solo si el caché de sesión no tiene ya una entrada fresca. Es 1 sola query
+  // extra por visita al home (aceptable en Supabase free). El caché es el mismo
+  // que lee /listings (misma clave, mismo select vía lib/listingsApi).
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      const entry = getListingsCache(DEFAULT_LISTINGS_KEY);
+      const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL;
+      if (fresh) return;
+      fetchDefaultListings()
+        .then((data) => {
+          if (!cancelled && data.length) setListingsCache(DEFAULT_LISTINGS_KEY, data);
+        })
+        .catch(() => { /* prewarm best-effort: la página recarga sola si falla */ });
+    };
+    const w = window as any;
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (typeof w.requestIdleCallback === "function") {
+      idleId = w.requestIdleCallback(run, { timeout: 3000 });
+    } else {
+      timeoutId = setTimeout(run, 2000);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined && typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const shareText = "Compra e vende na ilha de Tinharé! Veja anúncios de produtos, serviços, gastronomia e muito mais no Mercado Ilha 🏝️";
 

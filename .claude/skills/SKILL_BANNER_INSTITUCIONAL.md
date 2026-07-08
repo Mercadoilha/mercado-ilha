@@ -77,6 +77,15 @@ curl -s -o "frontend/public/banners/<nombre-archivo>.png" "<rawUrl>"
 ```
 Nombrar el archivo descriptivamente, ej: `banner-institucional.png`, `banner-promo-verano.png`.
 
+> ⚠️ **VERSIONAR SIEMPRE el nombre al reemplazar un banner existente.** Desde
+> 2026-07-08 el CDN de Vercel cachea las variantes optimizadas de imágenes por 31
+> días (`minimumCacheTTL` en `next.config.mjs`, tarea T1 del plan de optimización).
+> Si subís un banner nuevo con el MISMO nombre que uno anterior, `/_next/image`
+> puede seguir sirviendo la versión vieja hasta un mes. Por eso, para actualizar un
+> banner usá un nombre nuevo (`banner-institucional-v2.png`, `banner-institucional-v3.png`)
+> y actualizá la URL en el panel admin. Nunca sobrescribas un archivo de banner ya
+> publicado.
+
 ### Paso 5 — Commit y push a GitHub
 ```bash
 # Aumentar buffer para archivos grandes (PNG ~2MB)
@@ -152,3 +161,7 @@ Logo top-left. Category name bold. Wide cinematic format.
 - git push puede fallar con archivos >1MB sin el buffer aumentado. Siempre ejecutar
   `git config http.postBuffer 524288000` antes del push.
 - La URL de Higgsfield (cloudfront) es temporal. Siempre descargar y hostear en Vercel.
+- **Caché de imágenes de 31 días (T1 del plan de optimización):** las variantes
+  optimizadas se cachean semanas en el CDN. Para banners, esto obliga a versionar el
+  nombre del archivo en cada actualización (ver ⚠️ en el Paso 4). Las fotos de
+  anuncios no tienen este problema: su path ya es único (uuid+timestamp).

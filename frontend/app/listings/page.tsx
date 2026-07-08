@@ -14,10 +14,12 @@ import {
   getScroll,
   saveFilterUi,
   getFilterUi,
-  LISTINGS_RESULTS_TTL,
+  LISTINGS_SOFT_TTL,
+  LISTINGS_HARD_TTL,
   type ListingsCacheEntry,
 } from "../../lib/listingsCache";
 import { getCategoriesSync, loadCategories, getLocalitiesSync, loadLocalities } from "../../lib/catalogCache";
+import { LISTINGS_SELECT } from "../../lib/listingsApi";
 import { fold, foldWords, prefixFilter, MIN_WORD_DESC } from "../../lib/searchNorm";
 import {
   getCachedFavorites,
@@ -79,8 +81,11 @@ function ListingsContent() {
   const initRef = useRef<{ key: string; entry: ListingsCacheEntry | null } | null>(null);
   if (initRef.current === null) {
     const entry = getListingsCache(cacheKey);
-    const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL ? entry : null;
-    initRef.current = { key: cacheKey, entry: fresh };
+    // Mostrable sin spinner hasta HARD_TTL (30 min): datos que aún valen y se
+    // revalidan atrás. Vale también para restaurar el scroll al volver del detalle
+    // con caché stale-mostrable.
+    const showable = entry && Date.now() - entry.ts < LISTINGS_HARD_TTL ? entry : null;
+    initRef.current = { key: cacheKey, entry: showable };
   }
 
   const [listings, setListings] = useState<any[]>(initRef.current.entry?.data ?? []);
@@ -151,12 +156,16 @@ function ListingsContent() {
 
     // Render inmediato desde caché (stale-while-revalidate) o mantener lo anterior visible.
     const entry = getListingsCache(cacheKey);
-    const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL ? entry : null;
-    if (fresh) {
-      setListings(fresh.data);
-      setRelaxedSearch(!!fresh.relaxed);
+    const age = entry ? Date.now() - entry.ts : Infinity;
+    // Mostrable sin spinner hasta HARD_TTL. Siempre revalidamos atrás; el indicador
+    // "Atualizando…" solo se muestra si el caché ya está stale (edad ≥ SOFT_TTL):
+    // datos frescos se revalidan en silencio (comportamiento previo).
+    const showable = entry && age < LISTINGS_HARD_TTL ? entry : null;
+    if (showable) {
+      setListings(showable.data);
+      setRelaxedSearch(!!showable.relaxed);
       setLoading(false);
-      setRefreshing(true);
+      setRefreshing(age >= LISTINGS_SOFT_TTL);
     } else if (listingsRef.current.length > 0) {
       setRefreshing(true);
       setLoading(false);
@@ -168,7 +177,8 @@ function ListingsContent() {
 
     async function load() {
       // 1 foto por anúncio (a primeira por sort_order); subzones não é usado pelo card.
-      const selectBase = "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
+      // Select importado de lib/listingsApi (fuente única compartida con el prewarm del home).
+      const selectBase = LISTINGS_SELECT;
       const extraSelect = selectBase + ", listing_extra_categories!inner(category_id)";
 
       // Lookups independientes en paralelo: catálogo de categorías (sync si está

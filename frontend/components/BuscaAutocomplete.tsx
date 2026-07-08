@@ -20,6 +20,53 @@ type Suggestion = {
 
 const cache = new Map<string, Suggestion[]>();
 
+// Espejo del caché en sessionStorage (T5 del plan V2): las sugerencias repetidas
+// son instantáneas también tras recargar la página o reabrir el PWA, no solo dentro
+// de la misma carga. Mismo patrón que lib/catalogCache. El Map en memoria sigue
+// siendo la fuente rápida; sessionStorage solo lo hidrata una vez y lo persiste.
+const SS_KEY = "mi_busca_cache_v1";
+const SS_TTL = 10 * 60 * 1000; // 10 min
+const SS_MAX = 50; // tope de queries persistidas (las más viejas se descartan)
+let ssHydrated = false;
+
+type StoredEntry = { data: Suggestion[]; ts: number };
+
+function hydrateFromSS() {
+  if (ssHydrated) return;
+  ssHydrated = true;
+  if (typeof window === "undefined") return;
+  try {
+    const raw = sessionStorage.getItem(SS_KEY);
+    if (!raw) return;
+    const store = JSON.parse(raw) as Record<string, StoredEntry>;
+    const now = Date.now();
+    for (const [k, e] of Object.entries(store)) {
+      if (e && Array.isArray(e.data) && typeof e.ts === "number" && now - e.ts < SS_TTL) {
+        cache.set(k, e.data);
+      }
+    }
+  } catch {
+    // storage corrupto / modo privado: ignorar, el Map en memoria sigue sirviendo.
+  }
+}
+
+function persistToSS(key: string, data: Suggestion[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = sessionStorage.getItem(SS_KEY);
+    const store: Record<string, StoredEntry> = raw ? JSON.parse(raw) : {};
+    store[key] = { data, ts: Date.now() };
+    const keys = Object.keys(store);
+    if (keys.length > SS_MAX) {
+      keys.sort((a, b) => store[a].ts - store[b].ts);
+      for (const k of keys.slice(0, keys.length - SS_MAX)) delete store[k];
+    }
+    sessionStorage.setItem(SS_KEY, JSON.stringify(store));
+  } catch {
+    // storage lleno / modo privado: ignorar.
+  }
+}
+
 function norm(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -55,6 +102,7 @@ function rankCompletions(titles: string[], word: string): string[] {
 
 async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggestion[]> {
   const key = fold(norm(q));
+  hydrateFromSS(); // primer miss: cargar lo persistido de sesiones/cargas previas
   if (cache.has(key)) return cache.get(key)!;
 
   const ql = norm(q);
@@ -208,7 +256,10 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
   }
 
   const final = result.slice(0, 8);
-  if (final.length > 0) cache.set(key, final);
+  if (final.length > 0) {
+    cache.set(key, final);
+    persistToSS(key, final);
+  }
   return final;
 }
 

@@ -191,6 +191,9 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 - **Skill `/banner-institucional`** (`.claude/skills/SKILL_BANNER_INSTITUCIONAL.md`): genera con
   Higgsfield, descarga, sube a `public/banners/`, push, retorna URL. ⚠️ correr
   `git config http.postBuffer 524288000` antes del push de imágenes.
+- ⚠️ **Desde 2026-07-08** (`minimumCacheTTL` 31 días, ver §13): al reemplazar un banner existente
+  **versionar el nombre del archivo** (`banner-institucional-v2.png`), nunca sobrescribir el mismo
+  nombre — si no, `/_next/image` puede seguir sirviendo la versión vieja hasta un mes.
 
 ## 8. PANEL DE ADMINISTRADOR (`/admin`, requiere `role=admin`)
 
@@ -309,6 +312,28 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
 - Verificado en su momento (evitar falsos positivos): `adminSettings` ya cachea a nivel módulo;
   `favorites` ya tiene unique index; MV `active_listings_summary` no la consume nadie;
   `SessionContext.getSession()` lee de local storage (no red). Ver `feedback_verificar_diagnostico`.
+- **`OPTIMIZATION_MASTER_PLAN_V2.md`** (raíz, creado 2026-07-07): segunda auditoría de velocidad
+  sobre el V1 ya en producción. **Fase 1 (T1-T5) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21):
+  - `next.config.mjs`: `images.minimumCacheTTL = 2678400` (31 días) — fotos de anuncios tienen path
+    inmutable (uuid+timestamp), seguro cachear semanas; excepción banners, ver §7.
+  - `lib/listingsApi.ts` (nuevo): `LISTINGS_SELECT` + `DEFAULT_LISTINGS_KEY` ("||||") +
+    `fetchDefaultListings()` — fuente única del select default de `/listings`, importada tanto por
+    `app/listings/page.tsx` como por el prewarm del home (cero drift).
+  - `HomeClient.tsx`: prewarm en idle (`requestIdleCallback`/fallback 2s) del listado default de
+    `/listings` hacia `listingsCache` — tocar "Todos os anúncios" desde el home pinta sin spinner.
+  - `ListingDetailClient.tsx`: el estado de favorito ya no hace query propia; lee/escribe
+    `lib/favoritesCache.ts` (mismo Set que `/listings` y `/store`) — 1 RTT menos por detalle visto.
+  - `lib/listingsCache.ts`: dos umbrales en vez de uno — `LISTINGS_SOFT_TTL` 3 min (fresco, sin
+    indicador) y `LISTINGS_HARD_TTL` 30 min (se muestra igual, con "Atualizando…" de fondo). Antes
+    volvía a spinner pasados los 3 min.
+  - `BuscaAutocomplete.tsx`: caché de sugerencias espejado en `sessionStorage`
+    (`mi_busca_cache_v1`, TTL 10 min, tope 50 queries) — sobrevive a recargar/reabrir el PWA.
+  - Verificado: `npm run build` (52 páginas, todas las rutas iguales a la línea de base, ninguna
+    pasó a dinámica) + smoke test de `/` y `/listings` en runtime.
+  - **Hallazgo nuevo detectado con Speed Insights (no estaba en la auditoría V2 original): CLS
+    0.47 (Poor) en mobile**, ver §19 — pendiente investigar, probablemente en `/store/[id]`.
+  - Próxima fase del plan (Fase 2, T6-T9: SW v6 + splash real) requiere avisar `/effort xhigh`
+    antes de tocar el Service Worker — no arrancar sin confirmar con el usuario.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -447,14 +472,25 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Logo real + slot "Oferecido por" vía banners position `splash`. Código en
   `SplashScreen.tsx`/`SplashSponsorSync.tsx`. Posición `splash` habilitada en DB (`fase-splash-sponsor.sql`
   corrida 2026-07-07).
-- Íconos PWA con el logo real (reemplazar placeholders).
+- Íconos PWA con el logo real (reemplazar placeholders) — pasa a ser T7 de
+  `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 2 (además de agregar variante `maskable`).
 - Republicar anuncio vencido con 1 clic desde el perfil.
 - Filtros adicionales en listados: precio, sub-zona.
 - Panel admin: gestión de localidades y sub-zonas.
 - WhatsApp de Maria Agustina: confirmar si tiene número en metadata; si no, que lo cargue.
-- Buscador: extender cache a `sessionStorage`; revisar sinónimos tras 15 días de medición
-  (`SIGUIENTES_PASOS_BUSCADOR.md`).
+- Buscador: revisar sinónimos tras 15 días de medición (`SIGUIENTES_PASOS_BUSCADOR.md`).
 - (Confirmada ✅ fase-19-busca-sem-acentos: corrida por el usuario 2026-07-07 — ver §6.)
+- (Confirmada ✅ cache de sugerencias del buscador en `sessionStorage`: T5 de
+  `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 1, en producción 2026-07-08 — ver §13.)
+- **CLS 0.47 (Poor) en mobile**, detectado en Speed Insights el 2026-07-08 (foto tomada por el
+  usuario ANTES del deploy de la Fase 1 del plan V2) — no estaba en la auditoría original.
+  Ruta con peor score: `/store/[id]` ("Needs Improvement", 52). Pendiente: investigar qué elemento
+  salta el layout (candidatos: banner rotativo, imágenes sin dimensiones reservadas, fuentes) y
+  corregirlo en una fase futura del plan V2.
+- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fase 1 (T1-T5) en producción desde 2026-07-08 — ver §13.
+  Fases 2 (T6-T9, entrada/arranque del PWA), 3 (T10-T11, /listings instantáneo), 4 (T12-T13,
+  payload) y 5 (T14, validación) siguen pendientes. Fase 2 requiere avisar `/effort xhigh` antes
+  de tocar el Service Worker.
 
 ## 20. CORRER LOCALMENTE
 
@@ -473,6 +509,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` Fase 1 (T1-T5), **desplegado** (commit
+  pendiente de completar tras el push). `minimumCacheTTL` 31 días en imágenes; prewarm del
+  listado default de `/listings` desde el home (`lib/listingsApi.ts` nuevo); detalle reutiliza
+  `favoritesCache` en vez de query propia; `listingsCache` con TTL soft(3min)/hard(30min); caché
+  del buscador espejado en `sessionStorage`. Build verificado (52 páginas, rutas intactas).
+  Speed Insights ANTES del deploy (mobile, 24h): RES 75, FCP 2.12s, LCP 2.12s, INP 80ms,
+  **CLS 0.47 (Poor)**, FID 27ms, TTFB 0.71s — ver §13 y §19 (CLS es hallazgo nuevo, pendiente).
+  Próximo: Fase 2 del plan (T6-T9, SW v6 + splash) — avisar `/effort xhigh` antes de arrancar.
 - **2026-07-08** — Buscador: fix de falsos positivos (substring → inicio de palabra) + fix de SW
   cacheando dev, **desplegado** (commit `80181f1`, push a `main`). "pa" ya no traía casi todos los
   anuncios; `RegisterSW.tsx` ya no registra el service worker fuera de producción. Detalle en §6 y
