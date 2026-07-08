@@ -3,10 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { supabase } from "../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../lib/categoryPlaceholders";
 import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../components/ExtraCategoriesPicker";
+import type { PhotoAdjustResult } from "../../components/PhotoAdjustModal";
+
+// El modal de ajuste solo se descarga cuando el usuario toca una foto:
+// cero costo en la carga de /publish.
+const PhotoAdjustModal = dynamic(() => import("../../components/PhotoAdjustModal"), { ssr: false });
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
@@ -46,6 +52,7 @@ export default function PublishForm({ categories, localities, allSubzones, islan
   const [coversAllIsland, setCoversAllIsland] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [adjustIdx, setAdjustIdx] = useState<number | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +131,26 @@ export default function PublishForm({ categories, localities, allSubzones, islan
   const removePhoto = (idx: number) => {
     setPhotos((p) => p.filter((_, i) => i !== idx));
     setPhotoPreviews((p) => p.filter((_, i) => i !== idx));
+  };
+
+  const movePhoto = (i: number, dir: -1 | 1) => {
+    const swap = <T,>(arr: T[]) => {
+      const a = [...arr];
+      [a[i], a[i + dir]] = [a[i + dir], a[i]];
+      return a;
+    };
+    setPhotos(swap);
+    setPhotoPreviews(swap);
+  };
+
+  const applyAdjust = (res: PhotoAdjustResult | null) => {
+    if (res && adjustIdx !== null) {
+      const base = photos[adjustIdx]?.name.replace(/\.[^.]+$/, "") ?? "foto";
+      const file = new File([res.blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+      setPhotos((p) => p.map((f, i) => (i === adjustIdx ? file : f)));
+      setPhotoPreviews((p) => p.map((s, i) => (i === adjustIdx ? res.dataUrl : s)));
+    }
+    setAdjustIdx(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,21 +400,58 @@ export default function PublishForm({ categories, localities, allSubzones, islan
 
         {/* Fotos */}
         <div className="card" style={{ padding: "0.875rem" }}>
-          <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", marginBottom: 10 }}>
+          <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", marginBottom: 2 }}>
             Fotos <span className="text-muted">(até 4)</span>
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: "0 0 10px" }}>
+            A 1ª foto é a capa do anúncio. Toque na foto para girar ou ajustar.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
             {photoPreviews.map((src, i) => (
-              <div key={i} style={{ position: "relative", width: 72, height: 72 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid var(--border)" }} />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  ✕
-                </button>
+              <div key={i} style={{ width: 72 }}>
+                <div style={{ position: "relative", width: 72, height: 72 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt=""
+                    onClick={() => setAdjustIdx(i)}
+                    style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid var(--border)", cursor: "pointer" }}
+                  />
+                  {i === 0 && (
+                    <span style={{ position: "absolute", left: 0, bottom: 0, background: "var(--blue-main)", color: "#fff", fontSize: "0.55rem", fontWeight: 700, padding: "1px 6px", borderRadius: "0 6px 0 8px", pointerEvents: "none", letterSpacing: "0.03em" }}>
+                      CAPA
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {photoPreviews.length > 1 && (
+                  <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => movePhoto(i, -1)}
+                      disabled={i === 0}
+                      aria-label="Mover para a esquerda"
+                      style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1 }}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => movePhoto(i, 1)}
+                      disabled={i === photoPreviews.length - 1}
+                      aria-label="Mover para a direita"
+                      style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === photoPreviews.length - 1 ? "default" : "pointer", opacity: i === photoPreviews.length - 1 ? 0.35 : 1 }}
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {photos.length < 4 && (
@@ -403,6 +467,14 @@ export default function PublishForm({ categories, localities, allSubzones, islan
           </div>
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoChange} />
         </div>
+
+        {adjustIdx !== null && photoPreviews[adjustIdx] && (
+          <PhotoAdjustModal
+            imageSrc={photoPreviews[adjustIdx]}
+            onConfirm={applyAdjust}
+            onCancel={() => setAdjustIdx(null)}
+          />
+        )}
 
         {/* Categoria */}
         <div className="form-group">

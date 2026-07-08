@@ -3,16 +3,24 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { supabase } from "../../../../lib/supabaseClient";
 import { compressImage, normalizeFile } from "../../../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
 import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../../../components/ExtraCategoriesPicker";
+import type { PhotoAdjustResult } from "../../../../components/PhotoAdjustModal";
+
+// El modal de ajuste solo se descarga cuando el usuario toca una foto nueva.
+const PhotoAdjustModal = dynamic(() => import("../../../../components/PhotoAdjustModal"), { ssr: false });
 
 type Category = { id: number; name: string; slug: string; location_type: string; contact_button_text: string; whatsapp_message: string | null; expires_in_days: number | null };
 type Subcategory = { id: number; name: string };
 type Locality = { id: number; name: string };
 type Subzone = { id: number; name: string; locality_id: number };
 type ExistingPhoto = { id: number; photo_url: string; storage_path: string | null; sort_order: number };
+type NewPhoto = { key: number; file: File; preview: string };
+// Orden visual único de fotos existentes + nuevas; la posición define sort_order (capa = 0)
+type PhotoRef = { kind: "existing"; id: number } | { kind: "new"; key: number };
 
 type EditListingFormProps = {
   listingId: string;
@@ -51,8 +59,10 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
   // Photo management
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<number[]>([]);
-  const [newPhotos, setNewPhotos] = useState<File[]>([]);
-  const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
+  const [newPhotos, setNewPhotos] = useState<NewPhoto[]>([]);
+  const [photoOrder, setPhotoOrder] = useState<PhotoRef[]>([]);
+  const [adjustKey, setAdjustKey] = useState<number | null>(null);
+  const newKeyRef = useRef(0);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +120,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
 
       const photos = [...(data.listing_photos ?? [])].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       setExistingPhotos(photos);
+      setPhotoOrder(photos.map((p: any) => ({ kind: "existing" as const, id: p.id })));
       setDataLoading(false);
     }
 
@@ -145,11 +156,11 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
         ? prev.filter((x) => !localityZoneIds.includes(x))
         : Array.from(new Set([...prev, ...localityZoneIds]))
     );
-  const visibleExisting = existingPhotos.filter((p) => !removedPhotoIds.includes(p.id));
-  const totalPhotos = visibleExisting.length + newPhotos.length;
+  const totalPhotos = photoOrder.length;
 
   const removeExistingPhoto = (id: number) => {
     setRemovedPhotoIds((prev) => [...prev, id]);
+    setPhotoOrder((prev) => prev.filter((r) => !(r.kind === "existing" && r.id === id)));
   };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,17 +170,48 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
     if (!raw.length) return;
     e.target.value = "";
     const files = await Promise.all(raw.map(normalizeFile));
-    setNewPhotos((prev) => [...prev, ...files].slice(0, 4));
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => setNewPhotoPreviews((prev) => [...prev, ev.target?.result as string].slice(0, 4));
-      reader.readAsDataURL(file);
+    const entries: NewPhoto[] = await Promise.all(
+      files.map(async (file) => {
+        const preview = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+        return { key: newKeyRef.current++, file, preview };
+      })
+    );
+    setNewPhotos((prev) => [...prev, ...entries]);
+    setPhotoOrder((prev) => [...prev, ...entries.map((en) => ({ kind: "new" as const, key: en.key }))]);
+  };
+
+  const removeNewPhoto = (key: number) => {
+    setNewPhotos((p) => p.filter((n) => n.key !== key));
+    setPhotoOrder((prev) => prev.filter((r) => !(r.kind === "new" && r.key === key)));
+  };
+
+  const movePhoto = (i: number, dir: -1 | 1) => {
+    setPhotoOrder((prev) => {
+      const a = [...prev];
+      [a[i], a[i + dir]] = [a[i + dir], a[i]];
+      return a;
     });
   };
 
-  const removeNewPhoto = (idx: number) => {
-    setNewPhotos((p) => p.filter((_, i) => i !== idx));
-    setNewPhotoPreviews((p) => p.filter((_, i) => i !== idx));
+  const applyAdjust = (res: PhotoAdjustResult | null) => {
+    if (res && adjustKey !== null) {
+      setNewPhotos((prev) =>
+        prev.map((n) =>
+          n.key === adjustKey
+            ? {
+                ...n,
+                file: new File([res.blob], n.file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg", lastModified: Date.now() }),
+                preview: res.dataUrl,
+              }
+            : n
+        )
+      );
+    }
+    setAdjustKey(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -291,15 +333,31 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
       await supabase.from("listing_photos").delete().in("id", removedPhotoIds);
     }
 
+    // La posición en photoOrder define el sort_order final (capa = 0), tanto
+    // para las fotos existentes reordenadas como para las nuevas.
+    const toUpload: { pos: number; entry: NewPhoto }[] = [];
+    const orderTasks: PromiseLike<unknown>[] = [];
+    photoOrder.forEach((ref, pos) => {
+      if (ref.kind === "new") {
+        const entry = newPhotos.find((n) => n.key === ref.key);
+        if (entry) toUpload.push({ pos, entry });
+      } else {
+        const p = existingPhotos.find((e2) => e2.id === ref.id);
+        if (p && p.sort_order !== pos) {
+          orderTasks.push(supabase.from("listing_photos").update({ sort_order: pos }).eq("id", ref.id));
+        }
+      }
+    });
+    if (orderTasks.length > 0) await Promise.all(orderTasks);
+
     // Upload new photos en paralelo: el tiempo total es el de la foto más
-    // lenta, no la suma. sort_order se conserva por índice original.
-    if (newPhotos.length > 0) {
+    // lenta, no la suma.
+    if (toUpload.length > 0) {
       const token = session.access_token;
-      const baseOrder = visibleExisting.length;
       const uploaded = await Promise.all(
-        newPhotos.map(async (photo, i) => {
+        toUpload.map(async ({ pos, entry }) => {
           try {
-            const compressed = await compressImage(photo);
+            const compressed = await compressImage(entry.file);
             const form = new FormData();
             form.append("file", compressed);
             form.append("folder", "listings");
@@ -310,7 +368,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
             });
             const data = await res.json();
             if (res.ok && data.url) {
-              return { listing_id: listingId, photo_url: data.url, storage_path: data.key ?? null, sort_order: baseOrder + i };
+              return { listing_id: listingId, photo_url: data.url, storage_path: data.key ?? null, sort_order: pos };
             }
           } catch {
             // esta foto falla, las demás siguen
@@ -386,40 +444,71 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
 
       <form onSubmit={handleSubmit} style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-        {/* Fotos existentes + novas */}
+        {/* Fotos existentes + novas (lista única ordenável) */}
         <div className="card" style={{ padding: "0.875rem" }}>
-          <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", marginBottom: 10 }}>
+          <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b", marginBottom: 2 }}>
             Fotos <span className="text-muted">(até 4)</span>
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {/* Existing photos */}
-            {visibleExisting.map((p) => (
-              <div key={p.id} style={{ position: "relative", width: 72, height: 72 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.photo_url} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid var(--border)" }} />
-                <button
-                  type="button"
-                  onClick={() => removeExistingPhoto(p.id)}
-                  style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            {/* New photo previews */}
-            {newPhotoPreviews.map((src, i) => (
-              <div key={`new-${i}`} style={{ position: "relative", width: 72, height: 72 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "2px solid #059669" }} />
-                <button
-                  type="button"
-                  onClick={() => removeNewPhoto(i)}
-                  style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+          <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: "0 0 10px" }}>
+            Fotos já salvas não podem ser editadas — para trocar o enquadramento, remova e envie de novo. Nas fotos novas, toque para girar ou ajustar.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+            {photoOrder.map((ref, i) => {
+              const isNew = ref.kind === "new";
+              const newKey = ref.kind === "new" ? ref.key : null;
+              const existingId = ref.kind === "existing" ? ref.id : null;
+              const src = ref.kind === "new"
+                ? newPhotos.find((n) => n.key === ref.key)?.preview
+                : existingPhotos.find((p) => p.id === ref.id)?.photo_url;
+              if (!src) return null;
+              return (
+                <div key={isNew ? `n-${newKey}` : `e-${existingId}`} style={{ width: 72 }}>
+                  <div style={{ position: "relative", width: 72, height: 72 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt=""
+                      onClick={newKey !== null ? () => setAdjustKey(newKey) : undefined}
+                      style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: isNew ? "2px solid #059669" : "1px solid var(--border)", cursor: isNew ? "pointer" : "default" }}
+                    />
+                    {i === 0 && (
+                      <span style={{ position: "absolute", left: 0, bottom: 0, background: "var(--blue-main)", color: "#fff", fontSize: "0.55rem", fontWeight: 700, padding: "1px 6px", borderRadius: "0 6px 0 8px", pointerEvents: "none", letterSpacing: "0.03em" }}>
+                        CAPA
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => (newKey !== null ? removeNewPhoto(newKey) : removeExistingPhoto(existingId!))}
+                      style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {photoOrder.length > 1 && (
+                    <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => movePhoto(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Mover para a esquerda"
+                        style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1 }}
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePhoto(i, 1)}
+                        disabled={i === photoOrder.length - 1}
+                        aria-label="Mover para a direita"
+                        style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === photoOrder.length - 1 ? "default" : "pointer", opacity: i === photoOrder.length - 1 ? 0.35 : 1 }}
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {/* Add photo button */}
             {totalPhotos < 4 && (
               <button
@@ -434,6 +523,17 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
           </div>
           <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoChange} />
         </div>
+
+        {adjustKey !== null && (() => {
+          const entry = newPhotos.find((n) => n.key === adjustKey);
+          return entry ? (
+            <PhotoAdjustModal
+              imageSrc={entry.preview}
+              onConfirm={applyAdjust}
+              onCancel={() => setAdjustKey(null)}
+            />
+          ) : null;
+        })()}
 
         {/* Categoria */}
         <div className="form-group">
