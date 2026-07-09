@@ -69,6 +69,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-1290-2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
       </head>
       <body>
+        {/* Cortina azul de entrada solo-navegador (pedida por el usuario 2026-07-08). El PWA
+            instalado ya tiene su splash nativo del OS (apple-touch-startup-image arriba /
+            background_color del manifest en Android) — @media (display-mode: standalone) la
+            oculta por completo ahí (CSS, evaluado antes del primer paint). En navegador cubre
+            con la marca el arranque y se desvanece SOLA con una animación CSS (sin JS): así es
+            imposible que quede trabada tapando la app si algo fallara, y no hay riesgo de
+            mismatch de hidratación. Solo aparece en la carga real (hard load); el RootLayout
+            no se remonta en la navegación interna, así que NO reaparece entre rutas → cero
+            impacto en la velocidad de navegación. */}
+        <div id="browser-splash" aria-hidden="true">
+          <img src="/logo.svg" alt="" />
+        </div>
         <SessionProvider>
           {children}
           <BottomNav />

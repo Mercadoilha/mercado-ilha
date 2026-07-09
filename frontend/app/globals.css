@@ -81,6 +81,37 @@ body {
   color: #fff;
 }
 
+/* Cortina azul de entrada solo-navegador (ver comentario en app/layout.tsx).
+   100% CSS: se muestra y se desvanece sola con una animación que termina en
+   visibility:hidden (fill-mode forwards) → tras ~700ms deja de cubrir y no bloquea
+   ningún toque. Sin JS: no puede quedar trabada tapando la app. */
+#browser-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blue-main);
+  animation: browser-splash-out 700ms ease-out forwards;
+}
+#browser-splash img {
+  width: auto;
+  height: 64px;
+}
+@keyframes browser-splash-out {
+  0%, 45% { opacity: 1; }
+  100%    { opacity: 0; visibility: hidden; }
+}
+/* PWA instalado: nunca mostrar la cortina (ya tiene su splash nativo del OS) */
+@media (display-mode: standalone) {
+  #browser-splash { display: none; }
+}
+/* Respeta la preferencia de menos movimiento: sin cortina animada */
+@media (prefers-reduced-motion: reduce) {
+  #browser-splash { display: none; }
+}
+
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

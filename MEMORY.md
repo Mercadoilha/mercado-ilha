@@ -391,8 +391,24 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
       `/favorites` traía hasta 6 fotos por favorito.
     - Verificado: `npm run build` = 52 páginas, `/favorites` y `/listings` siguen `○ Static`,
       detalle `● SSG` — ninguna ruta se degradó; type-check limpio.
+  - **Cortina azul al abrir desde el navegador — EN PRODUCCIÓN** desde 2026-07-08 (commit ver
+    §21, fuera del plan V2 formal, pedida aparte por el usuario). Implementación **100% CSS, sin
+    JS** (decisión tras revisión: la 1ª versión usaba un `<script>` inline y era frágil — ver
+    §18). `app/layout.tsx`: `<div id="browser-splash" aria-hidden>` con el logo, primer hijo de
+    `<body>`. `globals.css`: `#browser-splash` cubre la pantalla (`position:fixed; inset:0;
+    z-index:9999`, fondo `--blue-main`) y se desvanece SOLA con
+    `animation: browser-splash-out 700ms ease-out forwards` (keyframe: opaca hasta 45%, luego
+    `opacity:0; visibility:hidden`). Al ser CSS puro **no puede quedar trabada tapando la app**
+    (el fill-mode forwards deja `visibility:hidden` → no bloquea toques). Dos `@media` la ocultan
+    con `display:none`: `(display-mode: standalone)` → el PWA instalado NUNCA la ve (conserva su
+    splash nativo del OS, sin el "doble salto" histórico); `(prefers-reduced-motion: reduce)` →
+    respeta la preferencia de menos movimiento. Solo aparece en la carga real (hard load); el
+    RootLayout no se remonta en la navegación interna → NO reaparece entre rutas (cero impacto en
+    velocidad de navegación). Verificado: HTML compilado sin script, CSS compilado con la
+    animación + ambos `@media`; `npm run build` 52 páginas sin rutas degradadas.
   - Plan V2 completo salvo la **Fase 5 (T14)**: validación con Web Vitals reales (Speed Insights),
-    sin código — esperar ≥7 días de producción y comparar contra la foto inicial. Esfuerzo bajo.
+    sin código — el usuario pidió retomarlo el **20 de julio de 2026** y comparar contra la foto
+    inicial. Esfuerzo bajo.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -461,6 +477,13 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 18. BUGS RESUELTOS — LECCIONES
 
+- **Cortina de entrada con JS por defecto-visible = riesgo de brick (2026-07-08, detectado en
+  revisión ANTES de deploy):** la 1ª versión de la cortina azul mostraba el overlay por defecto
+  (`opacity:1`) y lo escondía con un `<script>` inline. Si el JS no corría, el overlay quedaba
+  fijo tapando toda la app. Además el doble `requestAnimationFrame` la escondía en ~32ms
+  (imperceptible) y mutar el nodo antes de la hidratación arriesgaba mismatch de React. **Regla:
+  un overlay de carga debe poder desaparecer SIN JS.** Fix: reescrita 100% CSS (`animation ...
+  forwards` que termina en `visibility:hidden`). Ver §13.
 - **Registro (email como nombre, 2026-06-30):** RLS bloqueaba el INSERT a `profiles` en `signUp()`
   (sin sesión con email confirmation). Fix: trigger `AFTER INSERT ON auth.users` `SECURITY DEFINER`
   (`fase-14-trigger-new-user.sql`) que lee `raw_user_meta_data`. `profile/page.tsx` usa
@@ -553,16 +576,12 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   corregirlo en una fase futura del plan V2.
 - **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5), 2 (T6-T9), **3 (T10-T11) y 4 (T12-T13)
   en producción** desde 2026-07-08 — detalle técnico en §13. Queda solo la **Fase 5 (T14):
-  validación con Web Vitals reales** (Speed Insights), que **no toca código** — hay que esperar
-  ≥7 días de producción tras la Fase 3 y comparar p75 de LCP/INP/CLS por ruta contra la foto
-  inicial (guardada en §13). Recordar de paso el hallazgo del **CLS 0.47 en `/store/[id]`**
-  (pendiente aparte, ver arriba en §19).
-- **Splash azul al abrir desde el NAVEGADOR (no instalado): pendiente** (pedido del usuario
-  2026-07-08, "para después de terminar la optimización"). Desde el ícono instalado ya está
-  resuelto (splash nativo del OS). Desde el navegador NO hay splash nativo posible; la mejora es
-  una cortina liviana propia de la app que pinte azul (opcionalmente con logo) **solo cuando NO
-  está en `display-mode: standalone`** — así los instalados conservan el splash nativo sin
-  reintroducir el "salto" de dos pantallas. Implementar al cerrar el plan de optimización.
+  validación con Web Vitals reales** (Speed Insights), que **no toca código**. El usuario pidió
+  específicamente retomarlo el **20 de julio de 2026** (le avisó a Claude, pero los recordatorios
+  automáticos no sobreviven tantos días — así que si se abre sesión cerca de esa fecha, avisar
+  y comparar p75 de LCP/INP/CLS por ruta contra la foto inicial (guardada en §13). Recordar de
+  paso el hallazgo del **CLS 0.47 en `/store/[id]`** (pendiente aparte, ver arriba en §19).
+- (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§21.)
 
 ## 20. CORRER LOCALMENTE
 
@@ -581,6 +600,11 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — **Cortina azul al abrir desde el navegador**, **desplegado** (commit
+  `PENDIENTE_HASH`, push a `main`). Pedida por el usuario tras cerrar (por ahora) el plan V2.
+  Div + script inline en `app/layout.tsx` + CSS en `globals.css` con `@media (display-mode:
+  standalone)` para que el PWA instalado no la vea (conserva su splash nativo). Detalle técnico
+  en §13. Se agendó retomar la Fase 5 (T14, medición real) el 20 de julio de 2026.
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 4 (T12-T13)**, **desplegado** (commit
   `03d8dd6`, push a `main`). T12: la query del detalle (`listings/[id]/ListingDetailClient.tsx`)
   dejó de traer `*` + `listing_photos(*)`; ahora pide columnas explícitas (las auditadas por uso
