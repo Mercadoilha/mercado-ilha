@@ -376,8 +376,23 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
       prerenderizado con 10 `<article>`/`<a href="/listings/N">` reales (antes: 0, solo spinner);
       runtime (`next start`) sirviendo las mismas cards con `x-nextjs-cache: STALE` +
       `Cache-Control: s-maxage=60, stale-while-revalidate`.
-  - Plan V2 completo salvo **Fase 4 (T12-T13, pulido de payload)** y **Fase 5 (T14, validación con
-    datos reales)** — ambas de esfuerzo bajo, no requieren `/effort` especial.
+  - **Fase 4 (T12-T13) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — payloads más chicos:
+    - `app/listings/[id]/ListingDetailClient.tsx` (T12): la query del detalle ya no pide `*` +
+      `listing_photos(*)`. Ahora lista columnas explícitas (auditadas por uso real con grep de
+      `full.`/`listing.`, más un margen seguro de escalares baratos: `id, status, category_id,
+      subcategory_id, locality_id, created_at`) y `listing_photos(id, photo_url, sort_order)`.
+      Cero cambios visibles; menos bytes por apertura del detalle.
+    - `app/favorites/page.tsx` (T13): trae **1 foto por anuncio** (la primera por `sort_order`),
+      cerrando el resto del V1-T5. Sintaxis anidada de dos niveles
+      `.order("sort_order", { referencedTable: "listings.listing_photos" })` +
+      `.limit(1, { referencedTable: "listings.listing_photos" })`. **Verificada contra la DB real**
+      antes de aplicar: (1) PostgREST acepta el path punteado sin error; (2) probado sobre una
+      relación pública de dos niveles que el `limit` recorta el nivel más profundo (9→1). Antes
+      `/favorites` traía hasta 6 fotos por favorito.
+    - Verificado: `npm run build` = 52 páginas, `/favorites` y `/listings` siguen `○ Static`,
+      detalle `● SSG` — ninguna ruta se degradó; type-check limpio.
+  - Plan V2 completo salvo la **Fase 5 (T14)**: validación con Web Vitals reales (Speed Insights),
+    sin código — esperar ≥7 días de producción y comparar contra la foto inicial. Esfuerzo bajo.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -536,10 +551,12 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   Ruta con peor score: `/store/[id]` ("Needs Improvement", 52). Pendiente: investigar qué elemento
   salta el layout (candidatos: banner rotativo, imágenes sin dimensiones reservadas, fuentes) y
   corregirlo en una fase futura del plan V2.
-- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5), 2 (T6-T9) y **3 (T10-T11) en producción**
-  desde 2026-07-08 — detalle técnico en §13. Quedan **Fase 4 (T12-T13, pulido de payload)** y
-  **Fase 5 (T14, validación con datos reales)**, ambas de esfuerzo bajo (no requieren `/effort`
-  especial).
+- **`OPTIMIZATION_MASTER_PLAN_V2.md`:** Fases 1 (T1-T5), 2 (T6-T9), **3 (T10-T11) y 4 (T12-T13)
+  en producción** desde 2026-07-08 — detalle técnico en §13. Queda solo la **Fase 5 (T14):
+  validación con Web Vitals reales** (Speed Insights), que **no toca código** — hay que esperar
+  ≥7 días de producción tras la Fase 3 y comparar p75 de LCP/INP/CLS por ruta contra la foto
+  inicial (guardada en §13). Recordar de paso el hallazgo del **CLS 0.47 en `/store/[id]`**
+  (pendiente aparte, ver arriba en §19).
 - **Splash azul al abrir desde el NAVEGADOR (no instalado): pendiente** (pedido del usuario
   2026-07-08, "para después de terminar la optimización"). Desde el ícono instalado ya está
   resuelto (splash nativo del OS). Desde el navegador NO hay splash nativo posible; la mejora es
@@ -564,6 +581,17 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 4 (T12-T13)**, **desplegado** (commit
+  `PENDIENTE_HASH`, push a `main`). T12: la query del detalle (`listings/[id]/ListingDetailClient.tsx`)
+  dejó de traer `*` + `listing_photos(*)`; ahora pide columnas explícitas (las auditadas por uso
+  real, más un margen seguro de escalares) y `listing_photos(id, photo_url, sort_order)` → payload
+  del detalle más chico sin cambiar nada en pantalla. T13: `/favorites` ahora trae **1 foto por
+  anuncio** (la primera por `sort_order`) usando la sintaxis anidada de dos niveles
+  `referencedTable: "listings.listing_photos"` con `.order`+`.limit(1)` — **verificada contra la
+  DB real** antes de aplicar (probado que el `limit` punteado recorta el nivel más profundo:
+  9→1). Antes traía hasta 6 fotos por favorito. Build: 52 páginas, `/favorites` y `/listings`
+  siguen `○ Static`, detalle `● SSG` — ninguna ruta se degradó. Con esto, el plan V2 solo deja
+  pendiente la Fase 5 (T14, validación con datos reales, sin código). Commit: `PENDIENTE_HASH`.
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 3 (T10-T11)**, **desplegado** (commit
   ver hash abajo, push a `main`). T10: caché de `/listings` espejado en `sessionStorage` — recargar
   ya no vuelve al spinner. T11: `app/listings/page.tsx` pasó a Server Component con ISR (60s) que

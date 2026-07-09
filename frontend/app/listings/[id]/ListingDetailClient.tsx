@@ -89,8 +89,10 @@ export default function ListingDetailPage() {
       const { data: full, error: le } = await supabase
         .from("listings")
         .select(`
-          *,
-          listing_photos(*),
+          id, user_id, title, description, price, price_text, condition, status,
+          location_type, covers_all_island, locality_id, subzone_id, other_location_text,
+          category_id, subcategory_id, created_at,
+          listing_photos(id, photo_url, sort_order),
           categories(id, name, slug, contact_button_text, whatsapp_message),
           subcategories(id, name),
           localities(id, name)

@@ -26,6 +26,10 @@ export default function FavoritesPage() {
       .select("id, listing_id, listings(id, title, price, price_text, condition, status, locality_id, subzone_id, localities(name), listing_photos(photo_url, sort_order))")
       .eq("profile_id", session.user.id)
       .order("created_at", { ascending: false })
+      // T13 (plan V2): 1 foto por anuncio (la primera por sort_order). Sintaxis anidada
+      // de dos niveles verificada contra la DB real (referencedTable con path punteado).
+      .order("sort_order", { referencedTable: "listings.listing_photos" })
+      .limit(1, { referencedTable: "listings.listing_photos" })
       .then(({ data }) => {
         if (!mounted) return;
         setFavorites(data ?? []);
