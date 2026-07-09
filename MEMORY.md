@@ -582,7 +582,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 4 (T12-T13)**, **desplegado** (commit
-  `PENDIENTE_HASH`, push a `main`). T12: la query del detalle (`listings/[id]/ListingDetailClient.tsx`)
+  `03d8dd6`, push a `main`). T12: la query del detalle (`listings/[id]/ListingDetailClient.tsx`)
   dejó de traer `*` + `listing_photos(*)`; ahora pide columnas explícitas (las auditadas por uso
   real, más un margen seguro de escalares) y `listing_photos(id, photo_url, sort_order)` → payload
   del detalle más chico sin cambiar nada en pantalla. T13: `/favorites` ahora trae **1 foto por
@@ -591,7 +591,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   DB real** antes de aplicar (probado que el `limit` punteado recorta el nivel más profundo:
   9→1). Antes traía hasta 6 fotos por favorito. Build: 52 páginas, `/favorites` y `/listings`
   siguen `○ Static`, detalle `● SSG` — ninguna ruta se degradó. Con esto, el plan V2 solo deja
-  pendiente la Fase 5 (T14, validación con datos reales, sin código). Commit: `PENDIENTE_HASH`.
+  pendiente la Fase 5 (T14, validación con datos reales, sin código). Commit: `03d8dd6`.
 - **2026-07-08** — `OPTIMIZATION_MASTER_PLAN_V2.md` **Fase 3 (T10-T11)**, **desplegado** (commit
   ver hash abajo, push a `main`). T10: caché de `/listings` espejado en `sessionStorage` — recargar
   ya no vuelve al spinner. T11: `app/listings/page.tsx` pasó a Server Component con ISR (60s) que
