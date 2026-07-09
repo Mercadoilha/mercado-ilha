@@ -601,7 +601,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-08** — **Cortina azul al abrir desde el navegador**, **desplegado** (commit
-  `PENDIENTE_HASH`, push a `main`). Pedida por el usuario tras cerrar (por ahora) el plan V2.
+  `a95098c`, push a `main`). Pedida por el usuario tras cerrar (por ahora) el plan V2.
   Div + script inline en `app/layout.tsx` + CSS en `globals.css` con `@media (display-mode:
   standalone)` para que el PWA instalado no la vea (conserva su splash nativo). Detalle técnico
   en §13. Se agendó retomar la Fase 5 (T14, medición real) el 20 de julio de 2026.
