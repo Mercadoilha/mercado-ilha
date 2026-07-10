@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { whatsappUrl } from "../lib/adminSettings";
 
 type Props = {
@@ -22,6 +22,31 @@ export default function InstallInstructions({
   showIosToggle = true,
 }: Props) {
   const [iosExpanded, setIosExpanded] = useState(!showIosToggle);
+  const [browser, setBrowser] = useState<"safari" | "chrome">("safari");
+  const [iosVersion, setIosVersion] = useState<[number, number] | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (/CriOS/i.test(navigator.userAgent)) setBrowser("chrome");
+    const m = navigator.userAgent.match(/OS (\d+)(?:[._](\d+))?/);
+    if (m) setIosVersion([Number(m[1]), Number(m[2] || 0)]);
+  }, []);
+
+  // Antes do iOS 16.4 a Apple só permite instalar pelo Safari
+  const chromeBlocked =
+    iosVersion !== null && (iosVersion[0] < 16 || (iosVersion[0] === 16 && iosVersion[1] < 4));
+  // iPhones com iOS antigo têm telas diferentes no Safari
+  const safariVideo = iosVersion !== null && iosVersion[0] < 26 ? "instalar-safari-antigo" : "instalar-safari";
+  const videoSrc = browser === "safari" ? safariVideo : "instalar-chrome";
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.origin);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   const style = (
     <style>{`
@@ -72,56 +97,93 @@ export default function InstallInstructions({
         overflow: "hidden",
       }}
     >
-      <div style={{
-        background: "#FFF7E6",
-        border: "1px solid var(--sand-light)",
-        borderRadius: 7,
-        margin: 12,
-        padding: "8px 10px",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 8,
-      }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-        <span style={{ fontSize: 12, color: "#7c4a00", lineHeight: 1.4 }}>
-          Abra o site pelo <strong>Safari</strong> e siga os passos:
-        </span>
-      </div>
-
-      {([
-        { num: 1, text: <>Toque no ícone de <strong style={{ color: "var(--blue-main)" }}>Compartilhar</strong> (quadrado com seta para cima) na barra do Safari</> },
-        { num: 2, text: <>Role para baixo e toque em <strong style={{ color: "var(--blue-main)" }}>&ldquo;Adicionar à Tela de Início&rdquo;</strong></> },
-      ] as const).map((step, idx, arr) => (
-        <div
-          key={step.num}
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 10,
-            padding: "10px 12px",
-            borderBottom: idx < arr.length - 1 ? "1px solid var(--blue-xlight)" : "none",
-          }}
-        >
-          <span style={{
-            width: 20,
-            height: 20,
-            minWidth: 20,
-            borderRadius: "50%",
-            background: "var(--blue-main)",
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            {step.num}
-          </span>
-          <span style={{ fontSize: 13, color: "#1a3a5c", lineHeight: 1.4 }}>
-            {step.text}
-          </span>
+      <div style={{ padding: 12 }}>
+        <div style={{ fontSize: 13, color: "#1a3a5c", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>
+          Veja no vídeo como instalar. Qual navegador você usa?
         </div>
-      ))}
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
+          {(["safari", "chrome"] as const).map((b) => (
+            <button
+              key={b}
+              type="button"
+              onClick={() => setBrowser(b)}
+              style={{
+                padding: "7px 18px",
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: browser === b ? "1.5px solid var(--blue-main)" : "1.5px solid var(--border)",
+                background: browser === b ? "var(--blue-main)" : "#fff",
+                color: browser === b ? "#fff" : "var(--text-muted)",
+              }}
+            >
+              {b === "safari" ? "Safari" : "Chrome"}
+            </button>
+          ))}
+        </div>
+
+        {browser === "chrome" && chromeBlocked ? (
+          <div
+            style={{
+              background: "var(--blue-xlight)",
+              border: "1px solid var(--blue-light)",
+              borderRadius: 12,
+              padding: 14,
+              fontSize: 13,
+              color: "#1a3a5c",
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              ⚠️ Neste iPhone, o Chrome não permite instalar o app.
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              É preciso usar o Safari: copie o link do site, abra o Safari, cole o link na
+              barra de endereço e siga o vídeo do Safari.
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{
+                display: "block",
+                width: "100%",
+                background: copied ? "var(--green-dark, #0F6E56)" : "var(--blue-main)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {copied ? "Link copiado ✓" : "Copiar link do site"}
+            </button>
+          </div>
+        ) : (
+          <video
+            key={videoSrc}
+            src={`/videos/${videoSrc}.mp4`}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+            preload="metadata"
+            style={{
+              display: "block",
+              width: "100%",
+              maxWidth: 240,
+              margin: "0 auto",
+              borderRadius: 12,
+              border: "1px solid var(--blue-light)",
+              background: "var(--blue-main)",
+            }}
+          />
+        )}
+      </div>
 
       {adminWhatsApp && (
         <div style={{ textAlign: "center", fontSize: 12, color: "#666", padding: "10px 12px 12px" }}>
