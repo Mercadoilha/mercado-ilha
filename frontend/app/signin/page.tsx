@@ -4,14 +4,15 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-import InstallAppBanner from "../../components/InstallAppBanner";
+import { isStandalone } from "../../lib/platform";
+import InstallSigninStrip from "../../components/InstallSigninStrip";
 
 type Tab = "login" | "register";
 
 export default function SignInPage() {
   return (
     <>
-      <InstallAppBanner />
+      <InstallSigninStrip />
       <Suspense>
         <SignInContent />
       </Suspense>
@@ -131,7 +132,9 @@ function SignInContent() {
       return;
     }
 
-    router.push("/");
+    // Cadastro OK con sesión: llevar a la pantalla dedicada de instalación
+    // (salvo que ya esté instalada, ahí va directo al home).
+    router.push(isStandalone() ? "/" : "/instalar");
   };
 
   const tabStyle = (t: Tab): React.CSSProperties => ({

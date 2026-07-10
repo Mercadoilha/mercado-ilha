@@ -402,7 +402,7 @@ export default function ProfilePage() {
 
         {/* ── Instalar app (some sozinha quando já está instalado) ── */}
         <div style={{ margin: "0 -1rem" }}>
-          <InstallAppCard adminWa={adminWa} />
+          <InstallAppCard adminWa={adminWa} compact />
         </div>
 
         {/* ── Meus anúncios ── */}

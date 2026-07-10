@@ -12,6 +12,7 @@ import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
 import BarcosWidget from "./BarcosWidget";
 import InstallAppCard from "./InstallAppCard";
+import InstallInvitePopup from "./InstallInvitePopup";
 import ListingCard from "./ListingCard";
 import { getListingsCache, setListingsCache, LISTINGS_RESULTS_TTL } from "../lib/listingsCache";
 import { fetchDefaultListings, DEFAULT_LISTINGS_KEY } from "../lib/listingsApi";
@@ -358,6 +359,8 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
           </a>
         </div>
       </section>
+
+      <InstallInvitePopup />
     </div>
   );
 }

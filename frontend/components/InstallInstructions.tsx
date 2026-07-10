@@ -61,17 +61,23 @@ export default function InstallInstructions({
           style={{
             background: "var(--sand)",
             color: "#fff",
-            borderRadius: 10,
-            padding: "10px 16px",
-            fontSize: 14,
-            fontWeight: 700,
+            borderRadius: 12,
+            padding: "13px 18px",
+            fontSize: 15,
+            fontWeight: 800,
             width: "100%",
             border: "none",
             cursor: androidInstallDisabled ? "default" : "pointer",
             opacity: androidInstallDisabled ? 0.6 : 1,
+            boxShadow: androidInstallDisabled ? "none" : "0 4px 14px rgba(239,159,39,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
           }}
         >
-          Instalar agora
+          <span style={{ fontSize: 19, lineHeight: 1 }}>📲</span>
+          <span>Instalar App</span>
         </button>
       </>
     );
@@ -159,20 +165,23 @@ export default function InstallInstructions({
         style={{
           background: "var(--sand)",
           color: "#fff",
-          borderRadius: 10,
-          padding: "10px 16px",
-          fontSize: 14,
-          fontWeight: 700,
+          borderRadius: 12,
+          padding: "13px 18px",
+          fontSize: 15,
+          fontWeight: 800,
           width: "100%",
           border: "none",
           cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(239,159,39,0.4)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
+          gap: 8,
         }}
       >
-        <span>Ver como instalar</span>
-        <span className={`ib-chevron${iosExpanded ? " open" : ""}`}>▼</span>
+        <span style={{ fontSize: 19, lineHeight: 1 }}>📲</span>
+        <span>Instalar App</span>
+        <span className={`ib-chevron${iosExpanded ? " open" : ""}`} style={{ marginLeft: 2 }}>▼</span>
       </button>
 
       {iosExpanded && <div style={{ marginTop: 10 }}>{steps}</div>}

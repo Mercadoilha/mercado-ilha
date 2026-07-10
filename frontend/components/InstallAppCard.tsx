@@ -6,9 +6,11 @@ import InstallInstructions from "./InstallInstructions";
 
 type Props = {
   adminWa: string;
+  /** Versión compacta (menos espacio vertical), para el perfil. */
+  compact?: boolean;
 };
 
-export default function InstallAppCard({ adminWa }: Props) {
+export default function InstallAppCard({ adminWa, compact = false }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [standalone, setStandalone] = useState(false);
@@ -41,12 +43,12 @@ export default function InstallAppCard({ adminWa }: Props) {
   if (standalone || !platform) return null;
 
   return (
-    <section style={{ margin: "0 1rem 1.5rem" }}>
+    <section style={{ margin: compact ? "0.25rem 1rem 0.75rem" : "0 1rem 1.5rem" }}>
       <div style={{
         background: "#fff",
         border: "1px solid var(--border)",
         borderRadius: 12,
-        padding: "1rem",
+        padding: compact ? "0.75rem 1rem" : "1rem",
       }}>
         <button
           type="button"
