@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { whatsappUrl } from "../lib/adminSettings";
 
 type Props = {
@@ -14,6 +14,21 @@ type Props = {
 const helpMessage =
   "Olá! Estou com dificuldades para instalar o Mercado Ilha na tela de início. Pode me ajudar?";
 
+const ShareIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    style={{ verticalAlign: "middle", display: "inline-block" }}
+  >
+    <path d="M12 3v12M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M5 12v7a1 1 0 001 1h12a1 1 0 001-1v-7" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 export default function InstallInstructions({
   platform,
   onAndroidInstall,
@@ -22,31 +37,6 @@ export default function InstallInstructions({
   showIosToggle = true,
 }: Props) {
   const [iosExpanded, setIosExpanded] = useState(!showIosToggle);
-  const [browser, setBrowser] = useState<"safari" | "chrome">("safari");
-  const [iosVersion, setIosVersion] = useState<[number, number] | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (/CriOS/i.test(navigator.userAgent)) setBrowser("chrome");
-    const m = navigator.userAgent.match(/OS (\d+)(?:[._](\d+))?/);
-    if (m) setIosVersion([Number(m[1]), Number(m[2] || 0)]);
-  }, []);
-
-  // Antes do iOS 16.4 a Apple só permite instalar pelo Safari
-  const chromeBlocked =
-    iosVersion !== null && (iosVersion[0] < 16 || (iosVersion[0] === 16 && iosVersion[1] < 4));
-  // iPhones com iOS antigo têm telas diferentes no Safari
-  const safariVideo = iosVersion !== null && iosVersion[0] < 26 ? "instalar-safari-antigo" : "instalar-safari";
-  const videoSrc = browser === "safari" ? safariVideo : "instalar-chrome";
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.origin);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   const style = (
     <style>{`
@@ -99,90 +89,40 @@ export default function InstallInstructions({
     >
       <div style={{ padding: 12 }}>
         <div style={{ fontSize: 13, color: "#1a3a5c", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>
-          Veja no vídeo como instalar. Qual navegador você usa?
+          É preciso estar no <strong>Safari</strong> para instalar. Se você está em outro
+          navegador, abra este site pelo Safari e veja no vídeo como fazer:
         </div>
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
-          {(["safari", "chrome"] as const).map((b) => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => setBrowser(b)}
-              style={{
-                padding: "7px 18px",
-                borderRadius: 20,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                border: browser === b ? "1.5px solid var(--blue-main)" : "1.5px solid var(--border)",
-                background: browser === b ? "var(--blue-main)" : "#fff",
-                color: browser === b ? "#fff" : "var(--text-muted)",
-              }}
-            >
-              {b === "safari" ? "Safari" : "Chrome"}
-            </button>
-          ))}
-        </div>
+        <video
+          src="/videos/instalar-safari.mp4"
+          muted
+          loop
+          playsInline
+          controls
+          preload="auto"
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: 240,
+            margin: "0 auto",
+            borderRadius: 12,
+            border: "1px solid var(--blue-light)",
+            background: "var(--blue-main)",
+          }}
+        />
 
-        {browser === "chrome" && chromeBlocked ? (
-          <div
-            style={{
-              background: "var(--blue-xlight)",
-              border: "1px solid var(--blue-light)",
-              borderRadius: 12,
-              padding: 14,
-              fontSize: 13,
-              color: "#1a3a5c",
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              ⚠️ Neste iPhone, o Chrome não permite instalar o app.
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              É preciso usar o Safari: copie o link do site, abra o Safari, cole o link na
-              barra de endereço e siga o vídeo do Safari.
-            </div>
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              style={{
-                display: "block",
-                width: "100%",
-                background: copied ? "var(--green-dark, #0F6E56)" : "var(--blue-main)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "10px 14px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {copied ? "Link copiado ✓" : "Copiar link do site"}
-            </button>
-          </div>
-        ) : (
-          <video
-            key={videoSrc}
-            src={`/videos/${videoSrc}.mp4`}
-            autoPlay
-            muted
-            loop
-            playsInline
-            controls
-            preload="metadata"
-            style={{
-              display: "block",
-              width: "100%",
-              maxWidth: 240,
-              margin: "0 auto",
-              borderRadius: 12,
-              border: "1px solid var(--blue-light)",
-              background: "var(--blue-main)",
-            }}
-          />
-        )}
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 12,
+            color: "#1a3a5c",
+            lineHeight: 1.5,
+            textAlign: "center",
+          }}
+        >
+          Se o seu iPhone é anterior ao iPhone 11, o símbolo <ShareIcon /> fica na barra
+          inferior do navegador. Os passos seguintes são iguais aos do vídeo.
+        </div>
       </div>
 
       {adminWhatsApp && (
