@@ -107,6 +107,11 @@ body {
 @media (display-mode: standalone) {
   #browser-splash { display: none; }
 }
+/* Excepción Android instalado: su splash nativo solo muestra el ícono (la bolsa) y no admite
+   imagen propia. Mostramos la cortina con el logo completo (bolsa + "Mercado Ilha" + "Tinharé")
+   para igualar el splash de iPhone. La clase android-pwa la pone un script en <head> antes del
+   primer paint. El id da specificity suficiente para vencer al display:none de arriba. */
+html.android-pwa #browser-splash { display: flex; }
 /* Respeta la preferencia de menos movimiento: sin cortina animada */
 @media (prefers-reduced-motion: reduce) {
   #browser-splash { display: none; }

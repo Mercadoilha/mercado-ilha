@@ -50,6 +50,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <head>
+        {/* Android PWA: el splash nativo solo pinta el ícono cuadrado (la bolsa), no admite
+            imagen propia como iOS. Este script (síncrono, corre antes del primer paint) marca
+            <html> cuando es Android instalado; el CSS muestra ahí la cortina con el logo
+            completo (igual al splash de iPhone). Solo togglea una clase: si fallara, la cortina
+            queda oculta (comportamiento actual) — nunca puede trabar la app. El fade sigue
+            siendo 100% CSS. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(/android/i.test(navigator.userAgent)&&matchMedia('(display-mode: standalone)').matches){document.documentElement.className+=' android-pwa'}}catch(e){}",
+          }}
+        />
         {/* Pre-establish connections to external services before JS executes */}
         <link rel="preconnect" href="https://ywminblmiwjsxbntszbc.supabase.co" />
         <link rel="dns-prefetch" href="https://ywminblmiwjsxbntszbc.supabase.co" />
