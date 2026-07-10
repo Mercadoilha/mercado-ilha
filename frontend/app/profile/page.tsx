@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { getCachedProfile, setCachedProfile } from "../../lib/profileCache";
+import { getAdminSettings } from "../../lib/adminSettings";
 import AvatarUpload from "../../components/AvatarUpload";
+import InstallAppCard from "../../components/InstallAppCard";
 import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
 import ShareIcon from "../../components/ShareIcon";
@@ -16,6 +18,7 @@ export default function ProfilePage() {
   const { session, sessionLoading } = useSession();
 
   const [profile, setProfile] = useState<any>(null);
+  const [adminWa, setAdminWa] = useState("");
   const [myListings, setMyListings] = useState<any[]>([]);
   const [statsMap, setStatsMap] = useState<Record<number, { views: number; wa_clicks: number }>>({});
   const [loading, setLoading] = useState(true);
@@ -107,6 +110,10 @@ export default function ProfilePage() {
     load();
     return () => { mounted = false; };
   }, [session, sessionLoading]);
+
+  useEffect(() => {
+    getAdminSettings().then((s) => setAdminWa(s.whatsapp));
+  }, []);
 
   const saveProfile = async () => {
     if (!session) return;
@@ -391,6 +398,11 @@ export default function ProfilePage() {
               <ShareIcon /> Compartilhar minha loja
             </button>
           )}
+        </div>
+
+        {/* ── Instalar app (some sozinha quando já está instalado) ── */}
+        <div style={{ margin: "0 -1rem" }}>
+          <InstallAppCard adminWa={adminWa} />
         </div>
 
         {/* ── Meus anúncios ── */}
