@@ -94,11 +94,6 @@ export default function InstallInstructions({
       }}
     >
       <div style={{ padding: 12 }}>
-        <div style={{ fontSize: 13, color: "#1a3a5c", textAlign: "center", marginBottom: 10, lineHeight: 1.4 }}>
-          É preciso estar no <strong>Safari</strong> para instalar. Se você está em outro
-          navegador, abra este site pelo Safari e veja no vídeo como fazer:
-        </div>
-
         <video
           src="/videos/instalar-safari.mp4"
           muted

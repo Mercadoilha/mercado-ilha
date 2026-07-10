@@ -600,6 +600,49 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-10** — **Video de instalación (iPhone/Safari) reeditado + arreglos del flujo de
+  instalación.** ⚠️ En el repo, **sin desplegar aún** (falta build+commit+push).
+  - `public/videos/instalar-safari.mp4` reemplazado por una reedición hecha con ffmpeg desde el
+    crudo procesado: **intro de 1s** (primer cuadro congelado para que el espectador se ubique),
+    **datos personales difuminados** (la fila de contactos de la hoja de compartir), y las marcas
+    de "dónde tocar" ahora con la **forma del botón** — pill en "Adicionar", recuadro redondeado
+    en las filas "Compartir" y "Adicionar à Tela de Início"; los toques sobre botones redondos
+    (3 puntitos, "Ver mais") siguen circulares. Técnica: el círculo naranja pulsante estaba
+    quemado en el video → se borró con un "plate" limpio (cuadro del valle del pulso, UI estática)
+    y se redibujó el contorno correcto como overlay PNG pulsante. Crudos en
+    `Mercado Ilha Info/Videos instalacion iphone/` (fuera del repo).
+  - **`public/logo-dark.svg` nuevo**: wordmark "Mercado Ilha"/"Tinharé" en negro (`#1a1a1a`),
+    ícono de la bolsa intacto (los 2 blancos del ícono se conservan; los 18 del texto → negro).
+    Para fondos claros: usado en el popup (`InstallInvitePopup.tsx`) y en `/instalar`
+    (`InstalarClient.tsx`) — el texto blanco era invisible sobre blanco (afectaba iOS **y Android**;
+    la pantalla que se abre en Chrome es la misma `/instalar`). El home (`HomeClient.tsx`) y la
+    cortina de carga (`app/layout.tsx`) siguen con `logo.svg` blanco sobre azul.
+  - **Popup de invitación** (`InstallInvitePopup.tsx`): ahora aparece **máximo 1 vez por día**
+    (localStorage `install_popup_last_shown_at`, 24 h). Antes aparecía en cada apertura.
+  - `InstallInstructions.tsx`: **quitado** el texto "É preciso estar no Safari…" que iba encima
+    del video. Build OK, `/instalar` sigue `○ Static` (4.33 kB).
+- **2026-07-10** — `OPTIMIZATION_MASTER_PLAN_V3.md` creado (sin código, auditoría del código en
+  producción para escalar a 1000+ usuarios manteniendo el mantenimiento 100% gratis) y **Fase 0
+  (T0, foto inicial de consumo) completada** — datos aportados por el usuario desde los paneles:
+  - **Vercel Usage (plan Hobby, ciclo actual)**: Fast Data Transfer 388.54MB/100GB (0.4%), Fast
+    Origin Transfer 72.31MB/10GB (0.7%), Edge Requests 30K/1M (3%), ISR Reads 6K/1M (0.6%), ISR
+    Writes 2.3K/200K (1.2%), Function Invocations 7.5K/1M (0.75%), Image Transformations
+    177/5K (3.5%), Image Cache Reads 773/300K (0.3%), Image Cache Writes 1.5K/100K (1.5%),
+    Speed Insights Data Points 281/10K (2.8%). **Ninguno cerca del umbral de alerta (70%).**
+  - **Supabase (plan free)**: DB size 0.03GB/500MB (6%), Egress 0.033GB/5GB (0.7%), 8 MAU.
+    Filas de tracking: `listing_views` 209, `search_queries` 29, `whatsapp_clicks` 83,
+    `banner_clicks` 15 — chico hoy, pero **crece sin retención** (confirmado en el código, T1
+    del plan V3 lo resuelve).
+  - **Speed Insights (mobile, 24h, activado hace poco → solo `/` tiene muestras)**: RES 97
+    (Great), FCP 2.04s, LCP 2.11s, INP 104ms, **CLS 0** (vs. 0.47 "Poor" medido el 2026-07-08
+    antes del plan V2 — parece resuelto, a confirmar con más muestras), FID 37ms, TTFB 0.25s,
+    41 visitas. `/listings`, `/listings/[id]`, `/store/[id]` **pendientes de medir** (sin
+    tráfico suficiente aún en la ventana de 24h) — retomar junto con la Fase 5 del plan V2
+    (T14) agendada para el 2026-07-20.
+  - Prefetch de cards (`_rsc`, dato para la Contingencia C3 del plan V3): **salteado** por
+    decisión del usuario, no bloqueante.
+  - **Umbral de alerta fijado: 70% de cualquier cupo** → dispara T11/C1/C2/C3 del plan V3.
+    Con los números de hoy, nada se activa. Próximo paso del plan V3: **Fase 1 (T1-T3)**.
 - **2026-07-08** — **Cortina azul al abrir desde el navegador**, **desplegado** (commit
   `a95098c`, push a `main`). Pedida por el usuario tras cerrar (por ahora) el plan V2.
   Div + script inline en `app/layout.tsx` + CSS en `globals.css` con `@media (display-mode:

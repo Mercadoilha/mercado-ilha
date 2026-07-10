@@ -7,11 +7,14 @@ import InstallCtaButton from "./InstallCtaButton";
 /**
  * Popup de invitación a instalar, al abrir la app en el navegador (no instalada).
  * Se monta diferido desde el home para no afectar el LCP: espera un instante tras
- * el render principal antes de aparecer. Aparece CADA vez que se abre la app sin
- * instalar (iPhone y Android); cerrarlo solo lo descarta en esta apertura (queda en
- * la pantalla principal). El botón usa InstallCtaButton, así Android instala en el
- * acto y iPhone va a /instalar (donde se resuelve Safari).
+ * el render principal antes de aparecer. Aparece como máximo UNA vez por día (iPhone
+ * y Android); cerrarlo solo lo descarta en esta apertura (queda en la pantalla
+ * principal). El botón usa InstallCtaButton, así Android instala en el acto y iPhone
+ * va a /instalar (donde se resuelve Safari).
  */
+const POPUP_KEY = "install_popup_last_shown_at";
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 export default function InstallInvitePopup() {
   const [visible, setVisible] = useState(false);
 
@@ -19,8 +22,24 @@ export default function InstallInvitePopup() {
     if (isStandalone()) return;
     if (detectPlatform() === "other") return; // solo celulares
 
+    // Máximo una vez por día: si ya se mostró en las últimas 24 h, no reaparece.
+    let last = 0;
+    try {
+      last = Number(localStorage.getItem(POPUP_KEY)) || 0;
+    } catch {
+      last = 0;
+    }
+    if (Date.now() - last < ONE_DAY_MS) return;
+
     // Diferido: no compite con la carga inicial del home.
-    const t = setTimeout(() => setVisible(true), 1400);
+    const t = setTimeout(() => {
+      setVisible(true);
+      try {
+        localStorage.setItem(POPUP_KEY, String(Date.now()));
+      } catch {
+        /* localStorage no disponible: se mostrará igual, sin recordar */
+      }
+    }, 1400);
     return () => clearTimeout(t);
   }, []);
 
@@ -58,7 +77,7 @@ export default function InstallInvitePopup() {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="Mercado Ilha" style={{ height: 56, width: "auto", marginBottom: 12 }} />
+        <img src="/logo-dark.svg" alt="Mercado Ilha" style={{ height: 56, width: "auto", marginBottom: 12 }} />
         <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--blue-main)", marginBottom: 6 }}>
           Instale o Mercado Ilha
         </div>

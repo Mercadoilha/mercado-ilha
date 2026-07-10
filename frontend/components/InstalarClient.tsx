@@ -146,7 +146,7 @@ export default function InstalarClient() {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.svg"
+          src="/logo-dark.svg"
           alt="Mercado Ilha"
           style={{ height: 84, width: "auto", marginBottom: 16 }}
         />
