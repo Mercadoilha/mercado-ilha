@@ -26,6 +26,7 @@ export default function StorePage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   // Vendedor + anúncios não dependem da sessão: disparam de imediato, em
   // uma única tanda concorrente (sem esperar getSession()).
@@ -140,6 +141,7 @@ export default function StorePage() {
         }}
       >
         <div
+          onClick={() => { if (seller.avatar_url) setAvatarOpen(true); }}
           style={{
             width: 72,
             height: 72,
@@ -152,6 +154,7 @@ export default function StorePage() {
             margin: "0 auto 0.75rem",
             overflow: "hidden",
             border: "2px solid rgba(255,255,255,0.5)",
+            cursor: seller.avatar_url ? "zoom-in" : "default",
           }}
         >
           {seller.avatar_url ? (
@@ -163,92 +166,87 @@ export default function StorePage() {
           Membro desde {memberSince} · {listings.length} anúncio{listings.length !== 1 ? "s" : ""} ativo{listings.length !== 1 ? "s" : ""}
         </div>
 
-        {seller && (
-          sellerPhone ? (
-            <a
-              href={buildWaUrl(sellerPhone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => trackWhatsappClick(null, "store")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                marginTop: 12,
-                background: "#25d366",
-                color: "#fff",
-                padding: "0.5rem 1.25rem",
-                borderRadius: 999,
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                border: "none",
-                cursor: "pointer",
-                textDecoration: "none",
-              }}
-            >
-              💬 Falar com o vendedor
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (!session) { router.push("/signin?msg=contact"); return; }
-                alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                marginTop: 12,
-                background: "#25d366",
-                color: "#fff",
-                padding: "0.5rem 1.25rem",
-                borderRadius: 999,
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              💬 Falar com o vendedor
-            </button>
-          )
-        )}
+        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          {seller && (
+            sellerPhone ? (
+              <a
+                href={buildWaUrl(sellerPhone, `Olá ${seller.full_name}! Vi sua loja no Mercado Ilha.`)}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackWhatsappClick(null, "store")}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#25d366",
+                  color: "#fff",
+                  padding: "0.5rem 1rem",
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: "0.875rem",
+                  border: "none",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                💬 Falar com o vendedor
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!session) { router.push("/signin?msg=contact"); return; }
+                  alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#25d366",
+                  color: "#fff",
+                  padding: "0.5rem 1rem",
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: "0.875rem",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                💬 Falar com o vendedor
+              </button>
+            )
+          )}
 
-        <button
-          type="button"
-          onClick={() =>
-            compartilhar({
-              title: "Loja de " + seller.full_name + " — Mercado Ilha",
-              text: "Confira a loja de " + seller.full_name + " no Mercado Ilha!",
-              url: window.location.href,
-            })
-          }
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 8,
-            background: "transparent",
-            color: "#fff",
-            padding: "0.5rem 1.25rem",
-            borderRadius: 999,
-            fontWeight: 700,
-            fontSize: "0.875rem",
-            border: "2px solid rgba(255,255,255,0.7)",
-            cursor: "pointer",
-          }}
-        >
-          <ShareIcon /> Compartilhar loja
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              compartilhar({
+                title: "Loja de " + seller.full_name + " — Mercado Ilha",
+                text: "Confira a loja de " + seller.full_name + " no Mercado Ilha!",
+                url: window.location.href,
+              })
+            }
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "transparent",
+              color: "#fff",
+              padding: "0.5rem 1rem",
+              borderRadius: 999,
+              fontWeight: 700,
+              fontSize: "0.875rem",
+              border: "2px solid rgba(255,255,255,0.7)",
+              cursor: "pointer",
+            }}
+          >
+            <ShareIcon /> Compartilhar loja
+          </button>
+        </div>
       </div>
 
       {/* Anúncios */}
-      <div style={{ padding: "1rem 0" }}>
-        <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "0 1rem 0.75rem" }}>
-          Anúncios ativos
-        </h2>
-
+      <div style={{ padding: "0.5rem 0 1rem" }}>
         {listings.length === 0 ? (
           <div className="card" style={{ margin: "0 1rem", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
             <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
@@ -269,6 +267,40 @@ export default function StorePage() {
           </div>
         )}
       </div>
+
+      {/* Visor da foto do vendedor ampliada */}
+      {avatarOpen && seller.avatar_url && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setAvatarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.92)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setAvatarOpen(false)}
+            style={{ position: "absolute", top: 12, right: 16, background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: "50%", width: 36, height: 36, fontSize: "1.1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={seller.avatar_url}
+            alt={seller.full_name}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "90vw", maxHeight: "85vh", width: "auto", height: "auto", borderRadius: 12, objectFit: "contain" }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -357,7 +357,7 @@ export default function ListingDetailPage() {
   const isOwner = !!listing.user_id && session?.user?.id === listing.user_id;
 
   return (
-    <div className="page-body">
+    <div className="page-body" style={{ background: "#fff" }}>
       {/* Header */}
       <header className="page-header">
         <button
@@ -395,12 +395,12 @@ export default function ListingDetailPage() {
       </header>
 
       {/* ── Galería de fotos ── */}
-      <div style={{ position: "relative", background: "#e8eef6" }}>
+      <div style={{ position: "relative", background: "#fff" }}>
         {photos.length > 0 ? (
           <>
             <div
               onClick={() => openLightbox(photoIdx)}
-              style={{ position: "relative", width: "100%", height: "clamp(200px, 65vh, 600px)", background: "#fff", cursor: "zoom-in" }}
+              style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "#fff", cursor: "zoom-in" }}
             >
               <Image
                 src={photos[photoIdx]?.photo_url}
@@ -472,17 +472,15 @@ export default function ListingDetailPage() {
       {/* ── Info principal ── */}
       <div style={{ padding: "1rem" }}>
 
-        {/* Badges */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-          {category && <span className="badge badge-blue">{category.name}</span>}
-          {subcategory && <span className="badge badge-blue">{subcategory.name}</span>}
-          {listing.condition && <span className="badge badge-sand">{listing.condition}</span>}
+        {/* Título + condição (na mesma linha) + preço */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+          <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1e293b", lineHeight: 1.3 }}>
+            {listing.title}
+          </h2>
+          {listing.condition && (
+            <span className="badge badge-sand" style={{ flexShrink: 0, marginTop: 2 }}>{listing.condition}</span>
+          )}
         </div>
-
-        {/* Título + precio */}
-        <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1e293b", lineHeight: 1.3, marginBottom: 6 }}>
-          {listing.title}
-        </h2>
         <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--blue-main)", marginBottom: 12 }}>
           {price}
         </div>
@@ -490,7 +488,7 @@ export default function ListingDetailPage() {
         {/* Descripción (skeleton mientras llega la query completa — T9) */}
         {fullyLoaded ? (
           listing.description ? (
-            <p style={{ fontSize: "0.95rem", color: "#475569", lineHeight: 1.65, marginBottom: 16 }}>
+            <p style={{ fontSize: "1.05rem", color: "#111", lineHeight: 1.65, marginBottom: 16 }}>
               {listing.description}
             </p>
           ) : null
@@ -502,15 +500,12 @@ export default function ListingDetailPage() {
           </div>
         )}
 
-        {/* Ubicación */}
+        {/* Ubicación (sem recuadro) */}
         <div
           style={{
             display: "flex",
             alignItems: "flex-start",
             gap: 8,
-            background: "var(--blue-xlight)",
-            borderRadius: 10,
-            padding: "0.75rem",
             marginBottom: 16,
           }}
         >
@@ -572,9 +567,12 @@ export default function ListingDetailPage() {
                 justifyContent: "center",
                 fontSize: "1.4rem",
                 flexShrink: 0,
+                overflow: "hidden",
               }}
             >
-              👤
+              {seller.avatar_url ? (
+                <Image src={seller.avatar_url} alt={seller.full_name} width={44} height={44} sizes="44px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : "👤"}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b" }}>{seller.full_name}</div>
