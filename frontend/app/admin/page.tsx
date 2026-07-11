@@ -511,6 +511,10 @@ function Reports() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
 
+  // Avisos de uso abusivo de fotos (fase-24)
+  const [abuseAlerts, setAbuseAlerts] = useState<any[]>([]);
+  const [abuseBusy, setAbuseBusy] = useState<number | null>(null);
+
   useEffect(() => {
     supabase
       .from("reports")
@@ -518,7 +522,20 @@ function Reports() {
       .order("created_at", { ascending: false })
       .limit(60)
       .then(({ data }) => { setReports(data ?? []); setLoading(false); });
+    supabase
+      .from("upload_abuse_alerts")
+      .select("id,user_id,photo_count,created_at,reviewed,profiles:user_id(full_name,whatsapp)")
+      .order("created_at", { ascending: false })
+      .limit(40)
+      .then(({ data }) => setAbuseAlerts(data ?? []));
   }, []);
+
+  const markAbuseReviewed = async (id: number) => {
+    setAbuseBusy(id);
+    await supabase.from("upload_abuse_alerts").update({ reviewed: true }).eq("id", id);
+    setAbuseAlerts((prev) => prev.map((a) => a.id === id ? { ...a, reviewed: true } : a));
+    setAbuseBusy(null);
+  };
 
   const resolve = async (id: number, status: "resolved" | "dismissed") => {
     setBusy(id);
@@ -541,8 +558,50 @@ function Reports() {
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
 
+  const pendingAbuse = abuseAlerts.filter((a) => !a.reviewed).length;
+
   return (
     <div>
+      {abuseAlerts.length > 0 && (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.875rem" }}>
+            ⚠️ Uso abusivo de fotos ({pendingAbuse} {pendingAbuse === 1 ? "novo" : "novos"})
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            {abuseAlerts.map((a) => (
+              <div key={a.id} className="card" style={{ padding: "0.875rem", borderLeft: `3px solid ${a.reviewed ? "#94a3b8" : "#f59e0b"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b" }}>
+                      {(a.profiles as any)?.full_name ?? "usuário"}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 3 }}>
+                      Subiu <strong style={{ color: "#b45309" }}>{a.photo_count} fotos</strong> em 1 hora
+                    </div>
+                    {(a.profiles as any)?.whatsapp && (
+                      <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 2 }}>
+                        WhatsApp: {(a.profiles as any).whatsapp}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 2 }}>
+                      {new Date(a.created_at).toLocaleString("pt-BR")}
+                    </div>
+                  </div>
+                  {a.reviewed
+                    ? <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#059669", flexShrink: 0 }}>visto</span>
+                    : (
+                      <button type="button" disabled={abuseBusy === a.id} onClick={() => markAbuseReviewed(a.id)}
+                        className="btn btn-ghost" style={{ padding: "0.3rem 0.65rem", fontSize: "0.72rem", border: "1px solid var(--border)", flexShrink: 0 }}>
+                        ✓ Marcar visto
+                      </button>
+                    )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.875rem" }}>
         Denúncias ({reports.filter((r) => r.status === "new").length} novas)
       </h2>

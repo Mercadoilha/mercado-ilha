@@ -235,6 +235,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Podar upload_events viejos (>1 día): solo se usan para contar la última hora
+  // (aviso de uso abusivo, fase-24). Fire-and-forget: si falla, no aborta el cron.
+  {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { error: upErr } = await supabase.from("upload_events").delete().lt("created_at", oneDayAgo);
+    if (upErr) console.error("[cron] prune upload_events error:", upErr);
+  }
+
   // ── PASO 3: Desativar os ativos que atingiram os 30 dias ──────────────────
   const { data: expiring, error } = await supabase
     .from("listings")
