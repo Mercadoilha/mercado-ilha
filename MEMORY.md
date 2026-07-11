@@ -601,7 +601,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-10** — **Video de instalación (iPhone/Safari) reeditado + arreglos del flujo de
-  instalación.** ⚠️ En el repo, **sin desplegar aún** (falta build+commit+push).
+  instalación.** **Desplegado** (commit `ec9769f`, push a `main`).
   - `public/videos/instalar-safari.mp4` reemplazado por una reedición hecha con ffmpeg desde el
     crudo procesado: **intro de 1s** (primer cuadro congelado para que el espectador se ubique),
     **datos personales difuminados** (la fila de contactos de la hoja de compartir), y las marcas
