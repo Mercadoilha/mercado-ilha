@@ -49,13 +49,18 @@ export async function POST(req: NextRequest) {
 
     if (!isAdmin) {
       if (listingId != null) {
-        // Listing photo: verify the user owns the listing
-        const { data: listing } = await supabaseAdmin
-          .from("listings")
-          .select("user_id")
-          .eq("id", listingId)
-          .single();
-        if (!listing || listing.user_id !== user.id) {
+        // Listing photo: the authority is the url itself, not the client-supplied
+        // listingId. Look up the photo by its url and confirm it belongs to a
+        // listing owned by this user. (Prevents deleting another user's photo by
+        // passing your own listingId + someone else's url.)
+        const { data: photo } = await supabaseAdmin
+          .from("listing_photos")
+          .select("listings!inner(user_id)")
+          .eq("photo_url", url)
+          .limit(1)
+          .maybeSingle();
+        const ownerId = (photo?.listings as any)?.user_id;
+        if (!ownerId || ownerId !== user.id) {
           return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
         }
       } else {
