@@ -222,6 +222,19 @@ export async function GET(req: NextRequest) {
   const { deleted, photosDeleted } = await purgeListings(supabase, purgeIds);
   if (deleted) console.log(`[cron] Purged ${deleted} listings, ${photosDeleted} R2 photos`);
 
+  // ── PASO 2.5: Podar tablas de tracking viejas (retención, fase-20) ────────
+  // Evita que listing_views/search_queries/banner_clicks crezcan sin tope y
+  // llenen la DB free. Fire-and-forget: si falla, no aborta el cron.
+  let trackingPruned: unknown = null;
+  {
+    const { data: pruned, error: pruneErr } = await supabase.rpc("prune_tracking");
+    if (pruneErr) console.error("[cron] prune_tracking error:", pruneErr);
+    else {
+      trackingPruned = pruned;
+      console.log("[cron] Pruned tracking:", pruned);
+    }
+  }
+
   // ── PASO 3: Desativar os ativos que atingiram os 30 dias ──────────────────
   const { data: expiring, error } = await supabase
     .from("listings")
@@ -241,6 +254,7 @@ export async function GET(req: NextRequest) {
       deleted,
       photos_deleted: photosDeleted,
       deletion_warnings_sent: warned,
+      tracking_pruned: trackingPruned,
     });
   }
 
@@ -256,5 +270,6 @@ export async function GET(req: NextRequest) {
     photos_deleted: photosDeleted,
     emails_sent: sent,
     deletion_warnings_sent: warned,
+    tracking_pruned: trackingPruned,
   });
 }

@@ -11,6 +11,7 @@ const TTL = 5 * 60 * 1000; // 5 min
 
 export type CatalogCategory = { id: number; slug: string; name: string; icon: string | null };
 export type CatalogLocality = { id: number; name: string };
+export type CatalogSubcategory = { id: number; name: string };
 
 type Cached<T> = { data: T; ts: number };
 
@@ -98,4 +99,38 @@ export async function loadLocalities(): Promise<CatalogLocality[]> {
     return rows;
   })();
   return locInFlight;
+}
+
+// ---------------- Subcategorías (T6 del plan V3) ----------------
+// Todo el catálogo (id, name) en una sola carga, igual que categorías: el label de
+// subcategoría en /listings pasa de 1 query por visita a 1 query cada 5 min.
+const SUBCAT_SS = "mi_subcat_catalog_v1";
+let subcatMem: Cached<CatalogSubcategory[]> | null = null;
+let subcatInFlight: Promise<CatalogSubcategory[]> | null = null;
+
+export function getSubcategoriesSync(): CatalogSubcategory[] | null {
+  const now = Date.now();
+  if (subcatMem && now - subcatMem.ts < TTL) return subcatMem.data;
+  const ss = readSS<CatalogSubcategory[]>(SUBCAT_SS);
+  if (ss && now - ss.ts < TTL) {
+    subcatMem = ss;
+    return ss.data;
+  }
+  return null;
+}
+
+export async function loadSubcategories(): Promise<CatalogSubcategory[]> {
+  const sync = getSubcategoriesSync();
+  if (sync) return sync;
+  if (subcatInFlight) return subcatInFlight;
+  subcatInFlight = (async () => {
+    const { data } = await supabase.from("subcategories").select("id, name");
+    const rows = (data ?? []) as CatalogSubcategory[];
+    const entry = { data: rows, ts: Date.now() };
+    subcatMem = entry;
+    writeSS(SUBCAT_SS, entry);
+    subcatInFlight = null;
+    return rows;
+  })();
+  return subcatInFlight;
 }

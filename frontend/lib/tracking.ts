@@ -63,7 +63,9 @@ export function trackListingView(listingId: number, profileId: string | null): v
       _listing_id: listingId,
       _profile_id: profileId,
       _visitor_ip: null,
-      _visitor_device: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      // El truncado real vive en la RPC (fase-20); esto es defensa en
+      // profundidad: el user-agent completo no lo usa ningún reporte.
+      _visitor_device: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 120) : null,
     })
     .then(() => {}, () => {});
 }

@@ -26,6 +26,10 @@ velocidad de navegación dentro de la página. El objetivo permanente es que la 
 ## Archivos de referencia — leerlos SIEMPRE al iniciar sesión
 - `MEMORY.md` — **fuente de verdad**: contexto completo, decisiones, categorías,
   geografía, diseño, rutas, optimizaciones. Leerlo antes de cualquier acción.
+- `manual_fable5.md` — **método de trabajo obligatorio**: patrones de razonamiento
+  de Fable 5 (verificar antes de creer, causa raíz, checklist de cierre,
+  anti-patrones). Todo modelo (Opus, Sonnet, etc.) debe leerlo y aplicarlo en
+  cada tarea de esta sesión.
 - `ORCHESTRADOR.md` — sistema multiagente de optimización/desarrollo (coordinador +
   6 subagentes con sus skills embebidas). Cargarlo cuando el usuario pida: optimizar
   rendimiento, analizar navegación, agregar features, arreglar queries, mejorar PWA, o

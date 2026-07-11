@@ -14,8 +14,12 @@
 //   rutas privadas (/publish, /profile, /admin) ni /api/auth; los payloads RSC siguen
 //   network-first (el race aplica SOLO a documentos HTML de apertura, no a la navegación
 //   client-side, para respetar el ISR de 60s). Subir CACHE_VERSION en cada cambio.
+// v7 (Fase 5 V3 · T12): IMAGES_LIMIT 60 → 150. Con 60, una sola pasada por /listings (hasta
+//   60 cards) podía llenar/evacuar el caché de imágenes entero, y la visita siguiente re-baja
+//   todo del edge (latencia en 4G + edge requests contra el cupo). 150 cubre navegar varias
+//   vistas sin desalojar (~2–5 MB extra de storage, acotado). Estrategias por tipo intactas.
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE = `mi-static-${CACHE_VERSION}`; // shell, íconos, /_next/static (inmutable)
 const PAGES_CACHE = `mi-pages-${CACHE_VERSION}`;   // navegaciones HTML + payloads RSC
 const IMAGES_CACHE = `mi-images-${CACHE_VERSION}`; // /_next/image + fotos R2
@@ -25,7 +29,7 @@ const CURRENT_CACHES = [STATIC_CACHE, PAGES_CACHE, IMAGES_CACHE, DATA_CACHE];
 
 // Topes por caché (LRU simple por orden de inserción) — mantiene el storage acotado.
 const PAGES_LIMIT = 30;
-const IMAGES_LIMIT = 60;
+const IMAGES_LIMIT = 150;
 const DATA_LIMIT = 16;
 
 // Cuánto espera una navegación CON caché a que la red fresca gane antes de servir el
@@ -71,7 +75,7 @@ self.addEventListener('activate', (e) => {
       if (self.registration.navigationPreload) {
         try { await self.registration.navigationPreload.enable(); } catch (err) {/* no soportado */}
       }
-      // Borrar caches de versiones anteriores (v5 → v6 limpia mi-*-v5).
+      // Borrar caches de versiones anteriores (v6 → v7 limpia mi-*-v6).
       const keys = await caches.keys();
       await Promise.all(
         keys.filter((k) => !CURRENT_CACHES.includes(k)).map((k) => caches.delete(k))

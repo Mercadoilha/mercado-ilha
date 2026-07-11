@@ -600,6 +600,59 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-11** — **OPTIMIZATION_MASTER_PLAN_V3: Fases 1 a 5 (T1-T10, T12) desplegadas.**
+  **Desplegado** (commit pendiente de completar tras el push). T13 evaluada y descartada
+  por decisión del usuario ("ya funciona super bien", beneficio incremental vs. riesgo de
+  frescura — el propio plan recomendaba no hacerla ante la duda). T11 no se ejecutó:
+  condicional a que la Fase 0/6 muestre >70% del cupo de Image Transformations, no se dio.
+  T14 (guardarraíl mensual, sin código) queda agendada para 2026-07-20.
+  - **Fase 1 — DB lista para volumen** (`supabase/fase-20-retencion-tracking.sql`,
+    `fase-21-indices-escala.sql`, `fase-22-rls-initplan.sql`, ya corridos por el usuario en
+    sesión previa): retención de tracking (`prune_tracking()` enganchada al cron de
+    `expire-listings`, purga `listing_views` >90d / `search_queries` y `banner_clicks`
+    >180d; `whatsapp_clicks` NO se poda), índices parciales `WHERE status='active'` para
+    las 3 formas de la query caliente de listas, y políticas RLS reescritas con
+    `(select auth.uid())`/`(select is_admin())` + `to authenticated` en `listings`,
+    `listing_photos`, `listing_service_zones`, `favorites` (menos costo por fila, matriz de
+    seguridad verificada: anónimo solo ve `active`, dueño ve todo lo propio, admin ve todo).
+  - **Fase 2 — Profundidad de catálogo**: paginación keyset (`created_at`+`id` como
+    cursor, NO offset) en `/listings` con botón "Carregar mais anúncios"
+    (`ListingsClient.tsx`, `listingsApi.ts`); mismo patrón con `.limit(30)` + "Ver mais" en
+    `/store/[id]`; recorte de queries repetidas (skip de revalidación si el caché tiene
+    <60s, alineado al ISR; cache de nombres de subcategoría en `catalogCache.ts`).
+  - **Fase 3 — INP bajo interacción**: la persistencia de `sessionStorage` en
+    `listingsCache.ts` se partió en clave `meta` (scroll/filtros, escritura sync barata) y
+    clave `results` (grande, se escribe en `requestIdleCallback`/`pagehide`/
+    `visibilitychange`, fuera del camino del click); `onToggleFavorite` con referencia
+    estable (ya no re-renderiza las 60 cards por cada toggle); `pointer-events: none` en la
+    cortina azul de entrada (`#browser-splash`, `globals.css`) para que los taps tempranos
+    no se pierdan.
+  - **Fase 4 — Imágenes a escala**: `deviceSizes`/`imageSizes` de `next.config.mjs`
+    acotados al layout real (máx 480px CSS, DPR 3 → 1440px techo útil), sacando variantes
+    ≥1920px que ningún dispositivo pedía. T11 (servir solo WebP) NO se activó (condicional
+    no cumplida).
+  - **Fase 5 — SW v7**: `CACHE_VERSION` v6→v7, `IMAGES_LIMIT` 60→150 (una sola pasada por
+    `/listings` ya no desaloja el caché de imágenes entero); propaga a dispositivos ya
+    instalados vía `updateViaCache: "none"` (`RegisterSW.tsx`) sin necesidad de reinstalar.
+  - Cada fase verificada con `npm run build` (rutas se mantienen `○`/ISR) antes de
+    acumular la siguiente; deploy único al final de las 5 fases (decisión del usuario:
+    acumular en vez de desplegar fase por fase).
+- **2026-07-11** — **Unificado el botón "Instalar App" del home y del perfil con el de la
+  pantalla "Entrar".** **Desplegado** (commit pendiente de completar tras el push).
+  - Antes: `/` y `/profile` mostraban `InstallAppCard` (tarjeta desplegable con instrucciones
+    paso a paso). `/signin` mostraba `InstallSigninStrip` (franja azul "Instale o Mercado Ilha" +
+    botón naranja "Instalar App" vía `InstallCtaButton`, que ya resolvía Android con prompt nativo
+    e iPhone/otros llevando a `/instalar`).
+  - Ahora los tres usan **el mismo componente `InstallSigninStrip`**: visual y funcionamiento
+    100% idénticos en las tres pantallas (decisión del usuario: no quería variantes distintas).
+  - `HomeClient.tsx`: la franja quedó en el mismo lugar donde estaba la tarjeta vieja (después de
+    "Informação útil", antes de "Fale conosco") — el usuario eligió **no** moverla arriba de todo.
+  - `app/profile/page.tsx`: la franja se movió **arriba de todo, antes del header azul** ("Meu
+    perfil" y también en el estado "no logueado"), igual ubicación relativa que en `/signin`.
+  - `InstallAppCard.tsx` **eliminado** (quedó sin ningún uso tras el cambio). `InstallInstructions.tsx`
+    se conserva porque lo sigue usando `/instalar` (`InstalarClient.tsx`).
+  - Verificado con `npm run build` (`/` y `/profile` siguen `○ Static`) y con screenshots
+    Playwright/Chromium de las tres rutas en local, comparando visualmente la franja.
 - **2026-07-10** — **Video de instalación (iPhone/Safari) reeditado + arreglos del flujo de
   instalación.** **Desplegado** (commit `ec9769f`, push a `main`).
   - `public/videos/instalar-safari.mp4` reemplazado por una reedición hecha con ffmpeg desde el

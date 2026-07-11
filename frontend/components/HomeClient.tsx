@@ -11,7 +11,7 @@ import ShareIcon from "./ShareIcon";
 import BuscaAutocomplete from "./BuscaAutocomplete";
 import MaresWidget from "./MaresWidget";
 import BarcosWidget from "./BarcosWidget";
-import InstallAppCard from "./InstallAppCard";
+import InstallSigninStrip from "./InstallSigninStrip";
 import InstallInvitePopup from "./InstallInvitePopup";
 import ListingCard from "./ListingCard";
 import { getListingsCache, setListingsCache, LISTINGS_RESULTS_TTL } from "../lib/listingsCache";
@@ -331,7 +331,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
         <BarcosWidget />
       </section>
 
-      <InstallAppCard adminWa={adminWa} />
+      <InstallSigninStrip />
 
       {/* ── Fale conosco ── */}
       <section style={{ margin: "1.5rem 1rem 1rem" }}>

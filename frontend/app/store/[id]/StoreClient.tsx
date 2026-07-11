@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +12,14 @@ import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import ListingCard from "../../../components/ListingCard";
 import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
+import { cursorFromLast, applyKeysetCursor } from "../../../lib/listingsApi";
+
+// Tamaño de página de la tienda (T5 del plan V3). Menor que /listings (60) porque
+// acá no hay 2 columnas de filtros previos: la lista es más corta en general.
+const STORE_PAGE_SIZE = 30;
+
+const STORE_SELECT =
+  "id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name)";
 
 export default function StorePage() {
   const params = useParams();
@@ -27,6 +35,20 @@ export default function StorePage() {
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  // T5: paginación "Ver mais anúncios" (keyset por created_at, id). totalCount es el
+  // conteo exacto de activos del vendedor (para el encabezado "X anúncios ativos"),
+  // independiente de cuántos haya cargados en pantalla.
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // T8: refs para que toggleFavorite tenga deps estables ([]) y no se recree
+  // (ni re-renderice todas las ListingCard) en cada toggle. Mismo patrón que
+  // app/listings/ListingsClient.tsx.
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   // Vendedor + anúncios não dependem da sessão: disparam de imediato, em
   // uma única tanda concorrente (sem esperar getSession()).
@@ -39,12 +61,14 @@ export default function StorePage() {
         supabase.from("profiles_public").select("id,full_name,avatar_url,created_at").eq("id", sellerId).single(),
         supabase
           .from("listings")
-          .select("id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name)")
+          .select(STORE_SELECT, { count: "exact" })
           .order("sort_order", { referencedTable: "listing_photos" })
           .limit(1, { referencedTable: "listing_photos" })
           .eq("user_id", sellerId)
           .eq("status", "active")
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false }) // desempate estable para el keyset
+          .limit(STORE_PAGE_SIZE),
       ]);
 
       if (!mounted) return;
@@ -55,14 +79,43 @@ export default function StorePage() {
         setLoading(false);
         return;
       }
+      const rows = listingsRes.data ?? [];
       setSeller(sellerRes.data);
-      setListings(listingsRes.data ?? []);
+      setListings(rows);
+      setTotalCount(listingsRes.count ?? rows.length);
+      setHasMore(rows.length >= STORE_PAGE_SIZE);
       setLoading(false);
     }
 
     load();
     return () => { mounted = false; };
   }, [sellerId]);
+
+  // T5: trae la siguiente página por cursor keyset. Sin extras/fusión (a diferencia
+  // de /listings): 1 sola query, todo lo del vendedor ya viene filtrado por user_id.
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    const cursor = cursorFromLast(listings);
+    if (!cursor) return;
+    setLoadingMore(true);
+    let q = supabase
+      .from("listings")
+      .select(STORE_SELECT)
+      .order("sort_order", { referencedTable: "listing_photos" })
+      .limit(1, { referencedTable: "listing_photos" })
+      .eq("user_id", sellerId)
+      .eq("status", "active");
+    q = applyKeysetCursor(q, cursor);
+    const { data, error: e } = await q
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(STORE_PAGE_SIZE);
+    if (e) { setError(e.message); setLoadingMore(false); return; }
+    const rows = data ?? [];
+    setListings((prev) => [...prev, ...rows]);
+    setHasMore(rows.length >= STORE_PAGE_SIZE);
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, listings, sellerId]);
 
   // Favoritos desde o caché de sessão (T8): resolve em efeito próprio quando
   // há sessão, sem bloquear o load de vendedor+anúncios acima.
@@ -84,8 +137,9 @@ export default function StorePage() {
   }, [session, seller?.id]);
 
   const toggleFavorite = useCallback(async (listingId: number) => {
+    const session = sessionRef.current;
     if (!session) { router.push("/signin?msg=contact"); return; }
-    const isFav = favoriteIds.has(listingId);
+    const isFav = favoriteIdsRef.current.has(listingId);
     setBusyIds((c) => [...c, listingId]);
     if (isFav) {
       const { error: e } = await supabase.from("favorites").delete().eq("listing_id", listingId).eq("profile_id", session.user.id);
@@ -95,7 +149,8 @@ export default function StorePage() {
       if (!e) { addFavorite(session.user.id, listingId); setFavoriteIds((c) => new Set([...c, listingId])); }
     }
     setBusyIds((c) => c.filter((id) => id !== listingId));
-  }, [session, favoriteIds, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   if (loading) return (
     <div className="page-body" style={{ display: "flex", justifyContent: "center", paddingTop: "4rem" }}>
@@ -163,7 +218,7 @@ export default function StorePage() {
         </div>
         <div style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 4 }}>{seller.full_name}</div>
         <div style={{ fontSize: "0.8rem", opacity: 0.85 }}>
-          Membro desde {memberSince} · {listings.length} anúncio{listings.length !== 1 ? "s" : ""} ativo{listings.length !== 1 ? "s" : ""}
+          Membro desde {memberSince} · {totalCount} anúncio{totalCount !== 1 ? "s" : ""} ativo{totalCount !== 1 ? "s" : ""}
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
@@ -264,6 +319,31 @@ export default function StorePage() {
                 onToggleFavorite={toggleFavorite}
               />
             ))}
+          </div>
+        )}
+
+        {hasMore && (
+          <div style={{ textAlign: "center", padding: "1.25rem 1rem 0.5rem" }}>
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{
+                width: "100%",
+                maxWidth: 320,
+                padding: "0.7rem 1rem",
+                borderRadius: 10,
+                border: "1px solid var(--blue-main)",
+                background: "#fff",
+                color: "var(--blue-main)",
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                cursor: loadingMore ? "default" : "pointer",
+                opacity: loadingMore ? 0.6 : 1,
+              }}
+            >
+              {loadingMore ? "Carregando…" : "Ver mais anúncios"}
+            </button>
           </div>
         )}
       </div>

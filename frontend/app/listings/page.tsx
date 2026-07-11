@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "../../lib/supabaseAdmin";
-import { LISTINGS_SELECT } from "../../lib/listingsApi";
+import { LISTINGS_SELECT, PAGE_SIZE } from "../../lib/listingsApi";
 import ListingsClient from "./ListingsClient";
 
 // T11 (plan V2): Server Component con ISR. El listado default (60 anuncios activos,
@@ -24,7 +24,8 @@ export default async function ListingsPage() {
     .limit(1, { referencedTable: "listing_photos" })
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(60);
+    .order("id", { ascending: false }) // desempate estable para el keyset (T4)
+    .limit(PAGE_SIZE);
 
   return <ListingsClient initialDefault={data ?? []} />;
 }

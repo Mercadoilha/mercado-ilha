@@ -94,6 +94,7 @@ body {
   justify-content: center;
   background: var(--blue-main);
   animation: browser-splash-out 700ms ease-out forwards;
+  pointer-events: none;
 }
 #browser-splash img {
   width: auto;

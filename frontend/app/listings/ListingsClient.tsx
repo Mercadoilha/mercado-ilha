@@ -18,8 +18,21 @@ import {
   LISTINGS_HARD_TTL,
   type ListingsCacheEntry,
 } from "../../lib/listingsCache";
-import { getCategoriesSync, loadCategories, getLocalitiesSync, loadLocalities } from "../../lib/catalogCache";
-import { LISTINGS_SELECT, DEFAULT_LISTINGS_KEY } from "../../lib/listingsApi";
+import {
+  getCategoriesSync,
+  loadCategories,
+  getLocalitiesSync,
+  loadLocalities,
+  getSubcategoriesSync,
+  loadSubcategories,
+} from "../../lib/catalogCache";
+import {
+  LISTINGS_SELECT,
+  DEFAULT_LISTINGS_KEY,
+  PAGE_SIZE,
+  cursorFromLast,
+  applyKeysetCursor,
+} from "../../lib/listingsApi";
 import { fold, foldWords, prefixFilter, MIN_WORD_DESC } from "../../lib/searchNorm";
 import {
   getCachedFavorites,
@@ -47,6 +60,16 @@ const SLUG_ICON_FALLBACK: Record<string, string> = {
   "beleza-e-bem-estar": "💅", "translados": "🚗", "envios": "📫",
   "gastronomia": "🍽️", "terrenos": "🌍", "casas": "🏡", "alugueis": "🔑",
 };
+
+// Orden "recentes": created_at desc, id desc como desempate (coincide con el keyset).
+const byRecent = (a: any, b: any) =>
+  a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id;
+
+// T6: ventana de "no vale la pena revalidar" alineada al revalidate=60 de
+// app/listings/page.tsx — con menos de 60s de antigüedad, el propio ISR de la vista
+// default garantiza que no hay nada más nuevo que traer. Se aplica también a vistas
+// con filtros (categoría/zona/condición): un caché tan fresco no gana nada refetcheando.
+const REVALIDATE_SKIP_MS = 60_000;
 
 // T11: `initialDefault` es el listado default (60 anuncios activos, orden created_at
 // desc) renderizado en el servidor por app/listings/page.tsx (Server Component ISR).
@@ -152,7 +175,7 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
     const seeded =
       showable ??
       (cacheKey === DEFAULT_LISTINGS_KEY && initialDefault.length > 0
-        ? { data: initialDefault, ts: Date.now() }
+        ? { data: initialDefault, ts: Date.now(), hasMore: initialDefault.length >= PAGE_SIZE }
         : null);
     initRef.current = { key: cacheKey, entry: seeded };
   }
@@ -163,6 +186,9 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(!initRef.current.entry);
   const [refreshing, setRefreshing] = useState(false);
+  // T4: paginación "Carregar mais". hasMore = quedan páginas; loadingMore = trayendo.
+  const [hasMore, setHasMore] = useState<boolean>(!!initRef.current.entry?.hasMore);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [categoryLabel, setCategoryLabel] = useState("");
@@ -176,7 +202,18 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
   listingsRef.current = listings;
   const keyRef = useRef(cacheKey);
   keyRef.current = cacheKey;
+  // T8: refs de favoriteIds/session para que toggleFavorite tenga deps estables
+  // ([]) y no se recree (ni re-renderice las ~60 ListingCard) en cada toggle.
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
   const lastScrollRef = useRef(0);
+  // T4: primera corrida del efecto de carga (para no colapsar el acumulado al volver
+  // del detalle) y contexto de la query actual para reusar en "Carregar mais".
+  const firstRunRef = useRef(true);
+  const catIdRef = useRef<number | null>(null);
+  const zoneOrRef = useRef<string | null>(null);
 
   // Persistir el estado de filtros por baseKey para restaurarlo al volver del detalle.
   useEffect(() => {
@@ -203,11 +240,17 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
     if (categorySlug !== "produtos") setConditionFilter("");
   }, [categorySlug]);
 
-  // Resolve subcategory id → label
+  // Resolve subcategory id → label (T6: caché de sesión en vez de 1 query por visita).
   useEffect(() => {
     if (!subcategoryIdParam) { setSubcategoryLabel(""); return; }
-    supabase.from("subcategories").select("name").eq("id", Number(subcategoryIdParam)).single()
-      .then(({ data }) => setSubcategoryLabel(data?.name ?? ""));
+    const id = Number(subcategoryIdParam);
+    const sync = getSubcategoriesSync();
+    if (sync) { setSubcategoryLabel(sync.find((s) => s.id === id)?.name ?? ""); return; }
+    let mounted = true;
+    loadSubcategories().then((subs) => {
+      if (mounted) setSubcategoryLabel(subs.find((s) => s.id === id)?.name ?? "");
+    });
+    return () => { mounted = false; };
   }, [subcategoryIdParam]);
 
   // Localidades para el filtro de zona: caché de sesión, carga única, no bloquea la lista.
@@ -233,6 +276,7 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
     if (showable) {
       setListings(showable.data);
       setRelaxedSearch(!!showable.relaxed);
+      setHasMore(!!showable.hasMore);
       setLoading(false);
       setRefreshing(age >= LISTINGS_SOFT_TTL);
     } else if (listingsRef.current.length > 0) {
@@ -243,6 +287,19 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
       setRefreshing(false);
     }
     setError(null);
+
+    // T4: al volver del detalle con un acumulado de varias páginas, NO re-consultar
+    // en el primer mount: re-fetchar la página 1 colapsaría el acumulado a 60. Solo
+    // aplica al primer run con caché acumulado mostrable; los cambios de
+    // filtro/categoría siguen re-consultando.
+    const isFirstRun = firstRunRef.current;
+    firstRunRef.current = false;
+    const skipAccumulatedCollapse = isFirstRun && !!showable && showable.data.length > PAGE_SIZE;
+    // T6: caché con menos de REVALIDATE_SKIP_MS no gana nada revalidando ahora
+    // (ver comentario de la constante). Entre eso y SOFT_TTL se revalida en
+    // silencio como antes (el estado `refreshing` ya lo maneja arriba).
+    const skipFresh = !!showable && age < REVALIDATE_SKIP_MS;
+    const skipLoad = skipAccumulatedCollapse || skipFresh;
 
     async function load() {
       // 1 foto por anúncio (a primeira por sort_order); subzones não é usado pelo card.
@@ -266,7 +323,7 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
         const cat = (catsData ?? []).find((c) => c.slug === categorySlug);
         // Slug inválido: sin categoría → no mostrar nada.
         if (!cat) {
-          if (mounted) { setListings([]); setRelaxedSearch(false); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
+          if (mounted) { setListings([]); setRelaxedSearch(false); setHasMore(false); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
           return;
         }
         catId = cat.id;
@@ -286,6 +343,11 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
             return ors.join(",");
           })()
         : null;
+
+      // T4: contexto de la query actual para reusar en "Carregar mais" (misma
+      // categoría/condición/zona; el cursor lo agrega loadMore).
+      catIdRef.current = catId;
+      zoneOrRef.current = zoneOr;
 
       // Aplica los filtros comunes (status, búsqueda, condición, zona, orden, límite,
       // y 1 foto por anuncio) a cualquier query base de listings.
@@ -313,10 +375,15 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
         }
         if (conditionFilter) q = q.eq("condition", conditionFilter);
         if (zoneOr) q = q.or(zoneOr);
-        return q.order("created_at", { ascending: false }).limit(60);
+        return q
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false }) // desempate estable para el keyset (T4)
+          .limit(PAGE_SIZE);
       };
 
-      async function fetchPage(relaxWords: boolean): Promise<{ data: any[]; error: any }> {
+      // rawCount = filas crudas traídas (antes de fusionar/deduplicar): sirve para
+      // saber si quedan más páginas (rawCount >= PAGE_SIZE ⇒ probablemente hay más).
+      async function fetchPage(relaxWords: boolean): Promise<{ data: any[]; error: any; rawCount: number }> {
         if (catId) {
           // Concurrente: anuncios con esta categoría como PRINCIPAL ‖ como SECUNDARIA
           // (antes: extras y luego principal, encadenados). Se fusiona en el cliente.
@@ -330,16 +397,19 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
           const map = new Map<number, any>();
           for (const r of (primRes.data ?? [])) map.set(r.id, r);
           for (const r of (extraRes.data ?? [])) if (!map.has(r.id)) map.set(r.id, r);
-          const merged = Array.from(map.values())
-            .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0))
-            .slice(0, 60);
-          return { data: merged, error: primRes.error || extraRes.error };
+          const merged = Array.from(map.values()).sort(byRecent).slice(0, PAGE_SIZE);
+          return {
+            data: merged,
+            error: primRes.error || extraRes.error,
+            rawCount: (primRes.data?.length ?? 0) + (extraRes.data?.length ?? 0),
+          };
         }
         const res = await decorate(supabase.from("listings").select(selectBase), relaxWords);
-        return { data: (res.data as any[]) ?? [], error: res.error };
+        const data = (res.data as any[]) ?? [];
+        return { data, error: res.error, rawCount: data.length };
       }
 
-      let { data, error: fetchErr } = await fetchPage(false);
+      let { data, error: fetchErr, rawCount } = await fetchPage(false);
       let relaxed = false;
 
       // Fallback estilo Mercado Livre: si ninguna publicación tiene TODAS las
@@ -362,9 +432,13 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
         setError(fetchErr.message);
         // Mantener lo anterior visible en vez de vaciar la pantalla.
       } else {
+        // La búsqueda con texto NO pagina (el fallback relajado re-rankea client-side
+        // y no tiene cursor natural): hasMore solo aplica sin ?q=.
+        const newHasMore = !searchQuery && rawCount >= PAGE_SIZE;
         setListings(data);
         setRelaxedSearch(relaxed);
-        setListingsCache(cacheKey, data, relaxed);
+        setHasMore(newHasMore);
+        setListingsCache(cacheKey, data, relaxed, newHasMore);
       }
 
       // Registrar la búsqueda de texto (una vez por término) con su cantidad de
@@ -378,7 +452,8 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
       setRefreshing(false);
     }
 
-    load();
+    if (!skipLoad) load();
+    else { setLoading(false); setRefreshing(false); }
 
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -458,9 +533,10 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
   }, [listings, sortBy]);
 
   const toggleFavorite = useCallback(async (listingId: number) => {
+    const session = sessionRef.current;
     if (!session) { setError("Entre para guardar favoritos."); return; }
     const uid = session.user.id;
-    const isFav = favoriteIds.has(listingId);
+    const isFav = favoriteIdsRef.current.has(listingId);
     setBusyIds((c) => [...c, listingId]);
     setError(null);
     if (isFav) {
@@ -485,7 +561,75 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
       }
     }
     setBusyIds((c) => c.filter((id) => id !== listingId));
-  }, [session, favoriteIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // T4: "Carregar mais anúncios" (keyset por created_at, id). Solo sin ?q=. NO muestra
+  // spinner de página: agrega al final y deja el estado de carga en el propio botón.
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || searchQuery) return;
+    const current = listingsRef.current;
+    const cursor = cursorFromLast(current);
+    if (!cursor) return;
+
+    setLoadingMore(true);
+    setError(null);
+    const catId = catIdRef.current;
+    const zoneOr = zoneOrRef.current;
+    const selectBase = LISTINGS_SELECT;
+    const extraSelect = selectBase + ", listing_extra_categories!inner(category_id)";
+
+    // Mismo decorate que la página 1 pero sin palabras (la búsqueda no pagina) y con
+    // el cursor keyset agregado. El orden (created_at desc, id desc) debe coincidir.
+    const decorate = (q: any) => {
+      q = q
+        .order("sort_order", { referencedTable: "listing_photos" })
+        .limit(1, { referencedTable: "listing_photos" })
+        .eq("status", "active");
+      if (conditionFilter) q = q.eq("condition", conditionFilter);
+      if (zoneOr) q = q.or(zoneOr);
+      q = applyKeysetCursor(q, cursor);
+      return q
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(PAGE_SIZE);
+    };
+
+    const existing = new Set(current.map((r) => r.id));
+    let newItems: any[] = [];
+    let rawCount = 0;
+    let err: any = null;
+
+    if (catId) {
+      let primary = decorate(supabase.from("listings").select(selectBase)).eq("category_id", catId);
+      let extras = decorate(supabase.from("listings").select(extraSelect)).eq("listing_extra_categories.category_id", catId);
+      if (subcategoryIdParam) {
+        primary = primary.eq("subcategory_id", Number(subcategoryIdParam));
+        extras = extras.eq("listing_extra_categories.subcategory_id", Number(subcategoryIdParam));
+      }
+      const [primRes, extraRes] = await Promise.all([primary, extras]);
+      err = primRes.error || extraRes.error;
+      rawCount = (primRes.data?.length ?? 0) + (extraRes.data?.length ?? 0);
+      const map = new Map<number, any>();
+      for (const r of (primRes.data ?? [])) if (!existing.has(r.id)) map.set(r.id, r);
+      for (const r of (extraRes.data ?? [])) if (!existing.has(r.id) && !map.has(r.id)) map.set(r.id, r);
+      newItems = Array.from(map.values()).sort(byRecent).slice(0, PAGE_SIZE);
+    } else {
+      const res = await decorate(supabase.from("listings").select(selectBase));
+      err = res.error;
+      rawCount = res.data?.length ?? 0;
+      newItems = ((res.data as any[]) ?? []).filter((r) => !existing.has(r.id));
+    }
+
+    if (err) { setError(err.message); setLoadingMore(false); return; }
+
+    const accumulated = [...current, ...newItems];
+    const newHasMore = rawCount >= PAGE_SIZE;
+    setListings(accumulated);
+    setHasMore(newHasMore);
+    setListingsCache(keyRef.current, accumulated, false, newHasMore);
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, searchQuery, conditionFilter, subcategoryIdParam]);
 
   const pageTitle = categorySlug
     ? categoryLabel || "Anúncios"
@@ -695,6 +839,39 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
             />
           ))}
         </div>
+
+        {/* T4: Carregar mais (só sem busca; a busca não pagina). */}
+        {!loading && !searchQuery && hasMore && listings.length > 0 && (
+          <div style={{ textAlign: "center", padding: "1.25rem 1rem 0.5rem" }}>
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{
+                width: "100%",
+                maxWidth: 320,
+                padding: "0.7rem 1rem",
+                borderRadius: 10,
+                border: "1px solid var(--blue-main)",
+                background: "#fff",
+                color: "var(--blue-main)",
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                cursor: loadingMore ? "default" : "pointer",
+                opacity: loadingMore ? 0.6 : 1,
+              }}
+            >
+              {loadingMore ? "Carregando…" : "Carregar mais anúncios"}
+            </button>
+          </div>
+        )}
+
+        {/* Busca com muitos resultados: em vez de paginar, sugerir refinar. */}
+        {!loading && searchQuery && listings.length >= PAGE_SIZE && (
+          <div style={{ textAlign: "center", padding: "1rem", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+            Muitos resultados — refine sua busca para encontrar mais rápido.
+          </div>
+        )}
       </div>
     </div>
   );

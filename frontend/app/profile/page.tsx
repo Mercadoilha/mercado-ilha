@@ -8,7 +8,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { getCachedProfile, setCachedProfile } from "../../lib/profileCache";
 import { getAdminSettings } from "../../lib/adminSettings";
 import AvatarUpload from "../../components/AvatarUpload";
-import InstallAppCard from "../../components/InstallAppCard";
+import InstallSigninStrip from "../../components/InstallSigninStrip";
 import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
 import ShareIcon from "../../components/ShareIcon";
@@ -259,18 +259,21 @@ export default function ProfilePage() {
 
   // ── Not logged in ──
   if (!loading && !session) return (
-    <div className="page-body">
-      <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
-        <h1>Perfil</h1>
-      </header>
-      <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
-        <div style={{ fontSize: "3rem", marginBottom: 16 }}>👤</div>
-        <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1e293b", marginBottom: 8 }}>Bem-vindo ao Mercado Ilha</p>
-        <p className="text-muted" style={{ marginBottom: 24 }}>Entre para publicar e gerenciar seus anúncios.</p>
-        <Link href="/signin" className="btn btn-primary btn-block">Entrar / Cadastrar</Link>
+    <>
+      <InstallSigninStrip />
+      <div className="page-body">
+        <header className="page-header">
+          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <h1>Perfil</h1>
+        </header>
+        <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
+          <div style={{ fontSize: "3rem", marginBottom: 16 }}>👤</div>
+          <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1e293b", marginBottom: 8 }}>Bem-vindo ao Mercado Ilha</p>
+          <p className="text-muted" style={{ marginBottom: 24 }}>Entre para publicar e gerenciar seus anúncios.</p>
+          <Link href="/signin" className="btn btn-primary btn-block">Entrar / Cadastrar</Link>
+        </div>
       </div>
-    </div>
+    </>
   );
 
   if (loading) return (
@@ -280,13 +283,15 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="page-body">
-      <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
-        <h1>Meu perfil</h1>
-      </header>
+    <>
+      <InstallSigninStrip />
+      <div className="page-body">
+        <header className="page-header">
+          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <h1>Meu perfil</h1>
+        </header>
 
-      <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
         {/* ── Card de perfil ── */}
         <div
@@ -398,11 +403,6 @@ export default function ProfilePage() {
               <ShareIcon /> Compartilhar minha loja
             </button>
           )}
-        </div>
-
-        {/* ── Instalar app (some sozinha quando já está instalado) ── */}
-        <div style={{ margin: "0 -1rem" }}>
-          <InstallAppCard adminWa={adminWa} compact />
         </div>
 
         {/* ── Meus anúncios ── */}
@@ -690,5 +690,6 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+    </>
   );
 }
