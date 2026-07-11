@@ -601,7 +601,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-11** — **OPTIMIZATION_MASTER_PLAN_V3: Fases 1 a 5 (T1-T10, T12) desplegadas.**
-  **Desplegado** (commit pendiente de completar tras el push). T13 evaluada y descartada
+  **Desplegado** (commit `8ba77ad`, push a `main`). T13 evaluada y descartada
   por decisión del usuario ("ya funciona super bien", beneficio incremental vs. riesgo de
   frescura — el propio plan recomendaba no hacerla ante la duda). T11 no se ejecutó:
   condicional a que la Fase 0/6 muestre >70% del cupo de Image Transformations, no se dio.
@@ -638,7 +638,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
     acumular la siguiente; deploy único al final de las 5 fases (decisión del usuario:
     acumular en vez de desplegar fase por fase).
 - **2026-07-11** — **Unificado el botón "Instalar App" del home y del perfil con el de la
-  pantalla "Entrar".** **Desplegado** (commit pendiente de completar tras el push).
+  pantalla "Entrar".** **Desplegado** (commit `8ba77ad`, push a `main`).
   - Antes: `/` y `/profile` mostraban `InstallAppCard` (tarjeta desplegable con instrucciones
     paso a paso). `/signin` mostraba `InstallSigninStrip` (franja azul "Instale o Mercado Ilha" +
     botón naranja "Instalar App" vía `InstallCtaButton`, que ya resolvía Android con prompt nativo
