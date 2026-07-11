@@ -250,6 +250,14 @@ html.android-pwa #browser-splash { display: flex; }
   50% { opacity: 0.4; }
 }
 
+/* Hoja de compartir: sube desde abajo al abrir */
+.share-sheet-rise { animation: share-sheet-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes share-sheet-rise {
+  from { transform: translateY(70%); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .share-sheet-rise { animation: none; } }
+
 /* WhatsApp button */
 .btn-whatsapp {
   background: #25d366;

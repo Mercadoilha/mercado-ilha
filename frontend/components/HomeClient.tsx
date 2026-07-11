@@ -1,7 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import BannerRotativo from "./BannerRotativo";
 import { whatsappUrl } from "../lib/adminSettings";
@@ -16,6 +17,9 @@ import InstallInvitePopup from "./InstallInvitePopup";
 import ListingCard from "./ListingCard";
 import { getListingsCache, setListingsCache, LISTINGS_RESULTS_TTL } from "../lib/listingsCache";
 import { fetchDefaultListings, DEFAULT_LISTINGS_KEY } from "../lib/listingsApi";
+
+// Modal de compartir: se carga solo al tocar "Compartilhar" (no pesa en el LCP del home).
+const ShareAppModal = dynamic(() => import("./ShareAppModal"), { ssr: false });
 
 // Nomes com palavra única muito longa que não cabe em 3 colunas no tamanho padrão
 const LONG_NAME_SLUGS = new Set(["bioconstrucao", "electrodomesticos"]);
@@ -49,6 +53,7 @@ type Props = {
 
 export default function HomeClient({ listings, categories, adminWa, banners, bannerInterval }: Props) {
   const { session } = useSession();
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Prewarm del listado default de /listings en idle: tocar "Todos os anúncios" o
   // la pestaña "Anúncios" pinta la lista al instante, sin spinner ni RTT. Corre
@@ -83,30 +88,6 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
       if (timeoutId !== undefined) clearTimeout(timeoutId);
     };
   }, []);
-
-  const shareText = "Compra e vende na ilha de Tinharé! Veja anúncios de produtos, serviços, gastronomia e muito mais no Mercado Ilha 🏝️";
-
-  const handleShare = async () => {
-    const shareData = {
-      title: "Mercado Ilha",
-      text: shareText,
-      url: window.location.href,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (error) {
-        // Usuário pode ter cancelado. No fallback, abrimos WhatsApp.
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${window.location.href}`)}`;
-        window.open(waUrl, "_blank", "noopener,noreferrer");
-      }
-      return;
-    }
-
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${window.location.href}`)}`;
-    window.open(waUrl, "_blank", "noopener,noreferrer");
-  };
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -151,7 +132,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
 
           <button
             type="button"
-            onClick={handleShare}
+            onClick={() => setShareOpen(true)}
             title="Compartilhar Mercado Ilha"
             style={{
               display: "inline-flex",
@@ -361,6 +342,7 @@ export default function HomeClient({ listings, categories, adminWa, banners, ban
       </section>
 
       <InstallInvitePopup />
+      {shareOpen && <ShareAppModal onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

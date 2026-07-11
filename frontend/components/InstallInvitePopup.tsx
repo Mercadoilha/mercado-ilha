@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { detectPlatform, isStandalone } from "../lib/platform";
+import { detectPlatform, isAppInstalled } from "../lib/platform";
 import InstallCtaButton from "./InstallCtaButton";
 
 /**
@@ -19,7 +19,6 @@ export default function InstallInvitePopup() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (isStandalone()) return;
     if (detectPlatform() === "other") return; // solo celulares
 
     // Máximo una vez por día: si ya se mostró en las últimas 24 h, no reaparece.
@@ -31,16 +30,27 @@ export default function InstallInvitePopup() {
     }
     if (Date.now() - last < ONE_DAY_MS) return;
 
-    // Diferido: no compite con la carga inicial del home.
-    const t = setTimeout(() => {
-      setVisible(true);
-      try {
-        localStorage.setItem(POPUP_KEY, String(Date.now()));
-      } catch {
-        /* localStorage no disponible: se mostrará igual, sin recordar */
-      }
-    }, 1400);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    let t: ReturnType<typeof setTimeout> | undefined;
+
+    // No mostrar si ya está instalado, incluso abriendo desde el navegador (link/QR).
+    isAppInstalled().then((installed) => {
+      if (cancelled || installed) return;
+      // Diferido: no compite con la carga inicial del home.
+      t = setTimeout(() => {
+        setVisible(true);
+        try {
+          localStorage.setItem(POPUP_KEY, String(Date.now()));
+        } catch {
+          /* localStorage no disponible: se mostrará igual, sin recordar */
+        }
+      }, 1400);
+    });
+
+    return () => {
+      cancelled = true;
+      if (t) clearTimeout(t);
+    };
   }, []);
 
   const dismiss = () => {

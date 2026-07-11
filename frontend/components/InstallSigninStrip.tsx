@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isStandalone } from "../lib/platform";
+import { isAppInstalled } from "../lib/platform";
 import InstallCtaButton from "./InstallCtaButton";
 
 /**
@@ -13,7 +13,13 @@ export default function InstallSigninStrip() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    setShow(!isStandalone());
+    let cancelled = false;
+    isAppInstalled().then((installed) => {
+      if (!cancelled) setShow(!installed);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!show) return null;

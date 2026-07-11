@@ -19,6 +19,30 @@ export function isStandalone(): boolean {
   );
 }
 
+/**
+ * ¿El app ya está instalado en este dispositivo? Es más amplio que isStandalone():
+ * detecta la PWA instalada AUNQUE se esté abriendo desde el navegador (ej. al entrar
+ * por un link o escanear el QR con la cámara → abre en Chrome, no en la app instalada).
+ * Usa navigator.getInstalledRelatedApps() (Chrome/Edge Android), que reporta la PWA como
+ * instalada gracias a `related_applications` (platform "webapp") en el manifest. En iOS y
+ * navegadores sin soporte no hay forma de saberlo desde el navegador → cae a isStandalone().
+ */
+export async function isAppInstalled(): Promise<boolean> {
+  if (isStandalone()) return true;
+  const nav = navigator as any;
+  if (typeof nav.getInstalledRelatedApps === "function") {
+    try {
+      const apps = await nav.getInstalledRelatedApps();
+      if (Array.isArray(apps) && apps.some((a: any) => a.platform === "webapp")) {
+        return true;
+      }
+    } catch {
+      /* API no disponible o bloqueada: seguimos con el fallback */
+    }
+  }
+  return false;
+}
+
 export type IosBrowser = "safari" | "chrome" | "firefox" | "edge" | "opera" | "other";
 
 /**
