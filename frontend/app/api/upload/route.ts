@@ -19,8 +19,18 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10 MB (after compression files will be sma
 
 // Aviso de uso abusivo (H7). NO bloquea: solo cuenta subidas por hora y, si un
 // usuario cruza el umbral, deja un registro en /admin y avisa por email al admin.
-// Un usuario normal jamás se acerca: tope de 4 fotos/anuncio → 60/h ≈ 15 anúncios/h.
-const ABUSE_THRESHOLD = 60; // fotos por hora
+// Un usuario normal jamás se acerca: tope de 4 fotos/anuncio → 40/h ≈ 10 anúncios/h.
+const ABUSE_THRESHOLD = 40; // fotos por hora
+
+/** Escapa texto de usuario antes de interpolarlo en el HTML del email al admin. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 /**
  * Fire-and-forget tras una subida OK: registra el evento, cuenta la última hora
@@ -101,9 +111,9 @@ async function notifyAdminAbuse(supabaseAdmin: SupabaseClient, userId: string, c
         </p>
         <div style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:6px;padding:14px 16px;margin-bottom:20px">
           <p style="color:#92400e;font-size:0.9rem;line-height:1.6;margin:0">
-            <strong>Nome:</strong> ${userName}<br/>
-            <strong>Email:</strong> ${userEmail}<br/>
-            <strong>WhatsApp:</strong> ${prof?.whatsapp ?? "—"}
+            <strong>Nome:</strong> ${escapeHtml(userName)}<br/>
+            <strong>Email:</strong> ${escapeHtml(userEmail)}<br/>
+            <strong>WhatsApp:</strong> ${escapeHtml(prof?.whatsapp ?? "—")}
           </p>
         </div>
         <a href="${siteUrl}/admin"

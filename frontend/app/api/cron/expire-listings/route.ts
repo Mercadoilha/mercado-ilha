@@ -16,6 +16,16 @@ const r2 = new S3Client({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mercadoilha.vercel.app";
 
+/** Escapa texto de usuario (título, nombre) antes de interpolarlo en el HTML del email. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 type ListingForEmail = { id: number; title: string; user_id: string; profiles: any };
 
 /** Deletes all R2 photos + listing_photos rows + the listings themselves. */
@@ -96,7 +106,7 @@ async function sendListingEmails(
 function buildExpiredEmail(name: string, listings: ListingForEmail[]) {
   const single = listings.length === 1;
   const listItems = listings
-    .map((l) => `<li style="margin-bottom:6px"><strong>${l.title}</strong></li>`)
+    .map((l) => `<li style="margin-bottom:6px"><strong>${escapeHtml(l.title)}</strong></li>`)
     .join("");
 
   return {
@@ -106,7 +116,7 @@ function buildExpiredEmail(name: string, listings: ListingForEmail[]) {
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
         <img src="${SITE_URL}/logo.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
-        <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${name}!</h2>
+        <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${escapeHtml(name)}!</h2>
         <p style="color:#475569;font-size:0.95rem;line-height:1.6;margin-bottom:16px">
           ${single ? "O seguinte anúncio atingiu" : "Os seguintes anúncios atingiram"} o prazo de
           <strong>30 dias</strong> e ${single ? "foi desativado" : "foram desativados"} automaticamente:
@@ -141,7 +151,7 @@ function buildExpiredEmail(name: string, listings: ListingForEmail[]) {
 function buildDeletionWarningEmail(name: string, listings: ListingForEmail[]) {
   const single = listings.length === 1;
   const listItems = listings
-    .map((l) => `<li style="margin-bottom:6px"><strong>${l.title}</strong></li>`)
+    .map((l) => `<li style="margin-bottom:6px"><strong>${escapeHtml(l.title)}</strong></li>`)
     .join("");
 
   return {
@@ -151,7 +161,7 @@ function buildDeletionWarningEmail(name: string, listings: ListingForEmail[]) {
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
         <img src="${SITE_URL}/logo.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
-        <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${name}!</h2>
+        <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${escapeHtml(name)}!</h2>
         <p style="color:#475569;font-size:0.95rem;line-height:1.6;margin-bottom:16px">
           ${single ? "O seguinte anúncio está" : "Os seguintes anúncios estão"} inativo há 14 dias:
         </p>
