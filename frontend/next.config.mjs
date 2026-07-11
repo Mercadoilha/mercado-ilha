@@ -22,6 +22,23 @@ const nextConfig = {
       { protocol: "https", hostname: "mercadoilha.vercel.app" },
     ],
   },
+  // Cabeceras de seguridad HTTP (auditoría 2026-07-11, H5). Sin CSP estricto: la app
+  // usa estilos inline y un script inline en layout.tsx → un CSP mal calibrado rompería
+  // la página. X-Frame-Options ya cubre clickjacking. CSP con pruebas = mejora futura.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
