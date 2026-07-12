@@ -62,6 +62,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "try{if(/android/i.test(navigator.userAgent)&&matchMedia('(display-mode: standalone)').matches){document.documentElement.className+=' android-pwa'}}catch(e){}",
           }}
         />
+        {/* Captura temprana del prompt de instalación (Android/Chrome). El evento
+            `beforeinstallprompt` se dispara una sola vez, muy pronto, y NO se repite en
+            las navegaciones internas de Next. Este script síncrono lo guarda en
+            window.__deferredInstallPrompt antes de que React monte, para que el botón
+            "Instalar App" siga funcionando aunque el usuario navegue a /instalar.
+            Ver lib/installPrompt.ts. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.__deferredInstallPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__deferredInstallPrompt=e;window.dispatchEvent(new Event('bip-ready'))});window.addEventListener('appinstalled',function(){window.__deferredInstallPrompt=null});",
+          }}
+        />
         {/* Pre-establish connections to external services before JS executes */}
         <link rel="preconnect" href="https://ywminblmiwjsxbntszbc.supabase.co" />
         <link rel="dns-prefetch" href="https://ywminblmiwjsxbntszbc.supabase.co" />

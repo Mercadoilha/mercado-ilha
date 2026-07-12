@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAdminSettings } from "../lib/adminSettings";
 import {
   detectPlatform,
   detectIosBrowser,
   isStandalone,
-  type BeforeInstallPromptEvent,
   type Platform,
 } from "../lib/platform";
+import {
+  getInstallPrompt,
+  onInstallPromptChange,
+  triggerInstall,
+} from "../lib/installPrompt";
 import InstallInstructions from "./InstallInstructions";
 
 type IosView = "safari" | "other";
@@ -23,16 +27,11 @@ export default function InstalarClient() {
   const [showExit, setShowExit] = useState(false);
   const [copied, setCopied] = useState(false);
   const [canPromptAndroid, setCanPromptAndroid] = useState(false);
-  const deferred = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      deferred.current = e as BeforeInstallPromptEvent;
-      setCanPromptAndroid(true);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    const sync = () => setCanPromptAndroid(!!getInstallPrompt());
+    sync();
+    return onInstallPromptChange(sync);
   }, []);
 
   useEffect(() => {
@@ -51,11 +50,8 @@ export default function InstalarClient() {
   }, []);
 
   const handleAndroidInstall = async () => {
-    if (!deferred.current) return;
-    await deferred.current.prompt();
-    await deferred.current.userChoice;
-    deferred.current = null;
-    setCanPromptAndroid(false);
+    await triggerInstall();
+    setCanPromptAndroid(!!getInstallPrompt());
   };
 
   const openInSafari = () => {

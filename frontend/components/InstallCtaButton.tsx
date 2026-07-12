@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   detectPlatform,
   isStandalone,
-  type BeforeInstallPromptEvent,
   type Platform,
 } from "../lib/platform";
+import { getInstallPrompt, triggerInstall } from "../lib/installPrompt";
 
 type Props = {
   /** Texto del CTA. Por regla del proyecto siempre "Instalar App". */
@@ -41,16 +41,6 @@ export default function InstallCtaButton({
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [standalone, setStandalone] = useState(false);
   const [ready, setReady] = useState(false);
-  const deferred = useRef<BeforeInstallPromptEvent | null>(null);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      deferred.current = e as BeforeInstallPromptEvent;
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
 
   useEffect(() => {
     setStandalone(isStandalone());
@@ -62,10 +52,8 @@ export default function InstallCtaButton({
   if (hideWhenStandalone && standalone) return null;
 
   const handleClick = async () => {
-    if (platform === "android" && deferred.current) {
-      await deferred.current.prompt();
-      await deferred.current.userChoice;
-      deferred.current = null;
+    if (platform === "android" && getInstallPrompt()) {
+      await triggerInstall();
       onActed?.();
       return;
     }
