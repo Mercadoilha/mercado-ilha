@@ -600,6 +600,23 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-11** — **Fix: el botón "Instalar App" en Android no disparaba el prompt.**
+  **Desplegado** (commit `9878ae4`, push a `main`).
+  - Causa raíz: el evento `beforeinstallprompt` (Chrome/Android) se dispara UNA sola vez y
+    muy temprano en la carga del documento, y NO se vuelve a disparar en las navegaciones
+    client-side de Next. Cada componente (`InstalarClient.tsx`, `InstallCtaButton.tsx`) lo
+    escuchaba en su propio `useEffect` → al llegar a `/instalar` por navegación interna el
+    evento ya había pasado y el botón quedaba gris/inerte ("no funciona").
+  - Fix: captura global y temprana. Un script inline síncrono en el `<head>`
+    (`app/layout.tsx`) guarda el evento en `window.__deferredInstallPrompt` antes de que
+    React monte y emite `bip-ready`. Nuevo `lib/installPrompt.ts` (`getInstallPrompt` /
+    `onInstallPromptChange` / `triggerInstall`) es la interfaz única; ambos botones leen de
+    ahí en vez de tener su propio listener. Así el prompt sobrevive a la navegación interna.
+  - iPhone SIN cambios: en iOS la instalación es manual por Safari (video de pasos), no usa
+    `beforeinstallprompt`. Revisado y OK.
+  - Para testear en Android: si la app YA está instalada, Chrome no vuelve a ofrecer
+    instalarla (comportamiento normal) → desinstalar primero. Build OK, `/instalar` sigue
+    `○ Static`.
 - **2026-07-11** — **OPTIMIZATION_MASTER_PLAN_V3: Fases 1 a 5 (T1-T10, T12) desplegadas.**
   **Desplegado** (commit `8ba77ad`, push a `main`). T13 evaluada y descartada
   por decisión del usuario ("ya funciona super bien", beneficio incremental vs. riesgo de
