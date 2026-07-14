@@ -12,6 +12,7 @@ import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import ListingCard from "../../../components/ListingCard";
 import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
+import { getFeaturedIdsSync, loadFeaturedIds } from "../../../lib/featuredCache";
 import { cursorFromLast, applyKeysetCursor } from "../../../lib/listingsApi";
 
 // Tamaño de página de la tienda (T5 del plan V3). Menor que /listings (60) porque
@@ -33,6 +34,9 @@ export default function StorePage() {
   const [error, setError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [busyIds, setBusyIds] = useState<number[]>([]);
+  // Destacados (contorno dorado): mismo conjunto que el inicio, del caché de sesión.
+  // No bloquea el render — el dorado aparece cuando resuelve (igual que favoritos).
+  const [featuredIds, setFeaturedIds] = useState<Set<number> | null>(() => getFeaturedIdsSync());
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
   // T5: paginación "Ver mais anúncios" (keyset por created_at, id). totalCount es el
@@ -128,6 +132,14 @@ export default function StorePage() {
     loadFavorites(uid).then((ids) => { if (mounted) setFavoriteIds(new Set(ids)); });
     return () => { mounted = false; };
   }, [session]);
+
+  // Destacados: carga del caché de sesión si aún no está (no bloquea el render).
+  useEffect(() => {
+    if (getFeaturedIdsSync()) return;
+    let mounted = true;
+    loadFeaturedIds().then((s) => { if (mounted) setFeaturedIds(s); });
+    return () => { mounted = false; };
+  }, []);
 
   // Pre-fetch seller phone so the contact button is fully synchronous (avoids mobile popup blocker)
   useEffect(() => {
@@ -340,6 +352,7 @@ export default function StorePage() {
                 isFavorite={favoriteIds.has(l.id)}
                 busy={busyIds.includes(l.id)}
                 onToggleFavorite={toggleFavorite}
+                featured={featuredIds?.has(l.id)}
               />
             ))}
           </div>

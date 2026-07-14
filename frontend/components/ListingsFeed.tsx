@@ -44,6 +44,7 @@ import {
   removeFavorite,
   clearFavoritesCache,
 } from "../lib/favoritesCache";
+import { getFeaturedIdsSync, loadFeaturedIds } from "../lib/featuredCache";
 
 // Hojas Ordenar/Filtrar: se cargan solo al abrirlas (no pesan en la carga inicial).
 const OrdenarSheet = dynamic(() => import("./OrdenarSheet"), { ssr: false });
@@ -62,7 +63,9 @@ type ListingsFeedProps = {
   searchQuery?: string;
   subcategoryId?: string;
   // Reforma 4: ids con contorno dorado (destacados del inicio). El contorno acompaña
-  // al anuncio aunque se reordene o filtre.
+  // al anuncio aunque se reordene o filtre. En el inicio llega provisto por el servidor;
+  // en /listings (categorías/busca) queda undefined y el feed lo carga del caché de sesión
+  // (mismo conjunto que el inicio) para que el dorado también viaje acá.
   featuredIds?: Set<number>;
 };
 
@@ -137,6 +140,12 @@ export default function ListingsFeed({
   const [busyIds, setBusyIds] = useState<number[]>([]);
   const [localities, setLocalities] = useState<CatalogLocality[]>([]);
   const [subzones, setSubzones] = useState<CatalogSubzone[]>([]);
+  // Destacados: si el servidor no los pasó (inicio), los cargamos del caché de sesión.
+  // Arranca con lo que ya haya en caché para pintar el dorado en el primer render.
+  const [loadedFeatured, setLoadedFeatured] = useState<Set<number> | null>(
+    () => (featuredIds ? null : getFeaturedIdsSync())
+  );
+  const effectiveFeatured = featuredIds ?? loadedFeatured ?? undefined;
 
   // Estado de las hojas (Ordenar / Filtrar).
   const [ordenarOpen, setOrdenarOpen] = useState(false);
@@ -184,6 +193,15 @@ export default function ListingsFeed({
     if (prev === undefined) return;
     if (categorySlug !== "produtos") setConditionFilter("");
   }, [categorySlug]);
+
+  // Destacados (contorno dorado): solo cuando el servidor no los pasó (inicio). Caché de
+  // sesión, no bloquea el render — el dorado aparece cuando resuelve (igual que favoritos).
+  useEffect(() => {
+    if (featuredIds || getFeaturedIdsSync()) return;
+    let mounted = true;
+    loadFeaturedIds().then((s) => { if (mounted) setLoadedFeatured(s); });
+    return () => { mounted = false; };
+  }, [featuredIds]);
 
   // Localidades para el filtro de zona: caché de sesión, carga única, no bloquea la lista.
   useEffect(() => {
@@ -590,7 +608,7 @@ export default function ListingsFeed({
               isFavorite={favoriteIds.has(l.id)}
               busy={busyIds.includes(l.id)}
               onToggleFavorite={toggleFavorite}
-              featured={featuredIds?.has(l.id)}
+              featured={effectiveFeatured?.has(l.id)}
             />
           ))}
         </div>

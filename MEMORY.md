@@ -440,6 +440,28 @@ re-postar del grupo de WhatsApp). **Gratis por ahora; será pago más adelante.*
   dorado ⭐ (deshabilitado en cooldown, muestra `⭐ Nmin`); `bumped_at` en los `select` de perfil y
   `profileCache`.
 
+## 15.2 CONTORNO DOURADO VIAJA POR TODAS AS TELAS (2026-07-13, en producción)
+
+El contorno dorado que marca los "Anúncios destacados" (los primeros `featured_count`
+anuncios por `bumped_at` desc, ver §15) antes solo se veía en el **inicio**. Ahora acompaña
+al mismo anuncio en **todas** las pantallas donde aparece (categorías, resultados de
+búsqueda, tienda del vendedor, favoritos), sin costo de velocidad.
+- `ListingCard.tsx`: el dibujo del contorno ya existía (prop `featured`, `span` absoluto con
+  `border`/`boxShadow`, sin mover el layout) pero solo el inicio (`app/page.tsx`) le pasaba
+  los ids destacados a `ListingsFeed`.
+- **`frontend/lib/featuredCache.ts`** (nuevo): calcula el mismo conjunto que el inicio (top
+  `featured_count` anuncios activos por `bumped_at` desc) y lo guarda en caché de sesión
+  (módulo + `sessionStorage`, TTL 60s alineado al `revalidate=60` del inicio). Patrón
+  stale-while-revalidate idéntico al de `catalogCache.ts`/`favoritesCache.ts`: no bloquea el
+  render, el dorado aparece cuando resuelve.
+- **`ListingsFeed.tsx`** (usado por `/listings`, categorías y búsqueda): si `featuredIds` no
+  viene del servidor (solo el inicio lo provee), lo carga de `featuredCache`.
+- **`StoreClient.tsx`** (`/store/[id]`): mismo patrón, pasa `featured` a cada `ListingCard`.
+- **`favorites/page.tsx`**: no usa `ListingCard` (fila propia) — se agregó el mismo estilo de
+  borde+brillo inline, condicionado a que el anuncio siga activo.
+- Nota: `featuredCache.ts` ya existía en el repo desde antes (commit `fd90011`, sin uso) —
+  esta sesión lo conectó en los 3 lugares que faltaban.
+
 ## 15.1 BOTÃO "VENDIDO" (2026-07-07, fase-18, en producción)
 
 Solo para anuncios de categorías marcadas `is_product=true` en `/admin` (ver §4, §8). En
@@ -603,6 +625,12 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-13** — **El contorno dorado de "destacados" ahora viaja por todas las pantallas.**
+  **Desplegado** (commit pendiente, push a `main`).
+  - Antes solo se veía en el inicio. Se agregó `frontend/lib/featuredCache.ts` (caché de
+    sesión del mismo conjunto de ids destacados, TTL 60s) conectado en `ListingsFeed.tsx`
+    (categorías/búsqueda), `StoreClient.tsx` (tienda del vendedor) y `favorites/page.tsx`
+    (estilo inline, mismo look). Detalle: §15.2.
 - **2026-07-13** — **Fix botón volver en Favoritos + botões "Falar com o vendedor" e
   "Compartilhar loja" lado a lado na loja.** **Desplegado** (commit `fd90011`, push a `main`).
   - `/favorites` (`page.tsx`): el botón ← estaba hardcodeado a `<Link href="/">`, siempre volvía

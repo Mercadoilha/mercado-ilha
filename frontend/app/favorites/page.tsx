@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { useSession } from "../../contexts/SessionContext";
+import { getFeaturedIdsSync, loadFeaturedIds } from "../../lib/featuredCache";
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -13,6 +14,16 @@ export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  // Destacados (contorno dorado): mismo conjunto que el inicio, del caché de sesión.
+  // No bloquea el render — el dorado aparece cuando resuelve.
+  const [featuredIds, setFeaturedIds] = useState<Set<number> | null>(() => getFeaturedIdsSync());
+
+  useEffect(() => {
+    if (getFeaturedIdsSync()) return;
+    let mounted = true;
+    loadFeaturedIds().then((s) => { if (mounted) setFeaturedIds(s); });
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -121,6 +132,9 @@ export default function FavoritesPage() {
               const firstPhoto: string | null = sortedPhotos[0]?.photo_url ?? null;
               const locationText: string | null = (l.localities as any)?.name ?? null;
               const isInactive = l.status !== "active";
+              // El contorno dorado acompaña al anuncio destacado también acá (solo si sigue
+              // activo). Mismo dorado que las cards: borde + brillo interior sutil.
+              const isFeatured = !isInactive && !!featuredIds?.has(l.id);
 
               return (
                 <div
@@ -130,7 +144,8 @@ export default function FavoritesPage() {
                     gap: "0.75rem",
                     background: "#fff",
                     borderRadius: 12,
-                    border: "1px solid var(--border)",
+                    border: isFeatured ? "1.5px solid #C9A227" : "1px solid var(--border)",
+                    boxShadow: isFeatured ? "inset 0 0 11px rgba(201,162,39,0.16)" : "none",
                     padding: "0.625rem",
                     alignItems: "center",
                     opacity: isInactive ? 0.6 : 1,
