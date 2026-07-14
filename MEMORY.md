@@ -231,8 +231,8 @@ categoría/subcategoría con UI optimista (revierte si falla).
 | `/listings/[id]` | Detalle: galería, precio, vendedor, WhatsApp (RPC lazy), denuncia. Botón editar para dueño. |
 | `/listings/[id]/edit` | Editar anuncio (solo dueño). |
 | `/publish` | Formulario: fotos, categoría→subcategoría, ubicación según tipo. Llama `/api/revalidate` al publicar. |
-| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. |
-| `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 3 botones (Minha loja / Compartilhar / Favoritos) en fila arriba de la lista. |
+| `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). Botón ← usa `router.back()` (no vuelve fijo a `/listings`). |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
 | `/forgot-password` | 1 paso, solo email. `resetPasswordForEmail`. |
 | `/reset-password` | Nueva contraseña desde link. PKCE: `?code` → `exchangeCodeForSession`. |
@@ -500,7 +500,8 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 - **Categorías viejas en home tras editar:** el ISR servía cache viejo → `deleteCat`/`toggleCat`/
   `addCategory`/`saveEditCat` llaman `revalidateHome()` (POST fire-and-forget a `/api/revalidate`).
 - **Volver desde detalle:** usar `router.back()` (no Link hardcodeado) para preservar filtros. Ver
-  `fix_back_navigation`.
+  `fix_back_navigation`. Mismo fix aplicado 2026-07-13 al botón ← de `/store/[id]` (estaba fijo a
+  `/listings`, ahora respeta de dónde vino el usuario).
 - **Confirmar antes de corregir datos:** divergencias DB-vs-doc pueden ser intencionales; preguntar
   antes de un UPDATE. Ver `feedback_confirmar_antes_de_corregir_datos`.
 - **Login mostraba "senha incorreta" por error de red (2026-07-05):** tras reinstalar el PWA, el
@@ -600,6 +601,15 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-13** — **Botón "Minha loja" en perfil + fix botón volver en loja.** Push a
+  `main` pendiente de confirmar hash (ver abajo).
+  - `/profile`: se agregó un 3er botón "Minha loja" (link a `/store/[id]` propio) junto a
+    "Compartilhar" y "Favoritos" — los tres ahora en una fila de 3 columnas.
+  - `/store/[id]` (`StoreClient.tsx`): el botón ← estaba hardcodeado a `<Link href="/listings">`,
+    por lo que siempre volvía a todos los anúncios sin importar de dónde venía el usuario (ej.
+    desde `/profile`). Cambiado a `router.back()`, mismo patrón que `fix_back_navigation`. Ver §18.
+  - También se incluyó en el push un cambio previo ya presente en el working tree (no de esta
+    sesión): `/category/[slug]` — botón ← corregido de `/` a `/categorias`.
 - **2026-07-11** — **Fix: el botón "Instalar App" en Android no disparaba el prompt.**
   **Desplegado** (commit `9878ae4`, push a `main`).
   - Causa raíz: el evento `beforeinstallprompt` (Chrome/Android) se dispara UNA sola vez y

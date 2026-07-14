@@ -42,7 +42,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <Link href="/categorias" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
         <h1>{catWithSubs.name ?? slug}</h1>
       </header>
 

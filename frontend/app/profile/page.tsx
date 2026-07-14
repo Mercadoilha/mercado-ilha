@@ -393,7 +393,10 @@ export default function ProfilePage() {
           )}
 
           {!editMode && session && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 12 }}>
+              <Link href={`/store/${session.user.id}`} style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem", textDecoration: "none" }}>
+                🏪 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Minha loja</span>
+              </Link>
               <button
                 type="button"
                 onClick={() =>
@@ -403,11 +406,11 @@ export default function ProfilePage() {
                     url: window.location.origin + "/store/" + session.user.id,
                   })
                 }
-                style={outlineBlueBtn}
+                style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem" }}
               >
-                <ShareIcon /> <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Compartilhar loja</span>
+                <ShareIcon /> <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Compartilhar</span>
               </button>
-              <Link href="/favorites" style={{ ...outlineBlueBtn, textDecoration: "none" }}>
+              <Link href="/favorites" style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem", textDecoration: "none" }}>
                 ❤️ <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Favoritos</span>
               </Link>
             </div>

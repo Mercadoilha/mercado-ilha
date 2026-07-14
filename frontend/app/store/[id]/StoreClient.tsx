@@ -180,7 +180,11 @@ export default function StorePage() {
     <div className="page-body">
       {/* Header */}
       <header className="page-header">
-        <Link href="/listings" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+        >←</button>
         <h1 style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           Loja de {seller.full_name}
         </h1>
