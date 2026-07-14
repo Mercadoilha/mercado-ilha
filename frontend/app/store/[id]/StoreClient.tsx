@@ -225,9 +225,11 @@ export default function StorePage() {
           Membro desde {memberSince} · {totalCount} anúncio{totalCount !== 1 ? "s" : ""} ativo{totalCount !== 1 ? "s" : ""}
         </div>
 
-        {/* Acomodo fijo (apilado, ancho completo): idéntico en Android e iPhone,
-            independiente de las métricas de fuente del sistema (Roboto vs SF). */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12, maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
+        {/* Lado a lado (fila): dos botones de igual ancho (flex:1) y misma altura
+            (alignItems stretch). El texto puede acomodarse en dos líneas si el
+            sistema usa una fuente más ancha (Roboto en Android vs SF en iPhone),
+            manteniéndose parejo en ambos. */}
+        <div style={{ display: "flex", flexDirection: "row", gap: 8, marginTop: 12, maxWidth: 380, marginLeft: "auto", marginRight: "auto", alignItems: "stretch" }}>
           {seller && (
             sellerPhone ? (
               <a
@@ -239,14 +241,17 @@ export default function StorePage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: "100%",
+                  textAlign: "center",
+                  lineHeight: 1.15,
+                  flex: "1 1 0",
+                  minWidth: 0,
                   gap: 6,
                   background: "#25d366",
                   color: "#fff",
-                  padding: "0.6rem 1rem",
+                  padding: "0.55rem 0.6rem",
                   borderRadius: 999,
                   fontWeight: 700,
-                  fontSize: "0.875rem",
+                  fontSize: "0.8rem",
                   border: "none",
                   cursor: "pointer",
                   textDecoration: "none",
@@ -265,14 +270,17 @@ export default function StorePage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: "100%",
+                  textAlign: "center",
+                  lineHeight: 1.15,
+                  flex: "1 1 0",
+                  minWidth: 0,
                   gap: 6,
                   background: "#25d366",
                   color: "#fff",
-                  padding: "0.6rem 1rem",
+                  padding: "0.55rem 0.6rem",
                   borderRadius: 999,
                   fontWeight: 700,
-                  fontSize: "0.875rem",
+                  fontSize: "0.8rem",
                   border: "none",
                   cursor: "pointer",
                 }}
@@ -295,14 +303,17 @@ export default function StorePage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "100%",
+              textAlign: "center",
+              lineHeight: 1.15,
+              flex: "1 1 0",
+              minWidth: 0,
               gap: 6,
               background: "transparent",
               color: "#fff",
-              padding: "0.6rem 1rem",
+              padding: "0.55rem 0.6rem",
               borderRadius: 999,
               fontWeight: 700,
-              fontSize: "0.875rem",
+              fontSize: "0.8rem",
               border: "2px solid rgba(255,255,255,0.7)",
               cursor: "pointer",
             }}

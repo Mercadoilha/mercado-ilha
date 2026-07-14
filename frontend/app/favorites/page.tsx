@@ -56,7 +56,11 @@ export default function FavoritesPage() {
     return (
       <div className="page-body">
         <header className="page-header">
-          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+          >←</button>
           <h1>Favoritos</h1>
         </header>
         <div style={{ padding: "2.5rem 1rem", textAlign: "center" }}>
@@ -77,7 +81,11 @@ export default function FavoritesPage() {
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+        >←</button>
         <h1>Meus favoritos</h1>
       </header>
 

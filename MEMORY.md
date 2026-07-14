@@ -501,8 +501,9 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   `addCategory`/`saveEditCat` llaman `revalidateHome()` (POST fire-and-forget a `/api/revalidate`).
 - **Volver desde detalle:** usar `router.back()` (no Link hardcodeado) para preservar filtros. Ver
   `fix_back_navigation`. Mismo patrón aplicado 2026-07-13: `/store/[id]` (estaba fijo a
-  `/listings`, ahora usa `router.back()` y respeta de dónde vino el usuario) y `/category/[slug]`
-  (estaba fijo a `/`, ahora vuelve a `/categorias`).
+  `/listings`, ahora usa `router.back()` y respeta de dónde vino el usuario), `/category/[slug]`
+  (estaba fijo a `/`, ahora vuelve a `/categorias`) y `/favorites` (estaba fijo a `/`, ahora
+  `router.back()` en ambos headers → vuelve al perfil desde donde se entra).
 - **Confirmar antes de corregir datos:** divergencias DB-vs-doc pueden ser intencionales; preguntar
   antes de un UPDATE. Ver `feedback_confirmar_antes_de_corregir_datos`.
 - **Login mostraba "senha incorreta" por error de red (2026-07-05):** tras reinstalar el PWA, el
@@ -602,6 +603,16 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-13** — **Fix botón volver en Favoritos + botões "Falar com o vendedor" e
+  "Compartilhar loja" lado a lado na loja.** **Desplegado** (commit `PENDING`, push a `main`).
+  - `/favorites` (`page.tsx`): el botón ← estaba hardcodeado a `<Link href="/">`, siempre volvía
+    a inicio. Cambiado a `router.back()` (mismo patrón que `fix_back_navigation`, §18), en los dos
+    headers (logueado y no-logueado). Ahora al entrar desde el perfil vuelve al perfil.
+  - `/store/[id]` (`StoreClient.tsx`): los botones "Falar com o vendedor" y "Compartilhar loja"
+    pasaron de apilados (columna) a **lado a lado** (fila). Cada uno `flex:1 1 0` (igual ancho),
+    `alignItems:stretch` (igual altura), `fontSize 0.8rem`, `lineHeight 1.15`, `textAlign center`
+    y `minWidth:0` para que el texto se acomode en 2 líneas parejas si la fuente del sistema es
+    más ancha (Roboto Android vs SF iPhone). Contenedor `maxWidth 380` centrado.
 - **2026-07-13** — **Botón "Minha loja" en perfil + fix de 2 botones volver (loja y categoría
   con subcategorías).** **Desplegado** (commit `9ad8b4a`, push a `main`).
   - `/profile`: se agregó un 3er botón "Minha loja" (link a `/store/[id]` propio) junto a
