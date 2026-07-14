@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
-import { isStandalone } from "../../lib/platform";
+import { detectPlatform, isStandalone } from "../../lib/platform";
 import InstallSigninStrip from "../../components/InstallSigninStrip";
 
 type Tab = "login" | "register";
@@ -132,9 +132,18 @@ function SignInContent() {
       return;
     }
 
-    // Cadastro OK con sesión: llevar a la pantalla dedicada de instalación
-    // (salvo que ya esté instalada, ahí va directo al home).
-    router.push(isStandalone() ? "/" : "/instalar");
+    // Cadastro OK con sesión: invitar a instalar.
+    // - Ya instalada → home.
+    // - Android → home con invitación directa (el popup instala en el acto; nunca /instalar).
+    // - iPhone/desktop → pantalla guiada /instalar.
+    if (isStandalone()) {
+      router.push("/");
+    } else if (detectPlatform() === "android") {
+      try { sessionStorage.setItem("force_install_invite", "1"); } catch { /* no disponible */ }
+      router.push("/");
+    } else {
+      router.push("/instalar");
+    }
   };
 
   const tabStyle = (t: Tab): React.CSSProperties => ({

@@ -7,7 +7,12 @@ import {
   isStandalone,
   type Platform,
 } from "../lib/platform";
-import { getInstallPrompt, triggerInstall } from "../lib/installPrompt";
+import {
+  getInstallPrompt,
+  onInstallPromptChange,
+  triggerInstall,
+} from "../lib/installPrompt";
+import { setInstallProgress } from "../lib/installProgress";
 
 type Props = {
   /** Texto del CTA. Por regla del proyecto siempre "Instalar App". */
@@ -23,8 +28,10 @@ type Props = {
 
 /**
  * Botón único "Instalar App". Centraliza QUÉ hace el botón según contexto:
- *  - Android: dispara el prompt nativo (instala en el acto). Si el prompt no está
- *    disponible todavía, deriva a /instalar (instrucciones manuales).
+ *  - Android: dispara el prompt nativo (instala en el acto). NUNCA navega a /instalar.
+ *    Si el prompt todavía no llegó, muestra la barra "Preparando a instalação…" arriba
+ *    y espera `beforeinstallprompt` sin límite; al llegar dispara la instalación sola
+ *    (o, si la activación del toque ya expiró, ofrece un toque final en la barra).
  *  - iPhone (Safari o Chrome/otros): navega a /instalar, la pantalla dedicada que
  *    resuelve el caso Chrome→Safari y muestra el video.
  *  - Desktop/otros: deriva a /instalar.
@@ -52,12 +59,41 @@ export default function InstallCtaButton({
   if (hideWhenStandalone && standalone) return null;
 
   const handleClick = async () => {
-    if (platform === "android" && getInstallPrompt()) {
-      await triggerInstall();
+    if (platform === "android") {
+      // Android: instalar directo, JAMÁS derivar a /instalar.
+      if (getInstallPrompt()) {
+        await triggerInstall();
+        onActed?.();
+        return;
+      }
+      // Prompt aún no capturado (toque "a destiempo"): esperar sin navegar, con la barra
+      // de progreso arriba. Al llegar el prompt, disparar la instalación sola.
       onActed?.();
+      setInstallProgress({ phase: "preparing" });
+      let unsub = () => {};
+      const onReady = async () => {
+        if (!getInstallPrompt()) return; // todavía no llegó
+        unsub();
+        const ok = await triggerInstall();
+        if (ok || !getInstallPrompt()) {
+          // Instaló, o el usuario rechazó (prompt ya consumido).
+          setInstallProgress({ phase: "hidden" });
+        } else {
+          // El prompt siguió disponible → no se mostró (activación expirada): ofrecer un toque.
+          setInstallProgress({
+            phase: "ready",
+            onTap: async () => {
+              await triggerInstall();
+              setInstallProgress({ phase: "hidden" });
+            },
+          });
+        }
+      };
+      unsub = onInstallPromptChange(onReady);
+      onReady(); // por si el prompt llegó entre el chequeo inicial y la suscripción
       return;
     }
-    // iPhone (Safari o Chrome), Android sin prompt disponible, o desktop → pantalla dedicada.
+    // iPhone (Safari o Chrome) o desktop → pantalla dedicada.
     router.push("/instalar");
     onActed?.();
   };

@@ -12,6 +12,10 @@ type ListingCardProps = {
   sessionExists?: boolean;
   busy?: boolean;
   priority?: boolean;
+  // Reforma 4: contorno dorado de los anuncios destacados del inicio. El contorno se
+  // dibuja SIN mover el layout (outline con offset negativo + un brillo interior sutil),
+  // así no rompe las líneas divisorias del grid ni desalinea las filas.
+  featured?: boolean;
 };
 
 export default memo(function ListingCard({
@@ -21,6 +25,7 @@ export default memo(function ListingCard({
   sessionExists,
   busy,
   priority,
+  featured,
 }: ListingCardProps) {
   const hasNumericPrice = listing.price != null;
   const priceMain = hasNumericPrice
@@ -48,6 +53,20 @@ export default memo(function ListingCard({
         borderRadius: 0,
       }}
     >
+      {/* Contorno que enmarca la card por encima de la imagen (la imagen ya no lo tapa),
+          sin empujar el layout. Destacados del inicio → dorado con un brillo sutil; el resto
+          → el mismo marco pero en gris. pointer-events:none → no interfiere con los toques. */}
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: featured ? "1.5px solid #C9A227" : "1.5px solid #a9b4c1",
+          boxShadow: featured ? "inset 0 0 11px rgba(201,162,39,0.16)" : "none",
+          pointerEvents: "none",
+          zIndex: 2,
+        }}
+      />
       <Link
         href={`/listings/${listing.id}`}
         onClick={() =>
@@ -173,6 +192,7 @@ export default memo(function ListingCard({
             position: "absolute",
             top: 6,
             right: 6,
+            zIndex: 3,
             background: "rgba(255,255,255,0.9)",
             borderRadius: 999,
             width: 34,

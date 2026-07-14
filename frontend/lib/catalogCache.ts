@@ -12,6 +12,7 @@ const TTL = 5 * 60 * 1000; // 5 min
 export type CatalogCategory = { id: number; slug: string; name: string; icon: string | null };
 export type CatalogLocality = { id: number; name: string };
 export type CatalogSubcategory = { id: number; name: string };
+export type CatalogSubzone = { id: number; name: string; locality_id: number };
 
 type Cached<T> = { data: T; ts: number };
 
@@ -99,6 +100,46 @@ export async function loadLocalities(): Promise<CatalogLocality[]> {
     return rows;
   })();
   return locInFlight;
+}
+
+// ---------------- Sub-zonas (hoja Filtrar) ----------------
+// Todas las sub-zonas activas (id, name, locality_id) en una sola carga, para armar la
+// hoja de filtro multi-zona (localidades + sub-zonas con casillas). Se carga recién al
+// abrir la hoja, nunca en el camino crítico de la página. Incluye las sub-zonas "Outros"
+// (son oficiales en DB). Mismo TTL/patrón que localidades.
+const SUBZONE_SS = "mi_subzones_v1";
+let subzoneMem: Cached<CatalogSubzone[]> | null = null;
+let subzoneInFlight: Promise<CatalogSubzone[]> | null = null;
+
+export function getSubzonesSync(): CatalogSubzone[] | null {
+  const now = Date.now();
+  if (subzoneMem && now - subzoneMem.ts < TTL) return subzoneMem.data;
+  const ss = readSS<CatalogSubzone[]>(SUBZONE_SS);
+  if (ss && now - ss.ts < TTL) {
+    subzoneMem = ss;
+    return ss.data;
+  }
+  return null;
+}
+
+export async function loadSubzones(): Promise<CatalogSubzone[]> {
+  const sync = getSubzonesSync();
+  if (sync) return sync;
+  if (subzoneInFlight) return subzoneInFlight;
+  subzoneInFlight = (async () => {
+    const { data } = await supabase
+      .from("subzones")
+      .select("id, name, locality_id")
+      .eq("is_active", true)
+      .order("sort_order");
+    const rows = (data ?? []) as CatalogSubzone[];
+    const entry = { data: rows, ts: Date.now() };
+    subzoneMem = entry;
+    writeSS(SUBZONE_SS, entry);
+    subzoneInFlight = null;
+    return rows;
+  })();
+  return subzoneInFlight;
 }
 
 // ---------------- Subcategorías (T6 del plan V3) ----------------

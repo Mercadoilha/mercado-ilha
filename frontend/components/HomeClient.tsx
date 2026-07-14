@@ -1,40 +1,10 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import Link from "next/link";
+import { useMemo } from "react";
 import BannerRotativo from "./BannerRotativo";
-import { whatsappUrl } from "../lib/adminSettings";
-import { trackWhatsappClick } from "../lib/tracking";
-import { useSession } from "../contexts/SessionContext";
-import ShareIcon from "./ShareIcon";
-import BuscaAutocomplete from "./BuscaAutocomplete";
-import MaresWidget from "./MaresWidget";
-import BarcosWidget from "./BarcosWidget";
-import InstallSigninStrip from "./InstallSigninStrip";
+import SearchHeader from "./SearchHeader";
 import InstallInvitePopup from "./InstallInvitePopup";
-import ListingCard from "./ListingCard";
-import { getListingsCache, setListingsCache, LISTINGS_RESULTS_TTL } from "../lib/listingsCache";
-import { fetchDefaultListings, DEFAULT_LISTINGS_KEY } from "../lib/listingsApi";
-
-// Modal de compartir: se carga solo al tocar "Compartilhar" (no pesa en el LCP del home).
-const ShareAppModal = dynamic(() => import("./ShareAppModal"), { ssr: false });
-
-// Nomes com palavra única muito longa que não cabe em 3 colunas no tamanho padrão
-const LONG_NAME_SLUGS = new Set(["bioconstrucao", "electrodomesticos"]);
-
-function categoryHref(cat: any) {
-  const hasSubs = (cat.subcategories ?? []).some((s: any) => s.is_active);
-  return hasSubs ? `/category/${cat.slug}` : `/listings?category=${cat.slug}`;
-}
-
-const SLUG_ICON: Record<string, string> = {
-  "produtos": "📦", "servicos-do-lar": "🏠", "construcao": "🔨",
-  "beleza-e-bem-estar": "💅", "translados": "🚗", "envios": "📫",
-  "gastronomia": "🍽️", "terrenos": "🌍", "casas": "🏡", "alugueis": "🔑",
-  "babas": "🧸",
-};
+import ListingsFeed from "./ListingsFeed";
 
 type Banner = {
   id: number;
@@ -45,304 +15,32 @@ type Banner = {
 
 type Props = {
   listings: any[];
-  categories: any[];
+  featuredIds: number[];
   adminWa: string;
   banners: Banner[];
   bannerInterval: number;
 };
 
-export default function HomeClient({ listings, categories, adminWa, banners, bannerInterval }: Props) {
-  const { session } = useSession();
-  const [shareOpen, setShareOpen] = useState(false);
-
-  // Prewarm del listado default de /listings en idle: tocar "Todos os anúncios" o
-  // la pestaña "Anúncios" pinta la lista al instante, sin spinner ni RTT. Corre
-  // DESPUÉS del render principal del home (requestIdleCallback / fallback 2 s) y
-  // solo si el caché de sesión no tiene ya una entrada fresca. Es 1 sola query
-  // extra por visita al home (aceptable en Supabase free). El caché es el mismo
-  // que lee /listings (misma clave, mismo select vía lib/listingsApi).
-  useEffect(() => {
-    let cancelled = false;
-    const run = () => {
-      if (cancelled) return;
-      const entry = getListingsCache(DEFAULT_LISTINGS_KEY);
-      const fresh = entry && Date.now() - entry.ts < LISTINGS_RESULTS_TTL;
-      if (fresh) return;
-      fetchDefaultListings()
-        .then((data) => {
-          if (!cancelled && data.length) setListingsCache(DEFAULT_LISTINGS_KEY, data);
-        })
-        .catch(() => { /* prewarm best-effort: la página recarga sola si falla */ });
-    };
-    const w = window as any;
-    let idleId: number | undefined;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    if (typeof w.requestIdleCallback === "function") {
-      idleId = w.requestIdleCallback(run, { timeout: 3000 });
-    } else {
-      timeoutId = setTimeout(run, 2000);
-    }
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined && typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(idleId);
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
-    };
-  }, []);
-
-  const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  // Botões de acesso rápido: só texto, cada um com um tom da paleta da marca.
-  const quickBtnBase: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 54,
-    padding: "0.6rem 0.4rem",
-    borderRadius: 12,
-    border: "1px solid transparent",
-    textDecoration: "none",
-    cursor: "pointer",
-    textAlign: "center",
-    minWidth: 0,
-    fontFamily: "inherit",
-    fontSize: "0.78rem",
-    fontWeight: 700,
-    lineHeight: 1.2,
-    letterSpacing: "-0.01em",
-  };
-  const quickBtnTodos: CSSProperties = { ...quickBtnBase, background: "var(--blue-main)", color: "#fff" };
-  const quickBtnCategoria: CSSProperties = { ...quickBtnBase, background: "var(--blue-xlight)", color: "var(--blue-main)", borderColor: "var(--blue-light)" };
-  const quickBtnInfo: CSSProperties = { ...quickBtnBase, background: "var(--green-sea)", color: "var(--green-dark)" };
+export default function HomeClient({ listings, featuredIds, adminWa, banners, bannerInterval }: Props) {
+  const featuredSet = useMemo(() => new Set(featuredIds), [featuredIds]);
 
   return (
     <div className="page-body">
-      {/* ── Header azul ── */}
-      <header
-        style={{
-          background: "linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)",
-          padding: "1rem",
-          color: "#fff",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="Mercado Ilha" style={{ height: "40px", width: "auto", display: "block" }} />
-
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            title="Compartilhar Mercado Ilha"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "rgba(255,255,255,0.18)",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.35)",
-              borderRadius: 999,
-              padding: "0.55rem 0.85rem",
-              fontSize: "0.85rem",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            <ShareIcon />
-            Compartilhar
-          </button>
-        </div>
-
-        {/* ── Barra de búsqueda ── */}
-        <BuscaAutocomplete />
-      </header>
+      {/* ── Header azul (logo + Compartilhar + busca) ── */}
+      <SearchHeader />
 
       {/* ── Banner publicitário ── */}
       <BannerRotativo position="home" banners={banners} adminWa={adminWa} bannerInterval={bannerInterval} />
 
-      {/* ── Acesso rápido: 3 botões ── */}
-      <nav style={{ padding: "1rem 1rem 0.5rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-        <Link href="/listings" style={quickBtnTodos}>Todos os anúncios</Link>
-        <button type="button" onClick={() => scrollToSection("secao-categorias")} style={quickBtnCategoria}>Anúncios por categoria</button>
-        <button type="button" onClick={() => scrollToSection("secao-info")} style={quickBtnInfo}>Informação útil</button>
-      </nav>
-
-      {/* ── Anúncios destacados ── */}
-      <section style={{ padding: "0.75rem 0 0.5rem" }}>
-        <div style={{ marginBottom: "0.75rem", padding: "0 1rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Anúncios destacados</h2>
-        </div>
-
-        {listings.length === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              margin: "0 1rem",
-              padding: "2rem 1rem",
-              background: "#fff",
-              borderRadius: 12,
-              color: "var(--text-muted)",
-            }}
-          >
-            <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
-            <p style={{ fontSize: "0.9rem" }}>Ainda não há anúncios.</p>
-            <p style={{ fontSize: "0.8rem", marginTop: 4 }}>Seja o primeiro a publicar!</p>
-          </div>
-        )}
-
-        <div className="listing-grid">
-          {listings.map((l, i) => (
-            <ListingCard key={l.id} listing={l} priority={i < 4} />
-          ))}
-        </div>
-      </section>
-
-      {/* ── Categorias ── */}
-      <section id="secao-categorias" style={{ padding: "0.75rem 1rem 0", scrollMarginTop: "0.75rem" }}>
-
-        {/* Bloque 1: Categorias Destacadas */}
-        {(() => {
-          const featured = categories.filter((c: any) => c.home_sections?.is_featured_block);
-          if (featured.length === 0) return null;
-          return (
-            <div style={{ marginBottom: "1.25rem" }}>
-              <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.625rem", color: "#1e293b" }}>
-                Categorias Destacadas
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {featured.map((cat: any) => (
-                  <Link
-                    key={cat.slug}
-                    href={categoryHref(cat)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.75rem",
-                      padding: "0.875rem 1rem",
-                      background: "#fff",
-                      borderRadius: 12,
-                      border: "1px solid var(--border)",
-                      textDecoration: "none",
-                      color: "#1e293b",
-                    }}
-                  >
-                    <span style={{ fontSize: "1.5rem", lineHeight: 1, flexShrink: 0 }}>
-                      {cat.icon || SLUG_ICON[cat.slug] || "📌"}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "0.9rem", fontWeight: 600 }}>{cat.name}</div>
-                      {cat.description && (
-                        <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {cat.description}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ fontSize: "1rem", color: "#cbd5e1" }}>›</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Bloque 2: Secciones temáticas */}
-        {(() => {
-          const withSection = categories.filter((c: any) => c.home_sections && !c.home_sections.is_featured_block);
-          const sectionsMap = new Map<number, { section: any; cats: any[] }>();
-          withSection.forEach((cat: any) => {
-            const s = cat.home_sections;
-            if (!sectionsMap.has(s.id)) sectionsMap.set(s.id, { section: s, cats: [] });
-            sectionsMap.get(s.id)!.cats.push(cat);
-          });
-          const sortedSections = [...sectionsMap.values()].sort((a, b) => a.section.sort_order - b.section.sort_order);
-          return sortedSections.map(({ section, cats }) => (
-            <div key={section.id} style={{ marginBottom: "1.25rem" }}>
-              <h2 style={{ fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                {section.title}
-              </h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-                {cats.map((cat: any) => (
-                  <Link
-                    key={cat.slug}
-                    href={categoryHref(cat)}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "0.75rem 0.25rem",
-                      background: "#fff",
-                      borderRadius: 12,
-                      border: "1px solid var(--border)",
-                      textDecoration: "none",
-                      color: "#1e293b",
-                      minWidth: 0,
-                    }}
-                  >
-                    <span style={{ fontSize: "1.6rem", lineHeight: 1 }}>{cat.icon || SLUG_ICON[cat.slug] || "📌"}</span>
-                    <span
-                      style={
-                        LONG_NAME_SLUGS.has(cat.slug)
-                          ? { fontSize: "0.72rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }
-                          : { fontSize: "0.75rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2, overflowWrap: "break-word", maxWidth: "100%" }
-                      }
-                    >
-                      {cat.name}
-                    </span>
-                    {cat.description && (
-                      <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", textAlign: "center", lineHeight: 1.2, marginTop: -2, overflowWrap: "break-word", wordBreak: "break-word", maxWidth: "100%" }}>
-                        {cat.description}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ));
-        })()}
-
-      </section>
-
-      {/* ── Informação útil ── */}
-      <section id="secao-info" style={{ padding: "1.25rem 1rem 0.5rem", scrollMarginTop: "0.75rem" }}>
-        <div style={{ marginBottom: "0.75rem" }}>
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>Informação útil</h2>
-        </div>
-        <MaresWidget />
-        <BarcosWidget />
-      </section>
-
-      <InstallSigninStrip />
-
-      {/* ── Fale conosco ── */}
-      <section style={{ margin: "1.5rem 1rem 1rem" }}>
-        <div
-          style={{
-            background: "#fff",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: "1rem",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Sugestões ou problemas? Fala com a gente!
-          </p>
-          <a
-            href={whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha")}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => trackWhatsappClick(null, "suggestion")}
-            className="btn btn-whatsapp"
-            style={{ width: "100%", display: "flex", justifyContent: "center", cursor: "pointer", textDecoration: "none" }}
-          >
-            💬 Fale conosco pelo WhatsApp
-          </a>
-        </div>
-      </section>
+      {/* ── Feed de todos os anúncios (Ordenar/Filtrar + grid + "Ver mais") ── */}
+      <ListingsFeed
+        initialData={listings}
+        defaultOrder="bump"
+        namespace="home:"
+        featuredIds={featuredSet}
+      />
 
       <InstallInvitePopup />
-      {shareOpen && <ShareAppModal onClose={() => setShareOpen(false)} />}
     </div>
   );
 }

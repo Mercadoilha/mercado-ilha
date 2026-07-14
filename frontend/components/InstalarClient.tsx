@@ -7,6 +7,7 @@ import {
   detectPlatform,
   detectIosBrowser,
   isStandalone,
+  isAppInstalled,
   type Platform,
 } from "../lib/platform";
 import {
@@ -35,14 +36,28 @@ export default function InstalarClient() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     if (isStandalone()) {
       router.replace("/");
       return;
     }
     const p = detectPlatform();
-    setPlatform(p);
-    if (p === "ios") setIosView(detectIosBrowser() === "safari" ? "safari" : "other");
-    setReady(true);
+    // Refuerzo: si la PWA ya está instalada aunque se abra desde el navegador
+    // (link viejo/QR en Android → getInstalledRelatedApps), NO ofrecer instalar:
+    // volver al inicio. Nunca se muestra la instalación con la app ya instalada.
+    isAppInstalled().then((installed) => {
+      if (cancelled) return;
+      if (installed) {
+        router.replace("/");
+        return;
+      }
+      setPlatform(p);
+      if (p === "ios") setIosView(detectIosBrowser() === "safari" ? "safari" : "other");
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   useEffect(() => {

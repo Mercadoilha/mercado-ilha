@@ -51,8 +51,14 @@ export function onInstallPromptChange(cb: () => void): () => void {
 export async function triggerInstall(): Promise<boolean> {
   const prompt = getInstallPrompt();
   if (!prompt) return false;
-  await prompt.prompt();
-  const choice = await prompt.userChoice;
-  clearInstallPrompt();
-  return choice.outcome === "accepted";
+  try {
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    clearInstallPrompt();
+    return choice.outcome === "accepted";
+  } catch {
+    // Sin activación transitoria (p.ej. el prompt llegó tarde, fuera del gesto):
+    // no limpiamos el evento para que un toque posterior lo pueda reintentar.
+    return false;
+  }
 }

@@ -15,8 +15,9 @@ export const revalidate = 60;
 
 export default async function ListingsPage() {
   const admin = getSupabaseAdmin({ revalidate: 60 });
-  // Réplica EXACTA de fetchDefaultListings() (lib/listingsApi) pero con el cliente
-  // server-side (ISR de 60s en el fetch), usando el mismo LISTINGS_SELECT → cero drift.
+  // Primera página del listado default (orden created_at desc) con el cliente server-side
+  // (ISR de 60s en el fetch), usando el mismo LISTINGS_SELECT que el feed cliente → cero
+  // drift. El cliente (ListingsFeed) revalida y pagina por keyset (created_at, id).
   const { data } = await admin
     .from("listings")
     .select(LISTINGS_SELECT)

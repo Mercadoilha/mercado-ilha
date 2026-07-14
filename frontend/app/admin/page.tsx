@@ -1429,29 +1429,18 @@ function Settings() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // Bottom nav custom shortcut
-  const [navIcon, setNavIcon] = useState("🍽️");
-  const [navLabel, setNavLabel] = useState("Comida");
-  const [navSlug, setNavSlug] = useState("gastronomia");
-  const [navSaving, setNavSaving] = useState(false);
-  const [navMsg, setNavMsg] = useState("");
-  const [showNavIconPicker, setShowNavIconPicker] = useState(false);
-  const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
+  // Destacados del inicio (contorno dorado): cantidad de anuncios destacados.
+  const [featuredCount, setFeaturedCount] = useState("10");
+  const [featSaving, setFeatSaving] = useState(false);
+  const [featMsg, setFeatMsg] = useState("");
 
   useEffect(() => {
     Promise.all([
       supabase.from("admin_settings").select("value").eq("key", "admin_whatsapp").single(),
-      supabase.from("admin_settings").select("value").eq("key", "nav_custom_1").single(),
-      supabase.from("categories").select("slug,name").eq("is_active", true).order("sort_order"),
-    ]).then(([waRes, navRes, catRes]) => {
+      supabase.from("admin_settings").select("value").eq("key", "featured_count").single(),
+    ]).then(([waRes, featRes]) => {
       if (waRes.data?.value?.value) setWhatsapp(String(waRes.data.value.value));
-      if (navRes.data?.value) {
-        const v = navRes.data.value as { icon?: string; label?: string; category_slug?: string };
-        if (v.icon) setNavIcon(v.icon);
-        if (v.label) setNavLabel(v.label);
-        if (v.category_slug) setNavSlug(v.category_slug);
-      }
-      setCategories(catRes.data ?? []);
+      if (featRes.data?.value?.value != null) setFeaturedCount(String(featRes.data.value.value));
       setLoading(false);
     });
   }, []);
@@ -1467,15 +1456,25 @@ function Settings() {
     setSaving(false);
   };
 
-  const saveNav = async () => {
-    if (!navLabel.trim() || !navSlug.trim()) { setNavMsg("Preencha o rótulo e a categoria."); return; }
-    setNavSaving(true);
-    setNavMsg("");
+  const saveFeatured = async () => {
+    const n = Math.max(0, Math.floor(Number(featuredCount)));
+    if (!Number.isFinite(n)) { setFeatMsg("Informe um número válido."); return; }
+    setFeatSaving(true);
+    setFeatMsg("");
     const { error } = await supabase
       .from("admin_settings")
-      .upsert({ key: "nav_custom_1", value: { icon: navIcon, label: navLabel.trim(), category_slug: navSlug.trim() } }, { onConflict: "key" });
-    setNavMsg(error ? "Erro: " + error.message : "Atalho salvo com sucesso.");
-    setNavSaving(false);
+      .upsert({ key: "featured_count", value: { value: n } }, { onConflict: "key" });
+    if (error) {
+      setFeatMsg("Erro: " + error.message);
+    } else {
+      setFeaturedCount(String(n));
+      setFeatMsg("Quantidade salva com sucesso.");
+      // Refrescar a home (ISR) para que o contorno dourado se ajuste sem esperar 60s.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (token) fetch("/api/revalidate", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
+    setFeatSaving(false);
   };
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
@@ -1511,56 +1510,32 @@ function Settings() {
         </button>
       </div>
 
-      {/* Bottom nav custom shortcut */}
+      {/* Destacados do início (contorno dourado) */}
       <div className="card" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>🔗 Atalho da barra inferior</div>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>⭐ Destaques do início</div>
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
-          O quarto botão da barra de navegação inferior. Aparece como: {navIcon} {navLabel}
+          Quantos anúncios do topo do início aparecem com o contorno dourado. Os mais recentes
+          (ou destacados) ficam em cima e recebem o contorno automaticamente.
         </p>
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-          <button
-            type="button"
-            onClick={() => setShowNavIconPicker((v) => !v)}
-            title="Escolher ícone"
-            style={{
-              fontSize: "1.5rem", width: 48, height: 48, borderRadius: 10, flexShrink: 0,
-              cursor: "pointer", border: showNavIconPicker ? "2px solid var(--blue-main)" : "1px solid var(--border)",
-              background: showNavIconPicker ? "var(--blue-xlight)" : "#fff",
-            }}
-          >
-            {navIcon}
-          </button>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-            <input
-              className="form-input"
-              type="text"
-              placeholder="Rótulo (ex: Comida)"
-              value={navLabel}
-              onChange={(e) => setNavLabel(e.target.value)}
-              maxLength={20}
-            />
-            <select
-              className="form-select"
-              value={navSlug}
-              onChange={(e) => setNavSlug(e.target.value)}
-            >
-              {categories.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name} ({c.slug})</option>
-              ))}
-              {categories.length === 0 && <option value={navSlug}>{navSlug}</option>}
-            </select>
-          </div>
+        <div className="form-group">
+          <label className="form-label">Quantidade de destaques</label>
+          <input
+            className="form-input"
+            type="number"
+            min={0}
+            max={60}
+            value={featuredCount}
+            onChange={(e) => setFeaturedCount(e.target.value)}
+            style={{ maxWidth: 140 }}
+          />
         </div>
-        {showNavIconPicker && (
-          <IconPicker selected={navIcon} onSelect={(e) => { setNavIcon(e); setShowNavIconPicker(false); }} />
-        )}
-        {navMsg && (
-          <p style={{ fontSize: "0.8rem", color: navMsg.startsWith("Erro") ? "#dc2626" : "#059669", fontWeight: 600 }}>
-            {navMsg}
+        {featMsg && (
+          <p style={{ fontSize: "0.8rem", color: featMsg.startsWith("Erro") ? "#dc2626" : "#059669", fontWeight: 600 }}>
+            {featMsg}
           </p>
         )}
-        <button type="button" className="btn btn-primary" disabled={navSaving} onClick={saveNav}>
-          {navSaving ? "Salvando..." : "💾 Salvar atalho"}
+        <button type="button" className="btn btn-primary" disabled={featSaving} onClick={saveFeatured}>
+          {featSaving ? "Salvando..." : "💾 Salvar destaques"}
         </button>
       </div>
     </div>

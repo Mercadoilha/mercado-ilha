@@ -2,18 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getAdminSettings, type NavCustom1 } from "../lib/adminSettings";
 import { useSession } from "../contexts/SessionContext";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { session } = useSession();
-  const [customNav, setCustomNav] = useState<NavCustom1>({ icon: "🍽️", label: "Comida", category_slug: "gastronomia" });
-
-  useEffect(() => {
-    getAdminSettings().then((s) => setCustomNav(s.navCustom1));
-  }, []);
 
   const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -28,8 +21,6 @@ export default function BottomNav() {
     color: active(href) ? "var(--blue-main)" : "#94a3b8",
     minWidth: 48,
   });
-
-  const customHref = `/listings?category=${customNav.category_slug}`;
 
   return (
     <nav
@@ -52,9 +43,9 @@ export default function BottomNav() {
         Início
       </Link>
 
-      <Link href="/listings" style={link("/listings")}>
-        <span style={{ fontSize: "1.3rem" }}>🔍</span>
-        Anúncios
+      <Link href="/categorias" style={link("/categorias")}>
+        <span style={{ fontSize: "1.3rem" }}>🗂️</span>
+        Categorias
       </Link>
 
       {/* Botón central publicar */}
@@ -80,17 +71,10 @@ export default function BottomNav() {
         +
       </Link>
 
-      {session ? (
-        <Link href="/favorites" style={link("/favorites")}>
-          <span style={{ fontSize: "1.3rem" }}>❤️</span>
-          Favoritos
-        </Link>
-      ) : (
-        <Link href={customHref} style={link(customHref)}>
-          <span style={{ fontSize: "1.3rem" }}>{customNav.icon}</span>
-          {customNav.label}
-        </Link>
-      )}
+      <Link href="/informacao" style={link("/informacao")}>
+        <span style={{ fontSize: "1.3rem" }}>ℹ️</span>
+        Informação
+      </Link>
 
       {session ? (
         <Link href="/profile" style={link("/profile")}>

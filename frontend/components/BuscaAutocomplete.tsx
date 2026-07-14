@@ -280,7 +280,7 @@ function highlight(term: string, q: string) {
   );
 }
 
-export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?: string }) {
+export default function BuscaAutocomplete({ defaultValue = "", flush = false }: { defaultValue?: string; flush?: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState(defaultValue);
   const [open, setOpen] = useState(false);
@@ -292,6 +292,9 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Al llegar a la pantalla de resultados la barra trae el término ya escrito, pero NO debe
+  // desplegar sugerencias sola: recién se abre cuando el usuario vuelve a tocarla o escribir.
+  const interactedRef = useRef(false);
 
   const runSearch = useCallback((q: string) => {
     if (abortRef.current) abortRef.current.abort();
@@ -317,6 +320,8 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
       if (abortRef.current) abortRef.current.abort();
       return;
     }
+    // Sin interacción previa (recién llegado con el término ya escrito): no abrir solo.
+    if (!interactedRef.current) return;
     timerRef.current = setTimeout(() => runSearch(query), 300);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, runSearch]);
@@ -392,7 +397,7 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
   const hasResults = items.length > 0;
 
   return (
-    <div ref={containerRef} style={{ position: "relative", marginTop: "0.875rem" }}>
+    <div ref={containerRef} style={{ position: "relative", marginTop: flush ? 0 : "0.875rem", flex: 1 }}>
       <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <span
@@ -419,9 +424,12 @@ export default function BuscaAutocomplete({ defaultValue = "" }: { defaultValue?
             placeholder="O que você procura?"
             value={query}
             autoComplete="off"
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { interactedRef.current = true; setQuery(e.target.value); }}
             onKeyDown={handleKeyDown}
-            onFocus={() => { if (query.length >= 2 && hasResults) setOpen(true); }}
+            onFocus={() => {
+              interactedRef.current = true;
+              if (query.length >= 2) { if (hasResults) setOpen(true); else runSearch(query); }
+            }}
             style={{
               width: "100%",
               padding: "0.7rem 0.875rem 0.7rem 2.5rem",

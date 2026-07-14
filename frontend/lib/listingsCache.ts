@@ -39,18 +39,16 @@ export type ListingsCacheEntry = { data: any[]; ts: number; relaxed?: boolean; h
 //     Pasado HARD, sí se muestra el spinner (datos demasiado viejos).
 export const LISTINGS_SOFT_TTL = 3 * 60 * 1000; // 3 min
 export const LISTINGS_HARD_TTL = 30 * 60 * 1000; // 30 min
-// Compat: el nombre anterior apunta al umbral soft; lo usa el prewarm del home
-// (lib/listingsApi vía HomeClient) para decidir si re-calienta el listado default.
-export const LISTINGS_RESULTS_TTL = LISTINGS_SOFT_TTL;
 const MAX_KEYS = 10;
 
 const results = new Map<string, ListingsCacheEntry>();
 
 // --- Persistencia en sessionStorage (T10 + T7) ---
 // T7: claves separadas. META es chica y se escribe sync; RESULTS es grande y diferida.
-const META_SS = "mi_listings_meta_v2"; // scrolls + filterUi (chico)
+const META_SS = "mi_listings_meta_v3"; // scrolls + filterUi (chico). v3: filterUi multi-zona
 const RESULTS_SS = "mi_listings_results_v2"; // resultados (grande)
 const OLD_SS_V1 = "mi_listings_cache_v1"; // clave monolítica anterior → migrar (borrar)
+const OLD_META_V2 = "mi_listings_meta_v2"; // filterUi con zona única → descartar (formato viejo)
 const PERSIST_KEYS = 4; // solo las últimas N claves de resultados (las más recientes por LRU)
 const MAX_CHARS = 200 * 1024; // guarda de serialización (~200 kB): más grande no se persiste
 
@@ -71,6 +69,9 @@ function hydrateOnce(): void {
   // T7: la clave v1 (resultados+meta juntos) ya no se usa; su TTL corto la vuelve
   // irrelevante. Borrarla para no dejar basura ni re-serializarla nunca más.
   try { sessionStorage.removeItem(OLD_SS_V1); } catch { /* ignorar */ }
+  // meta v2 tenía filterUi con zona única (zoneFilter); el rediseño usa multi-zona.
+  // Descartar el formato viejo para no restaurar selecciones incompatibles.
+  try { sessionStorage.removeItem(OLD_META_V2); } catch { /* ignorar */ }
 
   // Meta (scrolls + filterUi): clave chica.
   try {
@@ -260,7 +261,13 @@ export function getScroll(key: string): number {
 }
 
 // --- Estado de filtros por baseKey (categoría|q|subcategoría) ---
-export type FilterUi = { sortBy: string; conditionFilter: string; zoneFilter: number | null };
+// Multi-zona (rediseño): localidades marcadas enteras + sub-zonas sueltas + condición.
+export type FilterUi = {
+  sortBy: string;
+  conditionFilter: string;
+  localityIds: number[];
+  subzoneIds: number[];
+};
 
 const filterUi = new Map<string, FilterUi>();
 

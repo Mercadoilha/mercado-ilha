@@ -13,6 +13,8 @@ interface MaresData {
   date: string;
 }
 
+// Rediseño /informacao: sin caja azul — la información va directo sobre el fondo
+// blanco de la página, con tipografía más grande (hay una página dedicada, se aprovecha).
 export default function MaresWidget() {
   const [data, setData] = useState<MaresData | null>(null);
 
@@ -34,20 +36,12 @@ export default function MaresWidget() {
   });
 
   return (
-    <div
-      style={{
-        margin: "0 0 4px",
-        padding: "10px 14px",
-        background: "#E6F1FB",
-        borderRadius: 10,
-        border: "1px solid #B5D4F4",
-      }}
-    >
+    <div style={{ padding: "4px 2px 14px" }}>
       <p
         style={{
           margin: "0 0 2px",
-          fontSize: 15,
-          fontWeight: 700,
+          fontSize: 19,
+          fontWeight: 800,
           color: "#185FA5",
         }}
       >
@@ -55,8 +49,8 @@ export default function MaresWidget() {
       </p>
       <p
         style={{
-          margin: "0 0 8px",
-          fontSize: 11,
+          margin: "0 0 12px",
+          fontSize: 13,
           color: "#5a7ea8",
         }}
       >
@@ -66,20 +60,21 @@ export default function MaresWidget() {
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "3px 8px",
+          gap: "6px 10px",
         }}
       >
         {data.tides.map((t: Tide, i: number) => (
           <div
             key={i}
-            style={{ display: "flex", alignItems: "center", gap: 5 }}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            <span style={{ fontSize: 13 }}>
+            <span style={{ fontSize: 15 }}>
               {t.type === "alta" ? "↑" : "↓"}
             </span>
             <span
               style={{
-                fontSize: 12,
+                fontSize: 15,
+                fontWeight: 600,
                 color: "#185FA5",
                 fontVariantNumeric: "tabular-nums",
               }}
@@ -88,7 +83,7 @@ export default function MaresWidget() {
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 color: "#0F6E56",
                 fontWeight: 600,
               }}
@@ -97,7 +92,7 @@ export default function MaresWidget() {
             </span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 color: "#5a7ea8",
               }}
             >
@@ -108,8 +103,8 @@ export default function MaresWidget() {
       </div>
       <p
         style={{
-          margin: "6px 0 0",
-          fontSize: 9,
+          margin: "8px 0 0",
+          fontSize: 10,
           color: "#8aabcc",
           textAlign: "right",
         }}

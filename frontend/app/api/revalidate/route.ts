@@ -3,10 +3,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Revalida la home (ISR) bajo demanda. Lo llama el cliente tras publicar un
- * anúncio para que aparezca al instante en "/" sin esperar la ventana de 60s.
- * Requiere una sesión válida de Supabase (solo usuarios logueados publican) →
- * evita que alguien anónimo fuerce regeneraciones.
+ * Revalida (ISR) bajo demanda el inicio "/" y "/categorias". Lo llama el cliente tras
+ * publicar un anúncio (para que aparezca al instante en el feed del inicio) y desde el
+ * admin al editar categorías / destaques (para refrescar el inicio y la pantalla de
+ * categorías). Requiere una sesión válida de Supabase → evita que un anónimo fuerce
+ * regeneraciones.
  */
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
@@ -21,5 +22,6 @@ export async function POST(req: NextRequest) {
   if (authErr || !user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   revalidatePath("/");
+  revalidatePath("/categorias");
   return NextResponse.json({ revalidated: true });
 }

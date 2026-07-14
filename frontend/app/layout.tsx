@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
+import InstallProgressBar from "../components/InstallProgressBar";
 import { SessionProvider } from "../contexts/SessionContext";
 
 export const viewport: Viewport = {
@@ -109,6 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <BottomNav />
           <RegisterSW />
+          <InstallProgressBar />
         </SessionProvider>
         <SpeedInsights />
       </body>

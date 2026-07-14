@@ -14,12 +14,12 @@ function TimeChip({ time }: { time: string }) {
   return (
     <span
       style={{
-        fontSize: 11,
+        fontSize: 13,
         color: "#185FA5",
-        background: "#fff",
+        background: "#f6faff",
         border: "1px solid #B5D4F4",
         borderRadius: 6,
-        padding: "2px 6px",
+        padding: "3px 8px",
         fontVariantNumeric: "tabular-nums",
       }}
     >
@@ -28,22 +28,16 @@ function TimeChip({ time }: { time: string }) {
   );
 }
 
+// Rediseño /informacao: sin caja azul — la información va directo sobre el fondo
+// blanco de la página, con tipografía más grande (hay una página dedicada, se aprovecha).
 export default function BarcosWidget() {
   return (
-    <div
-      style={{
-        margin: "8px 0 0",
-        padding: "10px 14px",
-        background: "#E6F1FB",
-        borderRadius: 10,
-        border: "1px solid #B5D4F4",
-      }}
-    >
+    <div style={{ padding: "14px 2px 4px", borderTop: "1px solid var(--border)" }}>
       <p
         style={{
           margin: "0 0 2px",
-          fontSize: 15,
-          fontWeight: 700,
+          fontSize: 19,
+          fontWeight: 800,
           color: "#185FA5",
         }}
       >
@@ -51,8 +45,8 @@ export default function BarcosWidget() {
       </p>
       <p
         style={{
-          margin: "0 0 8px",
-          fontSize: 11,
+          margin: "0 0 12px",
+          fontSize: 13,
           color: "#5a7ea8",
         }}
       >
@@ -61,15 +55,15 @@ export default function BarcosWidget() {
 
       <p
         style={{
-          margin: "0 0 4px",
-          fontSize: 11,
-          fontWeight: 600,
+          margin: "0 0 6px",
+          fontSize: 13,
+          fontWeight: 700,
           color: "#0F6E56",
         }}
       >
         Lancha rápida
       </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
         {LANCHA_RAPIDA.map((t) => (
           <TimeChip key={t} time={t} />
         ))}
@@ -77,15 +71,15 @@ export default function BarcosWidget() {
 
       <p
         style={{
-          margin: "0 0 4px",
-          fontSize: 11,
-          fontWeight: 600,
+          margin: "0 0 6px",
+          fontSize: 13,
+          fontWeight: 700,
           color: "#0F6E56",
         }}
       >
         Barco convencional
       </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {BARCO_CONVENCIONAL.map((t) => (
           <TimeChip key={t} time={t} />
         ))}
@@ -93,8 +87,8 @@ export default function BarcosWidget() {
 
       <p
         style={{
-          margin: "8px 0 0",
-          fontSize: 9,
+          margin: "10px 0 0",
+          fontSize: 11,
           color: "#8aabcc",
         }}
       >

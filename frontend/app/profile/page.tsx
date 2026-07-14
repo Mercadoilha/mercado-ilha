@@ -6,12 +6,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { getCachedProfile, setCachedProfile } from "../../lib/profileCache";
-import { getAdminSettings } from "../../lib/adminSettings";
+import { getAdminSettings, whatsappUrl } from "../../lib/adminSettings";
+import { trackWhatsappClick } from "../../lib/tracking";
 import AvatarUpload from "../../components/AvatarUpload";
 import InstallSigninStrip from "../../components/InstallSigninStrip";
 import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
 import ShareIcon from "../../components/ShareIcon";
+
+// Botón outline azul (compartir loja / favoritos) — dos lado a lado en el perfil.
+const outlineBlueBtn: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  width: "100%",
+  padding: "0.6rem 0.5rem",
+  background: "#fff",
+  border: "2px solid var(--blue-main)",
+  borderRadius: 10,
+  color: "var(--blue-main)",
+  fontWeight: 700,
+  fontSize: "0.82rem",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -374,34 +393,24 @@ export default function ProfilePage() {
           )}
 
           {!editMode && session && (
-            <button
-              type="button"
-              onClick={() =>
-                compartilhar({
-                  title: "Minha loja no Mercado Ilha",
-                  text: "Confira minha loja no Mercado Ilha!",
-                  url: window.location.origin + "/store/" + session.user.id,
-                })
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-                padding: "0.6rem",
-                marginTop: 12,
-                background: "#fff",
-                border: "2px solid var(--blue-main)",
-                borderRadius: 10,
-                color: "var(--blue-main)",
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                cursor: "pointer",
-              }}
-            >
-              <ShareIcon /> Compartilhar minha loja
-            </button>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() =>
+                  compartilhar({
+                    title: "Minha loja no Mercado Ilha",
+                    text: "Confira minha loja no Mercado Ilha!",
+                    url: window.location.origin + "/store/" + session.user.id,
+                  })
+                }
+                style={outlineBlueBtn}
+              >
+                <ShareIcon /> <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Compartilhar loja</span>
+              </button>
+              <Link href="/favorites" style={{ ...outlineBlueBtn, textDecoration: "none" }}>
+                ❤️ <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Favoritos</span>
+              </Link>
+            </div>
           )}
         </div>
 
@@ -635,6 +644,26 @@ export default function ProfilePage() {
         >
           Sair da conta
         </button>
+
+        {/* ── Fale conosco (sugestões ou reclamações), no final de tudo ──
+            Mesmo formato do card usado em /informacao. */}
+        {adminWa && (
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 12, padding: "1rem", textAlign: "center", marginTop: 4 }}>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+              Sugestões ou problemas? Fala com a gente!
+            </p>
+            <a
+              href={whatsappUrl(adminWa, "Tenho uma sugestão para o Mercado Ilha")}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => trackWhatsappClick(null, "suggestion")}
+              className="btn btn-whatsapp"
+              style={{ width: "100%", display: "flex", justifyContent: "center", cursor: "pointer", textDecoration: "none" }}
+            >
+              💬 Fale conosco pelo WhatsApp
+            </a>
+          </div>
+        )}
 
       </div>
 

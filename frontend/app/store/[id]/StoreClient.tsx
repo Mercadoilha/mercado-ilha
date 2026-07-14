@@ -221,7 +221,9 @@ export default function StorePage() {
           Membro desde {memberSince} · {totalCount} anúncio{totalCount !== 1 ? "s" : ""} ativo{totalCount !== 1 ? "s" : ""}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+        {/* Acomodo fijo (apilado, ancho completo): idéntico en Android e iPhone,
+            independiente de las métricas de fuente del sistema (Roboto vs SF). */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12, maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
           {seller && (
             sellerPhone ? (
               <a
@@ -230,12 +232,14 @@ export default function StorePage() {
                 rel="noreferrer"
                 onClick={() => trackWhatsappClick(null, "store")}
                 style={{
-                  display: "inline-flex",
+                  display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
                   gap: 6,
                   background: "#25d366",
                   color: "#fff",
-                  padding: "0.5rem 1rem",
+                  padding: "0.6rem 1rem",
                   borderRadius: 999,
                   fontWeight: 700,
                   fontSize: "0.875rem",
@@ -254,12 +258,14 @@ export default function StorePage() {
                   alert("Este vendedor ainda não cadastrou o número de WhatsApp.");
                 }}
                 style={{
-                  display: "inline-flex",
+                  display: "flex",
                   alignItems: "center",
+                  justifyContent: "center",
+                  width: "100%",
                   gap: 6,
                   background: "#25d366",
                   color: "#fff",
-                  padding: "0.5rem 1rem",
+                  padding: "0.6rem 1rem",
                   borderRadius: 999,
                   fontWeight: 700,
                   fontSize: "0.875rem",
@@ -282,12 +288,14 @@ export default function StorePage() {
               })
             }
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
               gap: 6,
               background: "transparent",
               color: "#fff",
-              padding: "0.5rem 1rem",
+              padding: "0.6rem 1rem",
               borderRadius: 999,
               fontWeight: 700,
               fontSize: "0.875rem",
