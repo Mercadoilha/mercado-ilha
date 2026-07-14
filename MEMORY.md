@@ -626,7 +626,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-13** — **El contorno dorado de "destacados" ahora viaja por todas las pantallas.**
-  **Desplegado** (commit pendiente, push a `main`).
+  **Desplegado** (commit `05aba05`, push a `main`).
   - Antes solo se veía en el inicio. Se agregó `frontend/lib/featuredCache.ts` (caché de
     sesión del mismo conjunto de ids destacados, TTL 60s) conectado en `ListingsFeed.tsx`
     (categorías/búsqueda), `StoreClient.tsx` (tienda del vendedor) y `favorites/page.tsx`
