@@ -604,7 +604,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-13** — **Fix botón volver en Favoritos + botões "Falar com o vendedor" e
-  "Compartilhar loja" lado a lado na loja.** **Desplegado** (commit `PENDING`, push a `main`).
+  "Compartilhar loja" lado a lado na loja.** **Desplegado** (commit `fd90011`, push a `main`).
   - `/favorites` (`page.tsx`): el botón ← estaba hardcodeado a `<Link href="/">`, siempre volvía
     a inicio. Cambiado a `router.back()` (mismo patrón que `fix_back_navigation`, §18), en los dos
     headers (logueado y no-logueado). Ahora al entrar desde el perfil vuelve al perfil.
