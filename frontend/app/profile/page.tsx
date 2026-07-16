@@ -14,7 +14,8 @@ import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
 import ShareIcon from "../../components/ShareIcon";
 
-// Botón outline azul (compartir loja / favoritos) — dos lado a lado en el perfil.
+// Botón outline (minha loja / compartilhar) — dos lado a lado dentro del card azul
+// del perfil, por eso el contorno y el texto van en blanco.
 const outlineBlueBtn: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -22,10 +23,10 @@ const outlineBlueBtn: React.CSSProperties = {
   gap: 6,
   width: "100%",
   padding: "0.6rem 0.5rem",
-  background: "#fff",
-  border: "2px solid var(--blue-main)",
+  background: "transparent",
+  border: "2px solid rgba(255,255,255,0.7)",
   borderRadius: 10,
-  color: "var(--blue-main)",
+  color: "#fff",
   fontWeight: 700,
   fontSize: "0.82rem",
   cursor: "pointer",
@@ -315,9 +316,16 @@ export default function ProfilePage() {
         <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
         {/* ── Card de perfil ── */}
+        {/* Mismo azul del banner de /store/[id]: perfil y loja se leen como una sola cosa.
+            Todo lo de adentro va en blanco / tonos claros para mantener el contraste. */}
         <div
           className="card"
-          style={{ padding: "1rem" }}
+          style={{
+            padding: "1rem",
+            background: "linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)",
+            border: "none",
+            color: "#fff",
+          }}
         >
           {profile != null && session != null && (
             <AvatarUpload
@@ -335,10 +343,10 @@ export default function ProfilePage() {
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, marginTop: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.full_name}
               </div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {session?.user?.email}
               </div>
             </div>
@@ -346,14 +354,14 @@ export default function ProfilePage() {
               type="button"
               onClick={() => setEditMode((v) => !v)}
               className="btn btn-outline"
-              style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
+              style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem", color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
             >
               {editMode ? "Cancelar" : "Editar"}
             </button>
           </div>
 
           {!editMode && (
-            <div style={{ fontSize: "0.875rem", color: "#1e293b" }}>
+            <div style={{ fontSize: "0.875rem", color: "#fff" }}>
               {profile?.whatsapp ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span>📱</span>
@@ -365,7 +373,7 @@ export default function ProfilePage() {
                   onClick={() => setEditMode(true)}
                   style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
                 >
-                  <div style={{ color: "#ef4444", fontSize: "0.8rem", textDecoration: "underline" }}>
+                  <div style={{ color: "var(--sand-light)", fontSize: "0.8rem", textDecoration: "underline" }}>
                     ⚠️ Adicione seu WhatsApp para que os compradores possam te contatar. Toque aqui para adicionar.
                   </div>
                 </button>
@@ -376,19 +384,19 @@ export default function ProfilePage() {
           {editMode && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <div className="form-group">
-                <label className="form-label">Nome</label>
+                <label className="form-label" style={{ color: "#fff" }}>Nome</label>
                 <input className="form-input" type="text" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={80} />
               </div>
               <div className="form-group">
-                <label className="form-label">WhatsApp</label>
+                <label className="form-label" style={{ color: "#fff" }}>WhatsApp</label>
                 <input className="form-input" type="tel" placeholder="71 99999-9999" value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} maxLength={20} />
-                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, display: "block" }}>
+                <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.8)", marginTop: 4, display: "block" }}>
                   Brasil: só DDD + número (ex: 75 99999-9999). Outro país: com + e código (ex: +54 11 9999-9999)
                 </span>
               </div>
-              {saveMsg && <p style={{ fontSize: "0.8rem", color: saveMsg.startsWith("Erro") ? "#dc2626" : "#059669" }}>{saveMsg}</p>}
-              {error && <p className="text-error">{error}</p>}
-              <button type="button" className="btn btn-primary" onClick={saveProfile} disabled={saving}>
+              {saveMsg && <p style={{ fontSize: "0.8rem", color: saveMsg.startsWith("Erro") ? "#fecaca" : "var(--green-sea)" }}>{saveMsg}</p>}
+              {error && <p className="text-error" style={{ color: "#fecaca" }}>{error}</p>}
+              <button type="button" className="btn" onClick={saveProfile} disabled={saving} style={{ background: "#fff", color: "var(--blue-main)" }}>
                 {saving ? "Salvando..." : "Salvar"}
               </button>
             </div>

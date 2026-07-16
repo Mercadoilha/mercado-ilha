@@ -127,6 +127,8 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
         />
       )}
 
+      {/* Se renderiza dentro del card azul do perfil → contorno, botão e mensagens
+          em branco / tons claros. */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 4 }}>
         {/* Avatar circle */}
         <div
@@ -135,7 +137,7 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
             height: 80,
             borderRadius: "50%",
             background: currentAvatarUrl ? "transparent" : "var(--blue-light)",
-            border: "3px solid var(--blue-main)",
+            border: "3px solid rgba(255,255,255,0.7)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -156,7 +158,7 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
 
         {/* Button or uploading indicator */}
         {uploading ? (
-          <p style={{ fontSize: "0.78rem", color: "var(--blue-main)", margin: 0, fontWeight: 600 }}>
+          <p style={{ fontSize: "0.78rem", color: "#fff", margin: 0, fontWeight: 600 }}>
             Salvando...
           </p>
         ) : (
@@ -165,8 +167,8 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
             onClick={() => fileRef.current?.click()}
             style={{
               background: "transparent",
-              color: "var(--blue-main)",
-              border: "1px solid var(--blue-main)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.7)",
               borderRadius: 999,
               padding: "0.35rem 1rem",
               fontSize: "0.78rem",
@@ -179,7 +181,7 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
         )}
 
         {msg && (
-          <p style={{ fontSize: "0.78rem", color: msg.ok ? "#059669" : "#dc2626", margin: 0 }}>
+          <p style={{ fontSize: "0.78rem", color: msg.ok ? "var(--green-sea)" : "#fecaca", margin: 0 }}>
             {msg.text}
           </p>
         )}

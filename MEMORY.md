@@ -204,6 +204,19 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   pasó de píldora outline (gris, mismo look que Ordenar/Filtrar) a píldora sólida azul con texto
   blanco (`storePillLink`, calcada del estilo de "Ver loja →"), manteniendo el texto "Lojas".
   "❤️ Favoritos" al lado sigue con el estilo outline de siempre (`pillLink`).
+- **Card de datos del perfil en azul (2026-07-16):** en `/profile`, el recuadro con
+  nombre/email/WhatsApp/foto pasó de fondo blanco a mismo degradado azul del banner de
+  `/store/[id]` (`linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)`), para
+  que perfil y loja se lean como una sola cosa. Todo lo de adentro se adaptó a blanco/tonos
+  claros: nombre y email en blanco, botón "Editar" outline blanco, aviso de "falta WhatsApp"
+  de rojo a `--sand-light` (el rojo se perdía sobre azul), formulario de edición (labels,
+  ayuda, botón Salvar ahora blanco sólido con texto azul) y `AvatarUpload.tsx` (borde del
+  círculo, botón "Trocar foto" y mensajes de éxito/error en tonos claros). Botones "Minha
+  loja"/"Compartilhar" pasaron de outline azul a outline blanco (`outlineBlueBtn` en
+  `app/profile/page.tsx`).
+- **Espaciado loja = espaciado entre anuncios (2026-07-16):** en `/store/[id]`, el grid de
+  anuncios ya no tiene padding-top propio (`StoreClient.tsx`) — quedan pegados al banner
+  azul, igual que están pegados entre sí (separados solo por la línea divisoria del grid).
 
 ## 7. PUBLICIDAD (BANNERS)
 
@@ -746,6 +759,10 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-16** — **Desplegado** (commit PENDIENTE, push a `main`). Card de datos del
+  perfil pasó a fondo azul (mismo degradado del banner de la loja) con todo su contenido
+  adaptado a tonos claros; espaciado de `/store/[id]` ajustado para que los anuncios queden
+  pegados al banner igual que entre sí. Ver §6.
 - **2026-07-16** — **Desplegado** (commit `6f0df5c`, push a `main`). Varios ajustes
   acumulados de esta sesión y de sesiones previas, todos subidos juntos en un mismo commit:
   - **Botón "Ver loja" más grande** en `/listings/[id]` y **pill "Lojas" del home con el

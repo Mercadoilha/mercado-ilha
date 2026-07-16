@@ -335,10 +335,11 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* Anúncios */}
-      <div style={{ padding: "0.5rem 0 1rem" }}>
+      {/* Anúncios — sem espaço acima: o grid é edge-to-edge e as cards se tocam entre si
+          (só as separa a linha divisória), então elas encostam no banner do mesmo jeito. */}
+      <div style={{ padding: "0 0 1rem" }}>
         {listings.length === 0 ? (
-          <div className="card" style={{ margin: "0 1rem", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
+          <div className="card" style={{ margin: "1rem 1rem 0", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
             <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
             <p style={{ fontSize: "0.875rem" }}>Este vendedor não tem anúncios ativos no momento.</p>
           </div>
