@@ -746,7 +746,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-16 (commit PENDIENTE — se completa el hash abajo tras el push)** — Varios ajustes
+- **2026-07-16** — **Desplegado** (commit `6f0df5c`, push a `main`). Varios ajustes
   acumulados de esta sesión y de sesiones previas, todos subidos juntos en un mismo commit:
   - **Botón "Ver loja" más grande** en `/listings/[id]` y **pill "Lojas" del home con el
     mismo estilo sólido azul** que "Ver loja" (antes outline gris), texto sin cambios. Ver §6.
