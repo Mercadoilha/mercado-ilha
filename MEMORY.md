@@ -645,9 +645,8 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   y comparar p75 de LCP/INP/CLS por ruta contra la foto inicial (guardada en §13). Recordar de
   paso el hallazgo del **CLS 0.47 en `/store/[id]`** (pendiente aparte, ver arriba en §19).
 - (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§22.)
-- **Correr `supabase/fase-26-lojas-directory.sql` en el SQL Editor de Supabase** (RPC `get_stores`
-  que necesita el directorio `/lojas`, ver §20) — no hay confirmación de que el usuario ya lo haya
-  corrido; verificar antes de asumir que la RPC existe en producción.
+- (Confirmada ✅ fase-26-lojas-directory.sql: corrida por el usuario — RPC `get_stores` en
+  producción, ver §20.)
 
 ## 20. DIRETÓRIO DE LOJAS (`/lojas`) + FAVORITOS NO HOME (2026-07-15)
 
@@ -668,8 +667,8 @@ volver a preguntarlas si se retoma esta feature).
   Solo lista tiendas con ≥1 anuncio activo; cada card muestra avatar, nombre, cantidad de
   anuncios y chips de localidades donde tiene anuncios activos.
 - **Fuente de datos:** `frontend/lib/lojasApi.ts` (`fetchStores`) → RPC `get_stores`
-  (`supabase/fase-26-lojas-directory.sql`, **verificar si ya se corrió en el SQL Editor de
-  Supabase**, ver §19). Una sola consulta (sin N+1): id/nombre/avatar/conteo de anuncios
+  (`supabase/fase-26-lojas-directory.sql`, **corrida por el usuario ✅**, ver §19). Una sola
+  consulta (sin N+1): id/nombre/avatar/conteo de anuncios
   activos/localidades. Orden "Mais procuradas" = contactos por WhatsApp de los últimos 30 días
   (agregado sobre `whatsapp_clicks`, que tiene RLS solo-admin — la RPC expone únicamente el
   conteo, `security definer`, `set search_path = public`, `grant execute` a `anon` +
@@ -701,8 +700,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
     perfil alineado con miniaturas + stats. Detalle técnico: §13; lección de la regresión: §18.
   - **Directorio de Lojas (`/lojas`) + Favoritos movido al home** (sesión previa, prompt
     `PROMPT_LOJAS_FAVORITOS.md`): pills "🏪 Lojas"/"❤️ Favoritos" en la fila Ordenar/Filtrar del
-    home, RPC `get_stores` (fase-26). Detalle completo: §20. **SQL `fase-26-lojas-directory.sql`
-    con corrida sin confirmar** — ver §19.
+    home, RPC `get_stores` (fase-26, SQL corrido ✅). Detalle completo: §20.
 - **2026-07-13** — **El contorno dorado de "destacados" ahora viaja por todas las pantallas.**
   **Desplegado** (commit `05aba05`, push a `main`).
   - Antes solo se veía en el inicio. Se agregó `frontend/lib/featuredCache.ts` (caché de
