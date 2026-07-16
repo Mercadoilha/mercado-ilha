@@ -465,14 +465,14 @@ export default function ProfilePage() {
                     <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
                       <div
                         style={{
-                          width: 52,
-                          height: 52,
+                          width: 62,
+                          height: 62,
                           borderRadius: 8,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "1.4rem",
+                          fontSize: "1.7rem",
                           overflow: "hidden",
                           flexShrink: 0,
                           position: "relative",
@@ -483,7 +483,7 @@ export default function ProfilePage() {
                             src={firstPhoto}
                             alt={l.title}
                             fill
-                            sizes="52px"
+                            sizes="62px"
                             style={{ objectFit: "contain" }}
                           />
                         ) : "🛍️"}

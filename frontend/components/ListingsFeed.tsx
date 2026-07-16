@@ -44,6 +44,7 @@ import {
   addFavorite,
   removeFavorite,
   clearFavoritesCache,
+  prefetchFavoritesList,
 } from "../lib/favoritesCache";
 import { getFeaturedIdsSync, loadFeaturedIds } from "../lib/featuredCache";
 
@@ -578,7 +579,17 @@ export default function ListingsFeed({
         {homeExtras && (
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Link href="/lojas" prefetch style={storePillLink}>Lojas</Link>
-            <Link href="/favorites" style={pillLink}>❤️ Favoritos</Link>
+            {/* pointerdown (no click): la query de favoritos sale con el dedo todavía
+                apoyado y viaja en paralelo con la navegación, en vez de arrancar recién
+                cuando monta la pantalla. prefetch trae además el chunk de la ruta. */}
+            <Link
+              href="/favorites"
+              prefetch
+              style={pillLink}
+              onPointerDown={() => { if (session) prefetchFavoritesList(session.user.id); }}
+            >
+              ❤️ Favoritos
+            </Link>
           </div>
         )}
         <div style={{ display: "flex", gap: homeExtras ? 8 : 10, flexShrink: 0 }}>

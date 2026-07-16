@@ -7,6 +7,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { useSession } from "../../contexts/SessionContext";
 import { getFeaturedIdsSync, loadFeaturedIds } from "../../lib/featuredCache";
+import {
+  getCachedFavoritesList,
+  loadFavoritesList,
+  removeFavorite as removeFavoriteFromCache,
+} from "../../lib/favoritesCache";
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -25,27 +30,30 @@ export default function FavoritesPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Stale-while-revalidate (mismo patrón que el perfil): si el caché de sesión ya tiene
+  // la lista — o si el prefetch del tap en "Favoritos" la trajo — se pinta al toque y la
+  // revalidación corre por detrás. El spinner queda solo para la primera vez sin caché.
   useEffect(() => {
     if (sessionLoading) return;
     if (!session) { setLoading(false); return; }
 
+    const uid = session.user.id;
     let mounted = true;
-    setLoading(true);
 
-    supabase
-      .from("favorites")
-      .select("id, listing_id, listings(id, title, price, price_text, condition, status, locality_id, subzone_id, localities(name), listing_photos(photo_url, sort_order))")
-      .eq("profile_id", session.user.id)
-      .order("created_at", { ascending: false })
-      // T13 (plan V2): 1 foto por anuncio (la primera por sort_order). Sintaxis anidada
-      // de dos niveles verificada contra la DB real (referencedTable con path punteado).
-      .order("sort_order", { referencedTable: "listings.listing_photos" })
-      .limit(1, { referencedTable: "listings.listing_photos" })
-      .then(({ data }) => {
-        if (!mounted) return;
-        setFavorites(data ?? []);
-        setLoading(false);
-      });
+    const cached = getCachedFavoritesList(uid);
+    if (cached) {
+      setFavorites(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    loadFavoritesList(uid).then((rows) => {
+      if (!mounted) return;
+      // rows === null → falló la consulta: conservamos lo que ya está en pantalla.
+      if (rows) setFavorites(rows);
+      setLoading(false);
+    });
 
     return () => { mounted = false; };
   }, [session, sessionLoading]);
@@ -54,6 +62,8 @@ export default function FavoritesPage() {
     setRemovingId(listingId);
     await supabase.from("favorites").delete().eq("id", favId);
     setFavorites((prev) => prev.filter((f) => f.id !== favId));
+    // Sin esto el caché de sesión seguiría trayendo el anuncio borrado al volver a entrar.
+    if (session) removeFavoriteFromCache(session.user.id, listingId);
     setRemovingId(null);
   };
 
@@ -155,14 +165,14 @@ export default function FavoritesPage() {
                   <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
                     <div
                       style={{
-                        width: 72,
-                        height: 72,
+                        width: 86,
+                        height: 86,
                         borderRadius: 8,
                         background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "1.75rem",
+                        fontSize: "2.1rem",
                         overflow: "hidden",
                         flexShrink: 0,
                         position: "relative",
@@ -173,7 +183,7 @@ export default function FavoritesPage() {
                           src={firstPhoto}
                           alt={l.title}
                           fill
-                          sizes="72px"
+                          sizes="86px"
                           style={{ objectFit: "contain" }}
                         />
                       ) : "🛍️"}

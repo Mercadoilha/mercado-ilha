@@ -218,6 +218,11 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   vendedor em `/store/[id]` também aumentou um pouco, 72→84px (`StoreClient.tsx`). Botões
   "Ver minha loja" (sem emoji 🏪, antes "Minha loja") e "Compartilhar" passaram de outline
   azul a **fundo branco sólido com texto azul** (`outlineBlueBtn` em `app/profile/page.tsx`).
+- **Miniaturas de anúncios ampliadas 20% (2026-07-16):** a pedido do usuário, as fotos dos
+  anúncios em `/favorites` (72→**86px**, `sizes="86px"`) e em "Meus anúncios" do perfil
+  (52→**62px**, `sizes="62px"`) cresceram 20%; o emoji de fallback 🛍️ acompanhou
+  (1.75→2.1rem e 1.4→1.7rem). `sizes` sempre junto com o `width/height` — se ficar no valor
+  antigo, `next/image` serve um arquivo menor que o box e a foto sai borrada.
 - **Espaçamento loja = espaçamento entre anúncios (2026-07-16):** em `/store/[id]`, o grid
   de anúncios tem um pequeno respiro acima (`padding: "0.25rem 0 1rem"` em `StoreClient.tsx`
   — metade do espaço original de 0.5rem, ajustado a pedido do usuário após ficarem colados
@@ -277,7 +282,7 @@ categoría/subcategoría con UI optimista (revierte si falla).
 | `/listings/[id]` | Detalle: galería, precio, vendedor, WhatsApp (RPC lazy), denuncia. Botón editar para dueño. |
 | `/listings/[id]/edit` | Editar anuncio (solo dueño). |
 | `/publish` | Formulario: fotos, categoría→subcategoría, ubicación según tipo. Llama `/api/revalidate` al publicar. |
-| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 2 botones (Minha loja / Compartilhar) en fila arriba de la lista — Favoritos se mudó al home (ver §20). |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 62×62 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 2 botones (Minha loja / Compartilhar) en fila arriba de la lista — Favoritos se mudó al home (ver §20). |
 | `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). Botón ← usa `router.back()` (no vuelve fijo a `/listings`). |
 | `/lojas` | Directorio público de tiendas (buscar, filtrar por lugar, ordenar). Ver §20. `○ Static`. |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
@@ -355,6 +360,18 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
 - **Prewarm + stale-while-revalidate** para datos con auth (perfil): `lib/profileCache.ts` con
   `prewarmProfile()` disparado al resolverse la sesión en `SessionContext`; `getCachedProfile()`
   render instantáneo; `setCachedProfile()` sincroniza tras mutaciones.
+- **Caché de sesión + prefetch al tocar para `/favorites` (2026-07-16):** mismo patrón que el
+  perfil, pero sin costo en el arranque. `lib/favoritesCache.ts` (que ya tenía el Set de ids)
+  pasó a ser dueño también de la **lista completa**: `getCachedFavoritesList()` (render
+  instantáneo), `loadFavoritesList()` (revalida por detrás, dedupe de vuelos, y de paso alinea
+  el Set de ids que sale gratis de las mismas filas) y `prefetchFavoritesList()` disparado en
+  `onPointerDown` del pill "❤️ Favoritos" (`ListingsFeed.tsx`) → la query viaja en paralelo con
+  la navegación en vez de arrancar recién al montar. **Por qué acá el prefetch va en el tap y no
+  en el arranque de sesión** (como el perfil): agregar una 4ª query al `SessionContext` le cobra
+  el costo a todos los usuarios, incluso a los que nunca abren favoritos. El tap no cuesta nada
+  hasta que hay intención. Dos detalles que hacen falta: `loadFavoritesList()` devuelve `null`
+  ante error (el llamador conserva lo que muestra, no vacía la pantalla) y `mutationEpoch`
+  descarta la respuesta de una query que salió **antes** de un toggle (ver §18).
 - **`next/dynamic`** para módulos pesados de uso raro (`AvatarCropModal`, PhotoUploader).
 - **`next/image`** (AVIF/WebP, remotePatterns) para fotos.
 - Widgets secundarios (marés, barcos) cargan post-render y nunca rompen la home si fallan.
@@ -573,6 +590,24 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 18. BUGS RESUELTOS — LECCIONES
 
+- **`/favorites` lenta: la pantalla que quedó fuera de todas las optimizaciones (2026-07-16):**
+  latencia al entrar reportada por el usuario. **No era la red ni la query**: era la única
+  pantalla con datos-con-auth sin caché **ni** prefetch, mientras todo a su alrededor sí los
+  tenía (`/profile` prewarmeada en `SessionContext`, `/lojas` con `prefetch` en el `<Link>`,
+  las cards con `prefetchListingDetail` en `onPointerDown`). Consultaba de cero en **cada**
+  entrada, con spinner bloqueante y en serie (tap → payload RSC → mount → query). Fix: caché de
+  sesión + SWR + prefetch en el tap (ver §13). **Lección:** cuando una sola pantalla "se siente
+  lenta" y las demás no, sospechar primero de qué patrón del proyecto le falta antes de tocar la
+  query — las optimizaciones se aplicaron pantalla por pantalla y es fácil que una quede afuera.
+- **Caché local + respuesta tardía = el favorito borrado revive (2026-07-16, detectado en
+  revisión ANTES de deploy):** al cachear la lista de favoritos, una query que salió **antes** de
+  un toggle vuelve con datos ya viejos y, al escribir el caché, resucita el favorito recién
+  sacado (o pierde el recién agregado). Fix: `mutationEpoch` en `favoritesCache.ts` — se captura
+  la marca antes de la query y, si cambió al volver, la respuesta se descarta (el toggle local ya
+  dejó el caché correcto). **Regla: todo caché con escritura optimista necesita una marca de
+  generación que invalide las respuestas en vuelo.** `addFavorite` además anula la lista (no se
+  puede fabricar la fila: falta el anuncio embebido) y `removeFavorite` filtra la fila (queda
+  completa y válida, sin refetch).
 - **Cortina de entrada con JS por defecto-visible = riesgo de brick (2026-07-08, detectado en
   revisión ANTES de deploy):** la 1ª versión de la cortina azul mostraba el overlay por defecto
   (`opacity:1`) y lo escondía con un `<script>` inline. Si el JS no corría, el overlay quedaba
@@ -726,6 +761,9 @@ volver a preguntarlas si se retoma esta feature).
   **2026-07-16:** el pill llevaba contador (`❤️ N` cuando el usuario tenía favoritos) y pasó a
   etiqueta fija "❤️ Favoritos" siempre, a pedido del usuario. El estado `favoriteIds` sigue
   vivo en `ListingsFeed.tsx`: alimenta los corazones de cada card, solo dejó de pintar el número.
+  **2026-07-16 (velocidad):** el pill sumó `prefetch` en el `<Link>` (como el de "Lojas") y
+  `prefetchFavoritesList(session.user.id)` en `onPointerDown` → al entrar, la lista ya viajó.
+  Ver §13 y la lección en §18.
 - **Nuevo pill "🏪 Lojas"** en la misma fila → `/lojas`.
 - **`/lojas`** (`frontend/app/lojas/page.tsx` + `LojasClient.tsx`, ruta `○ Static`): buscador
   con sugerencias mientras se escribe (mismo patrón que `BuscaAutocomplete.tsx`: debounce,
@@ -764,6 +802,19 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-16** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Latencia al entrar a
+  `/favorites` + miniaturas 20% más grandes.** La demora no era la red ni la query: `/favorites`
+  era la única pantalla con datos-con-auth **sin caché ni prefetch** (el perfil se prewarmea en
+  `SessionContext`, `/lojas` tiene `prefetch`, las cards prefetchean el detalle en el tap), así
+  que consultaba de cero en cada entrada con spinner bloqueante. Fix: `lib/favoritesCache.ts`
+  ahora también es dueño de la lista completa (caché de sesión + stale-while-revalidate) y el
+  pill "❤️ Favoritos" dispara `prefetchFavoritesList()` en `onPointerDown` + `prefetch` en el
+  `<Link>` → entrada repetida sin espera, entrada fría con la query en paralelo a la navegación.
+  **Sin costo nuevo en el arranque** (no se agregó query al `SessionContext`). En la revisión
+  apareció y se cerró un bug de caché: una respuesta en vuelo podía revivir un favorito recién
+  borrado → guarda `mutationEpoch`. Miniaturas +20%: `/favorites` 72→86px y "Meus anúncios"
+  62px (era 52). Verificado: `tsc --noEmit` limpio, `npm run build` 56 páginas, `/favorites`,
+  `/` y `/profile` siguen `○ Static`. Ver §13 (patrón), §18 (2 lecciones), §6 y §20.
 - **2026-07-16** — **Desplegado** (commit `f56f4d8`, push a `main`). Segunda vuelta sobre el
   perfil/loja de la misma sesión: banner del perfil pasó de card con margen a **edge-to-edge**
   (igual que el de la loja); fotos de perfil agrandadas (perfil 80→104px, loja 72→84px);
