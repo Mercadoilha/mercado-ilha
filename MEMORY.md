@@ -764,7 +764,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-16** — **Desplegado** (commit PENDIENTE, push a `main`). Segunda vuelta sobre el
+- **2026-07-16** — **Desplegado** (commit `f56f4d8`, push a `main`). Segunda vuelta sobre el
   perfil/loja de la misma sesión: banner del perfil pasó de card con margen a **edge-to-edge**
   (igual que el de la loja); fotos de perfil agrandadas (perfil 80→104px, loja 72→84px);
   botón "Minha loja" → "Ver minha loja" sin emoji; botones "Ver minha loja"/"Compartilhar"
