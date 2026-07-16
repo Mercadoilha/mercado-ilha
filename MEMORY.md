@@ -694,7 +694,7 @@ Registro cronológico de cierres de sesión (más reciente arriba). Detalle estr
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
 - **2026-07-15** — **Dos entregas en un mismo cierre: fix parpadeo/demoras + directorio de Lojas.**
-  **Desplegado** (commit `PENDIENTE`, push a `main`).
+  **Desplegado** (commit `bfdb783`, push a `main`).
   - **Fix parpadeo + demoras post-V3** (sesión Opus, diagnóstico verificado con mediciones):
     prioridad de imagen restaurada en las primeras 4 cards del home, "Atualizando…" ya no
     empuja el grid, prefetch de la query completa del detalle al tocar una card, prewarm del
