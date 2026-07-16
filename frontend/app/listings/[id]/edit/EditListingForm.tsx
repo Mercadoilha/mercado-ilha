@@ -9,6 +9,9 @@ import { compressImage, normalizeFile } from "../../../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
 import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../../../components/ExtraCategoriesPicker";
 import type { PhotoAdjustResult } from "../../../../components/PhotoAdjustModal";
+import { safeBack } from "../../../../lib/safeBack";
+import { clearListingPreview } from "../../../../lib/listingPreview";
+import { clearListingDetailPrefetch } from "../../../../lib/listingDetailPrefetch";
 
 // El modal de ajuste solo se descarga cuando el usuario toca una foto nueva.
 const PhotoAdjustModal = dynamic(() => import("../../../../components/PhotoAdjustModal"), { ssr: false });
@@ -382,8 +385,15 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
       }
     }
 
+    // Invalida o preview otimista desatualizado (título/preço antigos) para que, ao voltar
+    // ao detalhe, não faça flash com o dado anterior à edição — o fetch completo do detalhe
+    // já vai trazer o dado fresco de qualquer forma (o componente remonta ao voltar).
+    clearListingPreview(listingId);
+    clearListingDetailPrefetch(listingId);
     setSuccess(true);
-    router.push(`/listings/${listingId}`);
+    // back() (não push) para não empilhar uma tela nova: volta direto à mesma entrada de
+    // detalhe que já existia no histórico antes de entrar em editar, sem duplicar.
+    safeBack(router, `/listings/${listingId}`);
   };
 
   if (authLoading || dataLoading) {
@@ -398,7 +408,11 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
     return (
       <div className="page-body">
         <header className="page-header">
-          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <button
+            type="button"
+            onClick={() => safeBack(router, "/")}
+            style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+          >←</button>
           <h1>Editar anúncio</h1>
         </header>
         <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
@@ -413,7 +427,11 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
     return (
       <div className="page-body">
         <header className="page-header">
-          <Link href="/listings" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <button
+            type="button"
+            onClick={() => safeBack(router, "/listings")}
+            style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+          >←</button>
           <h1>Editar anúncio</h1>
         </header>
         <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
@@ -438,7 +456,11 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href={`/listings/${listingId}`} style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => safeBack(router, `/listings/${listingId}`)}
+          style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+        >←</button>
         <h1>Editar anúncio</h1>
       </header>
 
@@ -690,12 +712,13 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
           {submitting ? "Salvando..." : "💾 Salvar alterações"}
         </button>
 
-        <Link
-          href={`/listings/${listingId}`}
-          style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", paddingBottom: "0.5rem" }}
+        <button
+          type="button"
+          onClick={() => safeBack(router, `/listings/${listingId}`)}
+          style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", paddingBottom: "0.5rem", background: "none", border: "none", cursor: "pointer" }}
         >
           Cancelar e voltar ao anúncio
-        </Link>
+        </button>
       </form>
     </div>
   );

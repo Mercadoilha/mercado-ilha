@@ -44,3 +44,9 @@ export function takeListingDetailPrefetch(id: number): Promise<DetailResult> | n
   if (Date.now() - entry.ts >= TTL) return null;
   return entry.promise;
 }
+
+// Invalidar após editar: se por algum motivo ficou um prefetch em vôo/fresco para este id
+// (janela de 30s), descarta para não entregar dados anteriores à edição.
+export function clearListingDetailPrefetch(id: number): void {
+  cache.delete(id);
+}

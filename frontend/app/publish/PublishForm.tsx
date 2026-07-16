@@ -9,6 +9,7 @@ import { compressImage, normalizeFile } from "../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../lib/categoryPlaceholders";
 import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../components/ExtraCategoriesPicker";
 import type { PhotoAdjustResult } from "../../components/PhotoAdjustModal";
+import { safeBack } from "../../lib/safeBack";
 
 // El modal de ajuste solo se descarga cuando el usuario toca una foto:
 // cero costo en la carga de /publish.
@@ -319,7 +320,11 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     }).catch(() => {});
 
     setSuccess(true);
-    router.push(`/listings/${listing.id}`);
+    // replace (não push): a tela de publicar não deve ficar no histórico — se ficasse, ao
+    // voltar do detalhe cairíamos de volta no formulário já enviado. ?from=publish avisa o
+    // detalhe para que a seta de voltar leve à home (não a uma tela anterior qualquer,
+    // já que o usuário pode ter chegado em /publish de qualquer lugar do app).
+    router.replace(`/listings/${listing.id}?from=publish`);
   };
 
   // ── Auth loading ──
@@ -330,7 +335,11 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     return (
       <div className="page-body">
         <header className="page-header">
-          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <button
+            type="button"
+            onClick={() => safeBack(router, "/")}
+            style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+          >←</button>
           <h1>Publicar anúncio</h1>
         </header>
         <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -358,7 +367,11 @@ export default function PublishForm({ categories, localities, allSubzones, islan
     return (
       <div className="page-body">
         <header className="page-header">
-          <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+          <button
+            type="button"
+            onClick={() => safeBack(router, "/")}
+            style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+          >←</button>
           <h1>Publicar anúncio</h1>
         </header>
         <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
@@ -392,7 +405,11 @@ export default function PublishForm({ categories, localities, allSubzones, islan
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => safeBack(router, "/")}
+          style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
+        >←</button>
         <h1>Publicar anúncio</h1>
       </header>
 

@@ -33,6 +33,8 @@ export default function BottomNav() {
         background: "#fff",
         borderTop: "1px solid var(--border)",
         display: "flex",
+        // Levanta os itens do bordo inferior do telefone: a área útil fica acima do padding.
+        paddingBottom: 8,
         alignItems: "center",
         justifyContent: "space-around",
         zIndex: 100,

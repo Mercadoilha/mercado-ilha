@@ -17,6 +17,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sessionLoading, setSessionLoading] = useState(true);
 
   useEffect(() => {
+    // Precalentar el canal con la base de datos apenas abre la app: un pedido mínimo
+    // (HEAD, sin filas) que establece la conexión HTTP/2 y atraviesa la renovación del
+    // token vencido durante la noche. Corre en segundo plano, off del camino crítico →
+    // cuando el usuario abre su primer anuncio del día, la query del detalle ya no paga
+    // ese "arranque en frío" y la descripción aparece rápido desde la primera vez.
+    supabase.from("listings").select("id", { head: true, count: undefined }).limit(1).then(() => {}, () => {});
+
     supabase.auth.getSession().then(({ data }) => {
       const s = data?.session ?? null;
       setSession(s);

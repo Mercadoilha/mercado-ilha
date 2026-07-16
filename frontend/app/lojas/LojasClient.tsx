@@ -41,6 +41,7 @@ export default function LojasClient() {
   const [listError, setListError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0); // "Tentar novamente" → repite la carga
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -129,7 +130,7 @@ export default function LojasClient() {
         setListLoading(false);
       });
     return () => ctrl.abort();
-  }, [appliedSearch, localityId, sort]);
+  }, [appliedSearch, localityId, sort, reloadKey]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
@@ -273,7 +274,26 @@ export default function LojasClient() {
 
       {/* Lista de lojas */}
       <div style={{ padding: "0.6rem 1rem 1rem" }}>
-        {listError && <p className="text-error" style={{ margin: "0 0 8px" }}>{listError}</p>}
+        {/* Si ya hay lojas en pantalla el error viene de "Ver mais lojas": ese mismo
+            botón sigue abajo para reintentar, no hace falta otro. */}
+        {listError && stores.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "2.5rem 1rem", background: "#fff", borderRadius: 12 }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📡</div>
+            <p style={{ fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>{listError}</p>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)", marginBottom: 16 }}>
+              Verifique sua conexão e tente de novo.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              style={{ padding: "0.7rem 1.5rem", borderRadius: 10, border: "none", background: "var(--blue-main)", color: "#fff", fontWeight: 700, fontSize: "0.9rem", fontFamily: "inherit", cursor: "pointer" }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : listError ? (
+          <p className="text-error" style={{ margin: "0 0 8px" }}>{listError}</p>
+        ) : null}
 
         {listLoading && stores.length === 0 && (
           <div style={{ textAlign: "center", padding: "3rem 0" }}><div className="spinner" /></div>

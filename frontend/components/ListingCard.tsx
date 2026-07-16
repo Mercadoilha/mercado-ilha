@@ -70,7 +70,12 @@ export default memo(function ListingCard({
       />
       <Link
         href={`/listings/${listing.id}`}
-        onClick={() => {
+        // Se dispara en pointerdown (apenas se apoya el dedo/mouse), que ocurre unas
+        // fracciones de segundo ANTES del click/navegación → la query del detalle arranca
+        // con esa ventaja y la descripción llega antes a la vista. onClick queda como
+        // respaldo (teclado/enter); prefetchListingDetail deduplica y setListingPreview
+        // es idempotente, así que dispararlo dos veces no cuesta nada.
+        onPointerDown={() => {
           setListingPreview({
             id: listing.id,
             title: listing.title,
@@ -82,6 +87,18 @@ export default memo(function ListingCard({
           });
           // Dispara la query completa del detalle en paralelo con la navegación (barato,
           // async) → la descripción y las demás fotos llegan al toque.
+          prefetchListingDetail(listing.id);
+        }}
+        onClick={() => {
+          setListingPreview({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price ?? null,
+            price_text: listing.price_text ?? null,
+            condition: listing.condition ?? null,
+            firstPhoto,
+            localityName: locationText,
+          });
           prefetchListingDetail(listing.id);
         }}
         style={{

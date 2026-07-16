@@ -60,6 +60,22 @@ export default function ListingDetailPage() {
   const viewTracked = useRef<number | null>(null);
   const didInitRef = useRef(false);
 
+  // Chegou aqui direto de uma publicação bem-sucedida (PublishForm faz
+  // router.replace(`/listings/${id}?from=publish`), sem deixar o formulário no histórico).
+  // Não usamos useSearchParams (obrigaria envolver a rota em Suspense e tiraria o shell da
+  // geração estática) — lemos a URL 1x no mount e guardamos num state; a seta de voltar usa
+  // esse flag para ir à home em vez de back() (não haveria detalhe anterior nesse caso).
+  const [fromPublish] = useState(
+    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "publish"
+  );
+
+  // Limpa o "?from=publish" da barra de endereço (não polui um link compartilhado a partir
+  // daqui) sem empilhar uma entrada nova no histórico — replace troca só a entrada atual.
+  useEffect(() => {
+    if (fromPublish) router.replace(window.location.pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!listingId || Number.isNaN(listingId)) {
       setError("Anúncio não encontrado.");
@@ -362,7 +378,7 @@ export default function ListingDetailPage() {
       <header className="page-header">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => (fromPublish ? router.replace("/") : router.back())}
           style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
         >←</button>
         <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
@@ -581,12 +597,12 @@ export default function ListingDetailPage() {
             <Link
               href={`/store/${seller.id}`}
               style={{
-                fontSize: "0.8rem",
+                fontSize: "0.92rem",
                 color: "#fff",
                 fontWeight: 700,
                 textDecoration: "none",
                 background: "var(--blue-main)",
-                padding: "0.45rem 0.9rem",
+                padding: "0.6rem 1.1rem",
                 borderRadius: 999,
                 flexShrink: 0,
                 whiteSpace: "nowrap",

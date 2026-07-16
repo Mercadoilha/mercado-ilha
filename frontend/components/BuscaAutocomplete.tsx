@@ -292,6 +292,9 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Marca que el próximo render viene de elegir una sugerencia: hay que dejar el
+  // cursor al final (después del espacio) para poder seguir escribiendo.
+  const caretToEndRef = useRef(false);
   // Al llegar a la pantalla de resultados la barra trae el término ya escrito, pero NO debe
   // desplegar sugerencias sola: recién se abre cuando el usuario vuelve a tocarla o escribir.
   const interactedRef = useRef(false);
@@ -326,6 +329,19 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, runSearch]);
 
+  // Cursor al final de la barra tras completarla con una sugerencia. El input nunca
+  // pierde el foco (los ítems cancelan el pointerdown), así que en móvil el teclado
+  // sigue abierto y se puede escribir la palabra siguiente sin volver a tocar.
+  useEffect(() => {
+    if (!caretToEndRef.current) return;
+    caretToEndRef.current = false;
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    const end = el.value.length;
+    try { el.setSelectionRange(end, end); } catch { /* selección no soportada */ }
+  }, [query]);
+
   // Close on outside click
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
@@ -350,21 +366,30 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
     router.push(`/listings?q=${encodeURIComponent(q)}`);
   }
 
+  // Término ya elegido: la barra quedó completada con él y con el espacio final,
+  // así que en la lista se ve entero en negrita. Volver a tocarlo busca.
+  const isChosenTerm = useCallback(
+    (item: Suggestion) =>
+      item.kind === "term" && query.endsWith(" ") && fold(norm(query)) === fold(norm(item.label)),
+    [query],
+  );
+
   // Tocar una sugerencia: categoría/subcategoría navega directo; un término
-  // completa la barra (con espacio final) para que el usuario pueda agregar
-  // más texto y recién ahí tocar Buscar. Si el término ya es exactamente lo
-  // escrito, completarlo no aportaría nada → busca directo.
+  // completa la barra y deja el cursor después de un espacio, para poder seguir
+  // escribiendo la palabra siguiente. El espacio no entra en la búsqueda
+  // (goFreeText recorta). Tocar de nuevo el término ya elegido → buscar.
   function selectSuggestion(item: Suggestion) {
     if (item.kind === "nav") {
       goHref(item.href);
       return;
     }
-    if (fold(item.label) === fold(query.trim())) {
+    if (isChosenTerm(item)) {
       goFreeText(item.label);
       return;
     }
     setQuery(item.label + " ");
     setActiveIdx(-1);
+    caretToEndRef.current = true;
     inputRef.current?.focus();
   }
 
@@ -421,7 +446,7 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
             aria-expanded={open}
             aria-controls="busca-listbox"
             aria-activedescendant={activeIdx >= 0 ? `busca-item-${activeIdx}` : undefined}
-            placeholder="O que você procura?"
+            placeholder="Buscar no Mercado Ilha"
             value={query}
             autoComplete="off"
             onChange={(e) => { interactedRef.current = true; setQuery(e.target.value); }}
@@ -465,6 +490,9 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
         <div
           id="busca-listbox"
           role="listbox"
+          // Al salir el mouse de la lista ninguna sugerencia queda resaltada: tocar
+          // "Buscar" busca lo escrito en la barra, no la última que se pasó por encima.
+          onMouseLeave={() => setActiveIdx(-1)}
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
@@ -533,8 +561,9 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
                 }}>
                   em {item.hint}
                 </span>
-              ) : (
+              ) : isChosenTerm(item) ? null : (
                 // Señal de que el término completa la barra (estilo Mercado Livre).
+                // El término ya elegido no la lleva: tocarlo busca, no completa.
                 <span aria-hidden="true" style={{ fontSize: "0.85rem", color: "#94a3b8", flexShrink: 0 }}>
                   ↖
                 </span>

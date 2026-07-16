@@ -8,7 +8,7 @@
 --
 -- Reglas:
 --   • Solo el dueño, solo anuncios activos.
---   • Cooldown: 1 vez por hora por anuncio.
+--   • Cooldown: 1 vez cada 15 minutos por anuncio.
 --   • Destacar renueva la validez 30 días (equivale a republicar).
 --   • created_at NO se toca (sigue veraz para "publicado há X dias").
 --
@@ -54,8 +54,8 @@ begin
     raise exception 'not_allowed';
   end if;
 
-  -- Cooldown: 1 vez por hora.
-  if _last is not null and _last > _now - interval '1 hour' then
+  -- Cooldown: 1 vez cada 15 minutos.
+  if _last is not null and _last > _now - interval '15 minutes' then
     raise exception 'cooldown';
   end if;
 

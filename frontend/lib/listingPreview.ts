@@ -30,3 +30,11 @@ export function setListingPreview(p: ListingPreview): void {
 export function getListingPreview(id: number): ListingPreview | null {
   return previews.get(id) ?? null;
 }
+
+// Invalidar após uma edição bem-sucedida: se o preview otimista ficasse com o título/preço
+// antigos, ao voltar para o detalhe apareceriam por um instante antes da query completa
+// sobrescrever (flash de dado velho). Sem preview, o detalhe cai no spinner normal até
+// chegar o dado fresco — melhor do que mostrar algo errado.
+export function clearListingPreview(id: number): void {
+  previews.delete(id);
+}

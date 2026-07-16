@@ -138,7 +138,7 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   `reference_miniaturas_fotos`.
 - **Home (orden actual, `HomeClient.tsx`):** header azul (`SearchHeader`: logo + Compartilhar +
   búsqueda autocomplete) → `BannerRotativo` → **fila de acciones** (`ListingsFeed` con `homeExtras`):
-  a la izquierda **Lojas** (→`/lojas`) y **Favoritos** (→`/favorites`, con contador para logueados);
+  a la izquierda **Lojas** (→`/lojas`) y **Favoritos** (→`/favorites`, etiqueta fija, sin contador);
   a la derecha **Ordenar** y **Filtrar** → **feed de anúncios** (orden `bumped_at`; los primeros N
   llevan contorno dorado = destacados, N = `featured_count`) → `InstallInvitePopup`.
   **Ya NO existen los 3 botones de acceso rápido** (Todos/Categoria/Info útil, commit `a715b8b`):
@@ -168,16 +168,42 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   (antes quedaba pegado, esquinas rectas) y `RegisterSW.tsx` ya no registra el service worker en
   desarrollo (`process.env.NODE_ENV !== "production"` corta el registro) — en dev cacheaba
   `/_next/static` cache-first y servía JS viejo tras cada cambio, sin relación con el build real.
+  **Seguir escribiendo tras elegir una sugerencia (2026-07-16):** el primer toque
+  sobre una sugerencia de **término** SIEMPRE completa la barra, aunque el término sea idéntico a
+  lo escrito (antes ese caso buscaba directo y cortaba el tipeo de la segunda palabra: escribir
+  "iphone" y tocar la sugerencia se iba a resultados en vez de dejar "iphone " para agregar "13").
+  Queda el cursor al final, después del espacio (`caretToEndRef` + `setSelectionRange` en un
+  `useEffect` sobre `query`: corre cuando el DOM ya tiene el valor nuevo; el input nunca pierde el
+  foco porque los ítems cancelan el `pointerdown`, así que en móvil el teclado sigue abierto). El
+  **segundo** toque sobre ese mismo término ya elegido (`isChosenTerm()`: la barra termina en
+  espacio y `fold(norm(query)) === fold(norm(label))`, se ve entero en negrita) sí busca — y ese
+  ítem ya no muestra el ↖, porque tocarlo no completa. El espacio final nunca entra en la
+  búsqueda: `goFreeText()` hace `trim()` antes de armar la URL y `foldWords()` descarta vacíos.
+  También: el listbox resetea `activeIdx` en `onMouseLeave` — en desktop, pasar el mouse por
+  encima de la lista camino al botón Buscar dejaba una sugerencia resaltada y `handleSubmit`
+  buscaba **esa** en vez de lo escrito (en móvil no pasaba: cancelar el `pointerdown` suprime los
+  eventos de mouse de compatibilidad).
 - **Botón compartir:** Web Share API + fallback WhatsApp. Ícono en `ShareIcon.tsx`. En 4 lugares:
   header global, detalle del anuncio (outline azul, visible siempre), tienda (outline blanco),
   perfil propio (outline azul, URL `origin + '/store/' + userId`).
-- **Bottom nav fijo:** Início | Anúncios | ➕ (arena, circular) | 🍽️ Comida | Perfil/Entrar.
+- **Bottom nav fijo (`BottomNav.tsx`):** 🏠 Início | 🗂️ Categorias | ➕ (arena, circular) |
+  ℹ️ Informação | 👤 Perfil / 🔑 Entrar. Altura `--nav-height: 72px` (subió de 64px el
+  2026-07-16) + `paddingBottom: 8` en el `<nav>` → los ítems se centran en el espacio de
+  arriba y no quedan pegados al borde inferior del teléfono. `--nav-height` la consumen
+  también `body { padding-bottom }` y `.page-body { min-height }` en `globals.css`: cambiarla
+  ahí ajusta todo el clearance solo.
 - **OG image:** `/icon-192.png` para preview compacto en WhatsApp.
 - **Favoritos:** sección eliminada del perfil. Ya no existe en la UI.
 - **Botones que "pasaban desapercibidos" (2026-07-07):** en `/listings/[id]`, "Ver loja" pasó de
   link de texto a píldora sólida azul (`--blue-main`, fondo, blanco); "Editar anúncio" (dueño) pasó
   de azul a arena (`--sand`) con sombra. Sin emojis de lápiz (se sacaron a pedido del usuario) ni
   el 📍 antes de la localidad en `/favorites`.
+- **Botón "Ver loja" más grande (2026-07-16):** misma píldora azul, pero `fontSize` 0.8→0.92rem
+  y `padding` 0.45/0.9rem→0.6/1.1rem (`ListingDetailClient.tsx`).
+- **Pill "Lojas" del home con el mismo estilo que "Ver loja" (2026-07-16):** en `ListingsFeed.tsx`
+  pasó de píldora outline (gris, mismo look que Ordenar/Filtrar) a píldora sólida azul con texto
+  blanco (`storePillLink`, calcada del estilo de "Ver loja →"), manteniendo el texto "Lojas".
+  "❤️ Favoritos" al lado sigue con el estilo outline de siempre (`pillLink`).
 
 ## 7. PUBLICIDAD (BANNERS)
 
@@ -464,8 +490,8 @@ re-postar del grupo de WhatsApp). **Gratis por ahora; será pago más adelante.*
 - **DB `fase-17-destacar-anuncio.sql`** (✅ ejecutada): columna `listings.bumped_at timestamptz`
   (backfill = `created_at`; `created_at` NO se toca → sigue veraz para "publicado há X dias"). Índice
   `listings_status_bumped_idx`. RPC `bump_listing(_listing_id)` `security definer`: solo dueño +
-  `status='active'`; **cooldown 1h**; setea `bumped_at=now()`, renueva `expires_at=+30d`, limpia
-  `deletion_warning_sent_at`.
+  `status='active'`; **cooldown 15min** (reducido desde 1h el 2026-07-16, SQL re-ejecutada ✅); setea
+  `bumped_at=now()`, renueva `expires_at=+30d`, limpia `deletion_warning_sent_at`.
 - **Frontend:** home ordena destacados por `bumped_at` desc (sube en ≤60s por ISR); perfil con botón
   dorado ⭐ (deshabilitado en cooldown, muestra `⭐ Nmin`); `bumped_at` en los `select` de perfil y
   `profileCache`.
@@ -584,6 +610,27 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   contenido estable, el SW los servía cache-first y el navegador mostraba JS de un build viejo pese
   a que el código fuente ya estaba actualizado. Fix: registro del SW gateado a
   `NODE_ENV === "production"`. Commit `80181f1`.
+- **Las RPC (POST) no tienen el reintento automático que sí tienen las queries (GET)
+  (2026-07-16):** un usuario reportó que `/lojas` no cargaba al primer toque del botón y sí al
+  segundo. La RPC estaba sana (medida contra producción: ~180ms, devolviendo filas) — el
+  problema era del lado del cliente. `postgrest-js` trae reintento propio, pero solo para
+  métodos idempotentes (`RETRYABLE_METHODS = ["GET","HEAD","OPTIONS"]`, y
+  `if (!RETRYABLE_METHODS.includes(method)) throw fetchError`). Como todas las demás pantallas
+  usan `.select()` (GET), se recuperan solas de un microcorte de red **sin que nadie lo note**;
+  `/lojas` es la única que se alimenta de una RPC (POST) → 0 reintentos, y cualquier tropiezo de
+  red (o la renovación del token en la primera entrada del día, ver el prewarm de sesión más
+  arriba) llegaba a la pantalla como error duro. Agravante: el error no tenía botón de reintento,
+  así que la única salida era volver a tocar. Fix: reintento acotado dentro de `fetchStores`
+  (`lib/lojasApi.ts`) solo para fallos transitorios (`status === 0` = capa de red, `>= 500`,
+  `57014` = statement timeout) — un error real de la base se propaga en el acto porque no se cura
+  solo — y cartel con botón "Tentar novamente" en `LojasClient.tsx`. Ojo con el abort: una
+  consulta cancelada (cambiar orden/filtro, salir de la pantalla) **también** cae como
+  `status: 0`, así que hay que chequear `signal?.aborted` antes de reintentar o se re-disparan
+  consultas viejas. **Regla: al agregar una pantalla que se alimente de una RPC, el reintento hay
+  que ponerlo a mano — no viene gratis como en las queries normales.** Verificado con Playwright
+  interceptando la RPC: con 1 y 2 cortes de red la lista carga igual (el usuario nunca ve el
+  error), con caída total aparece el cartel y el botón trae las lojas; cambiar el orden dispara
+  exactamente 1 consulta (sin reintentos espurios por el abort).
 - **Un rediseño de componente puede resucitar bugs ya arreglados (2026-07-15):** el rediseño de
   navegación (commit `3d80e9b`) reemplazó el `HomeClient` viejo por `ListingsFeed.tsx` compartido,
   y en el camino se perdió silenciosamente el `priority={i<4}` de las primeras cards (fix de LCP
@@ -653,12 +700,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 Prompt de ejecución: `PROMPT_LOJAS_FAVORITOS.md` (mejoras pre-aprobadas por el usuario, no
 volver a preguntarlas si se retoma esta feature).
 
-- **Favoritos se mudó del perfil al home:** el pill "❤️ Favoritos" (con contador para
-  logueados, leído del caché client-side que ya existía — sin query extra) vive ahora en la
+- **Favoritos se mudó del perfil al home:** el pill "❤️ Favoritos" vive ahora en la
   fila Ordenar/Filtrar del feed, activado por la nueva prop `homeExtras` de `ListingsFeed.tsx`
   (`justifyContent: space-between`, pills nuevos a la izquierda). Solo el home la activa —
   `/listings` y las páginas de categoría no la ven (siguen con `flex-end`, sin extras). En
   `/profile` la grilla quedó en 2 columnas (Minha loja / Compartilhar).
+  **2026-07-16:** el pill llevaba contador (`❤️ N` cuando el usuario tenía favoritos) y pasó a
+  etiqueta fija "❤️ Favoritos" siempre, a pedido del usuario. El estado `favoriteIds` sigue
+  vivo en `ListingsFeed.tsx`: alimenta los corazones de cada card, solo dejó de pintar el número.
 - **Nuevo pill "🏪 Lojas"** en la misma fila → `/lojas`.
 - **`/lojas`** (`frontend/app/lojas/page.tsx` + `LojasClient.tsx`, ruta `○ Static`): buscador
   con sugerencias mientras se escribe (mismo patrón que `BuscaAutocomplete.tsx`: debounce,
@@ -674,6 +723,11 @@ volver a preguntarlas si se retoma esta feature).
   conteo, `security definer`, `set search_path = public`, `grant execute` a `anon` +
   `authenticated`). Solo expone datos públicos, los mismos que `profiles_public` (jamás
   `whatsapp` ni `role`).
+- **Reintento propio (2026-07-16):** por ser RPC (POST) no hereda el reintento
+  automático de postgrest-js, que solo cubre GET/HEAD/OPTIONS. `fetchStores` reintenta a mano los
+  fallos transitorios (2 reintentos, 400ms/1200ms; `status === 0` / `>= 500` / `57014`) sin tocar
+  el camino feliz, y `LojasClient.tsx` muestra cartel + botón "Tentar novamente" si aun así falla.
+  No reintentar cuando `signal?.aborted` (el abort también da `status: 0`). Ver la lección en §18.
 
 ## 21. CORRER LOCALMENTE
 
@@ -692,6 +746,32 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-16 (commit PENDIENTE — se completa el hash abajo tras el push)** — Varios ajustes
+  acumulados de esta sesión y de sesiones previas, todos subidos juntos en un mismo commit:
+  - **Botón "Ver loja" más grande** en `/listings/[id]` y **pill "Lojas" del home con el
+    mismo estilo sólido azul** que "Ver loja" (antes outline gris), texto sin cambios. Ver §6.
+  - Fix descripción lenta la primera vez del día (prefetch en `onPointerDown` + prewarm de
+    sesión). Ver §18 y `project_fix_parpadeo_demoras` (memoria).
+  - **Fix `/lojas` no cargaba al primer toque** (reportado por un usuario real): la RPC
+    `get_stores` viaja por POST y postgrest-js solo reintenta GET/HEAD/OPTIONS → era la única
+    pantalla sin red de contención ante un tropiezo de red. `fetchStores` ahora reintenta lo
+    transitorio (2 reintentos, 400ms/1200ms) y la pantalla ganó cartel + botón "Tentar
+    novamente". Ver §18 y §20.
+  - Pill "❤️ Favoritos" del home sin contador (siempre texto fijo). Ver §20.
+  - Barra inferior más alta y despegada del borde (`--nav-height` 64→72px). Ver §6.
+  - Cooldown de "Destacar" bajado de 1h a 15min (RPC + textos del perfil). Ver §15.
+  - Fix bucle de navegación atrás editar↔detalle + flujos de volver en publicar
+    (`lib/safeBack.ts` nuevo). Ver §18.
+  - **Buscador: elegir una sugerencia ya no corta el tipeo** (`BuscaAutocomplete.tsx`) — el
+    primer toque sobre un término siempre completa la barra y deja el cursor tras el espacio
+    (teclado abierto); el segundo toque sobre ese término ya elegido busca. El espacio final no
+    entra en la búsqueda. De paso: el hover ya no secuestra el botón Buscar en desktop. Ver §6.
+  - **Instalar App en iPhone: quitado el logo grande del encabezado** (`InstalarClient.tsx`,
+    solo para `platform === "ios"`; Android y desktop conservan el logo) — el usuario lo vio
+    ocupando demasiado espacio arriba; el resto del contenido (título, texto, video) sube para
+    ocupar ese lugar.
+  - Build ✅ (`tsc --noEmit` sin errores) tras cada cambio; sin verificación manual en
+    dispositivo real todavía.
 - **2026-07-15** — **Dos entregas en un mismo cierre: fix parpadeo/demoras + directorio de Lojas.**
   **Desplegado** (commit `bfdb783`, push a `main`).
   - **Fix parpadeo + demoras post-V3** (sesión Opus, diagnóstico verificado con mediciones):

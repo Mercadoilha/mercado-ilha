@@ -223,7 +223,7 @@ export default function ProfilePage() {
   };
 
   // Destacar: empuja el anuncio de vuelta al tope de la home (bumped_at = now)
-  // y renueva la validez 30 días. Cooldown de 1h (validado también en la RPC).
+  // y renueva la validez 30 días. Cooldown de 15min (validado también en la RPC).
   const bumpListing = async (id: number) => {
     setBumping(id);
     setBumpMsg(null);
@@ -246,7 +246,7 @@ export default function ProfilePage() {
       setBumpMsg({
         id,
         text: isCooldown
-          ? "Você já destacou este anúncio. Tente novamente em até 1 hora."
+          ? "Você já destacou este anúncio. Tente novamente em até 15 minutos."
           : "Não foi possível destacar o anúncio. Tente novamente.",
         ok: false,
       });
@@ -254,10 +254,10 @@ export default function ProfilePage() {
     setBumping(null);
   };
 
-  // Minutos restantes de cooldown (0 = pode destacar). 1h desde bumped_at.
+  // Minutos restantes de cooldown (0 = pode destacar). 15min desde bumped_at.
   const cooldownLeftMin = (bumpedAt?: string | null): number => {
     if (!bumpedAt) return 0;
-    const diffMs = 60 * 60 * 1000 - (Date.now() - new Date(bumpedAt).getTime());
+    const diffMs = 15 * 60 * 1000 - (Date.now() - new Date(bumpedAt).getTime());
     return diffMs > 0 ? Math.ceil(diffMs / 60000) : 0;
   };
 
@@ -536,7 +536,7 @@ export default function ProfilePage() {
                           ? "Destacando…"
                           : cdMin > 0
                           ? `Você poderá destacar de novo em ${cdMin} min`
-                          : "Destacar: aparecer no topo da tela principal (1 vez por hora)"
+                          : "Destacar: aparecer no topo da tela principal (1 vez a cada 15 min)"
                       }
                       style={{
                         background: canBump ? "#EF9F27" : "#fdecc8",
@@ -609,7 +609,7 @@ export default function ProfilePage() {
           {/* Leyenda del botón Destacar */}
           {myListings.length > 0 && (
             <div style={{ background: "#fff4e0", border: "1px solid #EF9F27", borderRadius: 10, padding: "0.7rem 0.875rem", fontSize: "0.78rem", color: "#92400e", marginTop: "0.5rem", lineHeight: 1.5 }}>
-              ⭐ <strong>Destacar:</strong> coloque seu anúncio de volta no topo da tela principal para ser visto por mais pessoas, como se você tivesse acabado de publicá-lo. Você pode destacar cada anúncio <strong>1 vez por hora</strong>.
+              ⭐ <strong>Destacar:</strong> coloque seu anúncio de volta no topo da tela principal para ser visto por mais pessoas, como se você tivesse acabado de publicá-lo. Você pode destacar cada anúncio <strong>1 vez a cada 15 minutos</strong>.
             </div>
           )}
 

@@ -69,7 +69,7 @@ type ListingsFeedProps = {
   // (mismo conjunto que el inicio) para que el dorado también viaje acá.
   featuredIds?: Set<number>;
   // Solo el inicio: agrega a la izquierda de la fila los pills "Lojas" (→/lojas) y
-  // "Favoritos" (→/favorites, con contador). Las demás vistas (/listings, categorías)
+  // "Favoritos" (→/favorites). Las demás vistas (/listings, categorías)
   // lo dejan en false → no aparecen ahí.
   homeExtras?: boolean;
 };
@@ -577,10 +577,8 @@ export default function ListingsFeed({
         )}
         {homeExtras && (
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <Link href="/lojas" prefetch style={pillLink}>Lojas</Link>
-            <Link href="/favorites" style={pillLink}>
-              {favoriteIds.size > 0 ? `❤️ ${favoriteIds.size}` : "❤️ Favoritos"}
-            </Link>
+            <Link href="/lojas" prefetch style={storePillLink}>Lojas</Link>
+            <Link href="/favorites" style={pillLink}>❤️ Favoritos</Link>
           </div>
         )}
         <div style={{ display: "flex", gap: homeExtras ? 8 : 10, flexShrink: 0 }}>
@@ -714,4 +712,20 @@ function pillBtn(active: boolean, compact = false): React.CSSProperties {
 const pillLink: React.CSSProperties = {
   ...pillBtn(false, true),
   textDecoration: "none",
+};
+
+// "Lojas": mismo estilo (relleno azul, texto branco) do botão "Ver loja →" no anúncio.
+const storePillLink: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "0.42rem 0.8rem",
+  borderRadius: 999,
+  border: "none",
+  background: "var(--blue-main)",
+  color: "#fff",
+  fontWeight: 700,
+  fontSize: "0.8rem",
+  textDecoration: "none",
+  whiteSpace: "nowrap",
 };

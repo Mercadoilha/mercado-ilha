@@ -155,12 +155,14 @@ export default function InstalarClient() {
           textAlign: "center",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo-dark.svg"
-          alt="Mercado Ilha"
-          style={{ height: 84, width: "auto", marginBottom: 16 }}
-        />
+        {platform !== "ios" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/logo-dark.svg"
+            alt="Mercado Ilha"
+            style={{ height: 84, width: "auto", marginBottom: 16 }}
+          />
+        )}
 
         <h1
           style={{
