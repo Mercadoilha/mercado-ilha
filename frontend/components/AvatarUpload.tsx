@@ -127,14 +127,15 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
         />
       )}
 
-      {/* Se renderiza dentro del card azul do perfil → contorno, botão e mensagens
-          em branco / tons claros. */}
+      {/* Se renderiza dentro do banner azul edge-to-edge do perfil → contorno, botão e
+          mensagens em branco / tons claros. Tamanho maior (104px) para preencher o
+          espaço do banner sem card ao redor. */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 4 }}>
         {/* Avatar circle */}
         <div
           style={{
-            width: 80,
-            height: 80,
+            width: 104,
+            height: 104,
             borderRadius: "50%",
             background: currentAvatarUrl ? "transparent" : "var(--blue-light)",
             border: "3px solid rgba(255,255,255,0.7)",
@@ -142,7 +143,7 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
-            fontSize: "1.6rem",
+            fontSize: "2rem",
             fontWeight: 800,
             color: "var(--blue-main)",
             flexShrink: 0,

@@ -14,8 +14,8 @@ import { useSession } from "../../contexts/SessionContext";
 import { compartilhar } from "../../lib/share";
 import ShareIcon from "../../components/ShareIcon";
 
-// Botón outline (minha loja / compartilhar) — dos lado a lado dentro del card azul
-// del perfil, por eso el contorno y el texto van en blanco.
+// Botón fondo blanco / letra azul (ver minha loja / compartilhar) — dos lado a lado
+// dentro do banner azul do perfil.
 const outlineBlueBtn: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -23,10 +23,10 @@ const outlineBlueBtn: React.CSSProperties = {
   gap: 6,
   width: "100%",
   padding: "0.6rem 0.5rem",
-  background: "transparent",
-  border: "2px solid rgba(255,255,255,0.7)",
+  background: "#fff",
+  border: "none",
   borderRadius: 10,
-  color: "#fff",
+  color: "var(--blue-main)",
   fontWeight: 700,
   fontSize: "0.82rem",
   cursor: "pointer",
@@ -313,17 +313,11 @@ export default function ProfilePage() {
           <h1>Meu perfil</h1>
         </header>
 
-        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-
-        {/* ── Card de perfil ── */}
-        {/* Mismo azul del banner de /store/[id]: perfil y loja se leen como una sola cosa.
-            Todo lo de adentro va en blanco / tonos claros para mantener el contraste. */}
+        {/* ── Banner do perfil (edge-to-edge, igual ao banner de /store/[id]) ── */}
         <div
-          className="card"
           style={{
-            padding: "1rem",
             background: "linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)",
-            border: "none",
+            padding: "1.5rem 1rem 1rem",
             color: "#fff",
           }}
         >
@@ -405,7 +399,7 @@ export default function ProfilePage() {
           {!editMode && session && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 12 }}>
               <Link href={`/store/${session.user.id}`} style={{ ...outlineBlueBtn, fontSize: "0.8rem", padding: "0.6rem 0.4rem", textDecoration: "none" }}>
-                🏪 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Minha loja</span>
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Ver minha loja</span>
               </Link>
               <button
                 type="button"
@@ -423,6 +417,8 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
         {/* ── Meus anúncios ── */}
         <section>

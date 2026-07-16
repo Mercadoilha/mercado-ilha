@@ -214,14 +214,14 @@ export default function StorePage() {
         <div
           onClick={() => { if (seller.avatar_url) setAvatarOpen(true); }}
           style={{
-            width: 72,
-            height: 72,
+            width: 84,
+            height: 84,
             borderRadius: "50%",
             background: "rgba(255,255,255,0.25)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "2rem",
+            fontSize: "2.2rem",
             margin: "0 auto 0.75rem",
             overflow: "hidden",
             border: "2px solid rgba(255,255,255,0.5)",
@@ -229,7 +229,7 @@ export default function StorePage() {
           }}
         >
           {seller.avatar_url ? (
-            <Image src={seller.avatar_url} alt={seller.full_name} width={72} height={72} sizes="72px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <Image src={seller.avatar_url} alt={seller.full_name} width={84} height={84} sizes="84px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : "👤"}
         </div>
         <div style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 4 }}>{seller.full_name}</div>
@@ -335,11 +335,10 @@ export default function StorePage() {
         </div>
       </div>
 
-      {/* Anúncios — sem espaço acima: o grid é edge-to-edge e as cards se tocam entre si
-          (só as separa a linha divisória), então elas encostam no banner do mesmo jeito. */}
-      <div style={{ padding: "0 0 1rem" }}>
+      {/* Anúncios — pequeno espaço acima do banner azul (metade do espaço original de 0.5rem). */}
+      <div style={{ padding: "0.25rem 0 1rem" }}>
         {listings.length === 0 ? (
-          <div className="card" style={{ margin: "1rem 1rem 0", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
+          <div className="card" style={{ margin: "0.25rem 1rem 0", padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
             <div style={{ fontSize: "2rem", marginBottom: 8 }}>🛍️</div>
             <p style={{ fontSize: "0.875rem" }}>Este vendedor não tem anúncios ativos no momento.</p>
           </div>

@@ -204,19 +204,24 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   pasó de píldora outline (gris, mismo look que Ordenar/Filtrar) a píldora sólida azul con texto
   blanco (`storePillLink`, calcada del estilo de "Ver loja →"), manteniendo el texto "Lojas".
   "❤️ Favoritos" al lado sigue con el estilo outline de siempre (`pillLink`).
-- **Card de datos del perfil en azul (2026-07-16):** en `/profile`, el recuadro con
-  nombre/email/WhatsApp/foto pasó de fondo blanco a mismo degradado azul del banner de
-  `/store/[id]` (`linear-gradient(135deg, var(--blue-main) 0%, var(--blue-mid) 100%)`), para
-  que perfil y loja se lean como una sola cosa. Todo lo de adentro se adaptó a blanco/tonos
-  claros: nombre y email en blanco, botón "Editar" outline blanco, aviso de "falta WhatsApp"
-  de rojo a `--sand-light` (el rojo se perdía sobre azul), formulario de edición (labels,
-  ayuda, botón Salvar ahora blanco sólido con texto azul) y `AvatarUpload.tsx` (borde del
-  círculo, botón "Trocar foto" y mensajes de éxito/error en tonos claros). Botones "Minha
-  loja"/"Compartilhar" pasaron de outline azul a outline blanco (`outlineBlueBtn` en
-  `app/profile/page.tsx`).
-- **Espaciado loja = espaciado entre anuncios (2026-07-16):** en `/store/[id]`, el grid de
-  anuncios ya no tiene padding-top propio (`StoreClient.tsx`) — quedan pegados al banner
-  azul, igual que están pegados entre sí (separados solo por la línea divisoria del grid).
+- **Banner do perfil edge-to-edge, igual ao de `/store/[id]` (2026-07-16):** em `/profile`,
+  o bloco com foto/nome/email/WhatsApp deixou de ser um card com margem e passou a ocupar
+  toda a largura da tela (mesmo degradê `linear-gradient(135deg, var(--blue-main) 0%,
+  var(--blue-mid) 100%)`, sem borda arredondada nem padding lateral do wrapper — banner e
+  wrapper com padding-1rem do resto do conteúdo ficaram como dois blocos separados em
+  `app/profile/page.tsx`). Todo o conteúdo interno adaptado a branco/tons claros: nome e
+  email em branco, botão "Editar" outline branco, aviso de "falta WhatsApp" de vermelho a
+  `--sand-light` (o vermelho se perdia sobre o azul), formulário de edição (labels, ajuda,
+  botão Salvar branco sólido com texto azul) e `AvatarUpload.tsx` (borda do círculo, botão
+  "Trocar foto" e mensagens em tons claros). **Foto de perfil aumentada de 80→104px**
+  (`AvatarUpload.tsx`) para preencher o espaço extra do banner sem card ao redor; a foto do
+  vendedor em `/store/[id]` também aumentou um pouco, 72→84px (`StoreClient.tsx`). Botões
+  "Ver minha loja" (sem emoji 🏪, antes "Minha loja") e "Compartilhar" passaram de outline
+  azul a **fundo branco sólido com texto azul** (`outlineBlueBtn` em `app/profile/page.tsx`).
+- **Espaçamento loja = espaçamento entre anúncios (2026-07-16):** em `/store/[id]`, o grid
+  de anúncios tem um pequeno respiro acima (`padding: "0.25rem 0 1rem"` em `StoreClient.tsx`
+  — metade do espaço original de 0.5rem, ajustado a pedido do usuário após ficarem colados
+  demais ao banner numa primeira versão sem espaço nenhum).
 
 ## 7. PUBLICIDAD (BANNERS)
 
@@ -759,6 +764,12 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-16** — **Desplegado** (commit PENDIENTE, push a `main`). Segunda vuelta sobre el
+  perfil/loja de la misma sesión: banner del perfil pasó de card con margen a **edge-to-edge**
+  (igual que el de la loja); fotos de perfil agrandadas (perfil 80→104px, loja 72→84px);
+  botón "Minha loja" → "Ver minha loja" sin emoji; botones "Ver minha loja"/"Compartilhar"
+  de outline a fondo blanco sólido con texto azul; espaciado entre banner y anuncios de la
+  loja ajustado a 0.25rem (mitad del original). Ver §6.
 - **2026-07-16** — **Desplegado** (commit `d60e8c2`, push a `main`). Card de datos del
   perfil pasó a fondo azul (mismo degradado del banner de la loja) con todo su contenido
   adaptado a tonos claros; espaciado de `/store/[id]` ajustado para que los anuncios queden
