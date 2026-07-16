@@ -38,6 +38,7 @@ export default function HomeClient({ listings, featuredIds, adminWa, banners, ba
         defaultOrder="bump"
         namespace="home:"
         featuredIds={featuredSet}
+        homeExtras
       />
 
       <InstallInvitePopup />

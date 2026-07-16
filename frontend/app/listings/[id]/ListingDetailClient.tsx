@@ -11,6 +11,8 @@ import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import { getListingPreview } from "../../../lib/listingPreview";
+import { takeListingDetailPrefetch } from "../../../lib/listingDetailPrefetch";
+import { LISTING_DETAIL_SELECT } from "../../../lib/listingsApi";
 import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
 
 export default function ListingDetailPage() {
@@ -86,19 +88,17 @@ export default function ListingDetailPage() {
       // Single query: listing + all related data via PostgREST joins
       // Note: subzones join excluded (no FK constraint on subzone_id)
       // Note: profiles NOT joined here — whatsapp is fetched lazily on contact click
-      const { data: full, error: le } = await supabase
-        .from("listings")
-        .select(`
-          id, user_id, title, description, price, price_text, condition, status,
-          location_type, covers_all_island, locality_id, subzone_id, other_location_text,
-          category_id, subcategory_id, created_at,
-          listing_photos(id, photo_url, sort_order),
-          categories(id, name, slug, contact_button_text, whatsapp_message),
-          subcategories(id, name),
-          localities(id, name)
-        `)
-        .eq("id", listingId)
-        .single();
+      // Si venís de una card, la query ya se lanzó en el onClick (prefetch) y viaja en
+      // paralelo con la navegación → acá se consume la respuesta ya en vuelo. Deep link /
+      // F5 no tiene prefetch → cae al fallback (misma query, mismo select compartido).
+      const prefetched = takeListingDetailPrefetch(listingId);
+      const { data: full, error: le } = prefetched
+        ? await prefetched
+        : await supabase
+            .from("listings")
+            .select(LISTING_DETAIL_SELECT)
+            .eq("id", listingId)
+            .single();
 
       if (!mounted) return;
       if (le || !full) {

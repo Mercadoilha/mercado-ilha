@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import ListingCard from "./ListingCard";
 import { supabase } from "../lib/supabaseClient";
 import { useSession } from "../contexts/SessionContext";
@@ -67,6 +68,10 @@ type ListingsFeedProps = {
   // en /listings (categorías/busca) queda undefined y el feed lo carga del caché de sesión
   // (mismo conjunto que el inicio) para que el dorado también viaje acá.
   featuredIds?: Set<number>;
+  // Solo el inicio: agrega a la izquierda de la fila los pills "Lojas" (→/lojas) y
+  // "Favoritos" (→/favorites, con contador). Las demás vistas (/listings, categorías)
+  // lo dejan en false → no aparecen ahí.
+  homeExtras?: boolean;
 };
 
 // Comparador por la columna de orden (created_at o bumped_at) con id desc de desempate
@@ -87,6 +92,7 @@ export default function ListingsFeed({
   searchQuery = "",
   subcategoryId = "",
   featuredIds,
+  homeExtras = false,
 }: ListingsFeedProps) {
   const { session } = useSession();
 
@@ -557,15 +563,35 @@ export default function ListingsFeed({
 
   return (
     <>
-      {/* Fila Ordenar / Filtrar (a la derecha; reserva su altura: sin salto de layout) */}
-      <div style={{ borderBottom: "1px solid var(--border)", background: "#fff", padding: "0.6rem 1rem", display: "flex", justifyContent: "flex-end", gap: 10, minHeight: 52 }}>
-        <button type="button" onClick={() => setOrdenarOpen(true)} style={pillBtn(sortBy !== "recent")}>
-          {sortButtonLabel(sortBy)} <span aria-hidden="true" style={{ fontSize: "0.7rem" }}>▾</span>
-        </button>
-        <button type="button" onClick={() => setFiltrarOpen(true)} style={pillBtn(filterActive)}>
-          {activeFilterCount > 0 ? `Filtrar (${activeFilterCount})` : "Filtrar"}{" "}
-          <span aria-hidden="true" style={{ fontSize: "0.7rem" }}>▾</span>
-        </button>
+      {/* Fila Ordenar / Filtrar. En el inicio (homeExtras) suma "Lojas" y "Favoritos" a la
+          izquierda y reparte con space-between; en las demás vistas queda a la derecha.
+          Reserva su altura (minHeight) → sin salto de layout. */}
+      <div style={{ position: "relative", borderBottom: "1px solid var(--border)", background: "#fff", padding: "0.6rem 1rem", display: "flex", justifyContent: homeExtras ? "space-between" : "flex-end", alignItems: "center", gap: 8, minHeight: 52 }}>
+        {/* "Atualizando…" vive en el centro libre de esta fila (posición absoluta) → aparece
+            y desaparece SIN mover un pixel del grid. La fila ya reserva su altura (minHeight),
+            así que no hay salto de layout. pointer-events:none → nunca bloquea los botones. */}
+        {refreshing && listings.length > 0 && (
+          <span aria-hidden style={{ position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "0.72rem", color: "var(--text-muted)", pointerEvents: "none" }}>
+            Atualizando…
+          </span>
+        )}
+        {homeExtras && (
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Link href="/lojas" prefetch style={pillLink}>Lojas</Link>
+            <Link href="/favorites" style={pillLink}>
+              {favoriteIds.size > 0 ? `❤️ ${favoriteIds.size}` : "❤️ Favoritos"}
+            </Link>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: homeExtras ? 8 : 10, flexShrink: 0 }}>
+          <button type="button" onClick={() => setOrdenarOpen(true)} style={pillBtn(sortBy !== "recent", homeExtras)}>
+            {sortButtonLabel(sortBy)} <span aria-hidden="true" style={{ fontSize: "0.7rem" }}>▾</span>
+          </button>
+          <button type="button" onClick={() => setFiltrarOpen(true)} style={pillBtn(filterActive, homeExtras)}>
+            {activeFilterCount > 0 ? `Filtrar (${activeFilterCount})` : "Filtrar"}{" "}
+            <span aria-hidden="true" style={{ fontSize: "0.7rem" }}>▾</span>
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: "0.35rem 0 0.75rem" }}>
@@ -574,12 +600,6 @@ export default function ListingsFeed({
         {loading && listings.length === 0 && (
           <div style={{ textAlign: "center", padding: "3rem 0" }}>
             <div className="spinner" />
-          </div>
-        )}
-
-        {refreshing && listings.length > 0 && (
-          <div style={{ textAlign: "center", padding: "0.4rem 0", fontSize: "0.72rem", color: "var(--text-muted)" }}>
-            Atualizando…
           </div>
         )}
 
@@ -600,7 +620,7 @@ export default function ListingsFeed({
         )}
 
         <div className="listing-grid">
-          {sortedListings.map((l) => (
+          {sortedListings.map((l, i) => (
             <ListingCard
               key={l.id}
               listing={l}
@@ -609,6 +629,7 @@ export default function ListingsFeed({
               busy={busyIds.includes(l.id)}
               onToggleFavorite={toggleFavorite}
               featured={effectiveFeatured?.has(l.id)}
+              priority={i < 4}
             />
           ))}
         </div>
@@ -670,19 +691,27 @@ export default function ListingsFeed({
   );
 }
 
-function pillBtn(active: boolean): React.CSSProperties {
+function pillBtn(active: boolean, compact = false): React.CSSProperties {
   return {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    padding: "0.45rem 0.9rem",
+    padding: compact ? "0.42rem 0.7rem" : "0.45rem 0.9rem",
     borderRadius: 999,
     border: active ? "1px solid var(--blue-main)" : "1px solid var(--border)",
     background: active ? "var(--blue-xlight)" : "#fff",
     color: active ? "var(--blue-main)" : "#334155",
     fontWeight: 600,
-    fontSize: "0.82rem",
+    fontSize: compact ? "0.8rem" : "0.82rem",
     cursor: "pointer",
     fontFamily: "inherit",
+    whiteSpace: "nowrap",
   };
 }
+
+// Pills de navegación del inicio ("Lojas" / "Favoritos"): mismo look que pillBtn
+// inactivo compacto, pero como <Link> (prefetch de la ruta, sin decoración).
+const pillLink: React.CSSProperties = {
+  ...pillBtn(false, true),
+  textDecoration: "none",
+};

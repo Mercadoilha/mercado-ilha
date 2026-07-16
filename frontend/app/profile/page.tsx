@@ -70,6 +70,7 @@ export default function ProfilePage() {
       setEditName((cached.profile.full_name as string) ?? "");
       setEditWhatsapp((cached.profile.whatsapp as string) ?? "");
       setMyListings(cached.listings);
+      if (cached.statsMap) setStatsMap(cached.statsMap);
       setLoading(false);
     } else {
       setLoading(true);
@@ -122,6 +123,7 @@ export default function ProfilePage() {
           map[s.listing_id] = { views: Number(s.views) || 0, wa_clicks: Number(s.wa_clicks) || 0 };
         }
         setStatsMap(map);
+        setCachedProfile(uid, { statsMap: map });
       }
       setLoading(false);
     }
@@ -393,8 +395,8 @@ export default function ProfilePage() {
           )}
 
           {!editMode && session && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 12 }}>
-              <Link href={`/store/${session.user.id}`} style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem", textDecoration: "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 12 }}>
+              <Link href={`/store/${session.user.id}`} style={{ ...outlineBlueBtn, fontSize: "0.8rem", padding: "0.6rem 0.4rem", textDecoration: "none" }}>
                 🏪 <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Minha loja</span>
               </Link>
               <button
@@ -406,13 +408,10 @@ export default function ProfilePage() {
                     url: window.location.origin + "/store/" + session.user.id,
                   })
                 }
-                style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem" }}
+                style={{ ...outlineBlueBtn, fontSize: "0.8rem", padding: "0.6rem 0.4rem" }}
               >
                 <ShareIcon /> <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Compartilhar</span>
               </button>
-              <Link href="/favorites" style={{ ...outlineBlueBtn, fontSize: "0.72rem", padding: "0.6rem 0.3rem", textDecoration: "none" }}>
-                ❤️ <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>Favoritos</span>
-              </Link>
             </div>
           )}
         </div>

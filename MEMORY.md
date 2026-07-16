@@ -136,13 +136,15 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   con nota opcional. Ubicación en la card = solo localidad/zona (sin ícono 📍). Miniaturas vía
   `next/image` (AVIF/WebP). Ver memorias `project_listing_card_style` y
   `reference_miniaturas_fotos`.
-- **Home (orden actual, commit `a715b8b`):** header azul → búsqueda autocomplete → BannerRotativo
-  → 3 botones de acceso rápido, ahora bloques de color sólido sin ícono (Todos = azul principal,
-  Categoria = azul xlight, Info útil = verde-mar; "Todos os anúncios" → `/listings`; los otros dos
-  hacen scroll suave con `id="secao-categorias"`/`id="secao-info"`) → **Anúncios destacados**
-  (ordenados por `bumped_at`) → **Categorias Destacadas** (Bloque 1) → **Secciones temáticas**
-  (Bloque 2) → anuncios recientes → **Informação útil** (Tabela de Marés + horários de barcos) →
-  Fale conosco.
+- **Home (orden actual, `HomeClient.tsx`):** header azul (`SearchHeader`: logo + Compartilhar +
+  búsqueda autocomplete) → `BannerRotativo` → **fila de acciones** (`ListingsFeed` con `homeExtras`):
+  a la izquierda **Lojas** (→`/lojas`) y **Favoritos** (→`/favorites`, con contador para logueados);
+  a la derecha **Ordenar** y **Filtrar** → **feed de anúncios** (orden `bumped_at`; los primeros N
+  llevan contorno dorado = destacados, N = `featured_count`) → `InstallInvitePopup`.
+  **Ya NO existen los 3 botones de acceso rápido** (Todos/Categoria/Info útil, commit `a715b8b`):
+  fueron eliminados en un rediseño posterior. Los bloques **Categorias Destacadas** (Bloque 1) y
+  **Secciones temáticas** (Bloque 2) viven ahora en `/categorias` (`CategoriesBlocks`); la
+  **Informação útil** (Tabela de Marés + horários de barcos) en `/informacao` (`InformacaoClient`).
 - **Búsqueda autocomplete (`BuscaAutocomplete.tsx`):** debounce 300ms, AbortController, cache en
   memoria por query, consultas paralelas (listings+categories+subcategories), skeleton, navegación
   ↑↓ Enter Esc, ARIA. Sugerencias: máx 5 anuncios + máx 3 categorías (sin anuncios en el dropdown
@@ -231,8 +233,9 @@ categoría/subcategoría con UI optimista (revierte si falla).
 | `/listings/[id]` | Detalle: galería, precio, vendedor, WhatsApp (RPC lazy), denuncia. Botón editar para dueño. |
 | `/listings/[id]/edit` | Editar anuncio (solo dueño). |
 | `/publish` | Formulario: fotos, categoría→subcategoría, ubicación según tipo. Llama `/api/revalidate` al publicar. |
-| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 3 botones (Minha loja / Compartilhar / Favoritos) en fila arriba de la lista. |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 52×52 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 2 botones (Minha loja / Compartilhar) en fila arriba de la lista — Favoritos se mudó al home (ver §20). |
 | `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). Botón ← usa `router.back()` (no vuelve fijo a `/listings`). |
+| `/lojas` | Directorio público de tiendas (buscar, filtrar por lugar, ordenar). Ver §20. `○ Static`. |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
 | `/forgot-password` | 1 paso, solo email. `resetPasswordForEmail`. |
 | `/reset-password` | Nueva contraseña desde link. PKCE: `?code` → `exchangeCodeForSession`. |
@@ -315,7 +318,7 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   `favorites` ya tiene unique index; MV `active_listings_summary` no la consume nadie;
   `SessionContext.getSession()` lee de local storage (no red). Ver `feedback_verificar_diagnostico`.
 - **`OPTIMIZATION_MASTER_PLAN_V2.md`** (raíz, creado 2026-07-07): segunda auditoría de velocidad
-  sobre el V1 ya en producción. **Fase 1 (T1-T5) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21):
+  sobre el V1 ya en producción. **Fase 1 (T1-T5) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §22):
   - `next.config.mjs`: `images.minimumCacheTTL = 2678400` (31 días) — fotos de anuncios tienen path
     inmutable (uuid+timestamp), seguro cachear semanas; excepción banners, ver §7.
   - `lib/listingsApi.ts` (nuevo): `LISTINGS_SELECT` + `DEFAULT_LISTINGS_KEY` ("||||") +
@@ -335,7 +338,7 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   - **Hallazgo nuevo detectado con Speed Insights (no estaba en la auditoría V2 original): CLS
     0.47 (Poor) en mobile**, ver `ERRORES_PENDIENTES.md` — pendiente investigar, probablemente en
     `/store/[id]`.
-  - **Fase 2 (T6-T9) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — la entrada de la app:
+  - **Fase 2 (T6-T9) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §22) — la entrada de la app:
     - `public/sw.js` → **v6**: la navegación deja de ser network-first puro. Con documento
       cacheado, la red compite contra un timeout de 500ms (`NAV_TIMEOUT_MS`); si no llega a
       tiempo se sirve el caché al instante y la red sigue refrescándolo de fondo
@@ -359,7 +362,7 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
     - `app/layout.tsx`: 8 `<link rel="apple-touch-startup-image">` (PNGs en `public/splash/`,
       logo.svg centrado sobre `#185FA5`, generados con `sharp`) cubriendo las resoluciones de
       iPhone vigentes — antes iOS abría el PWA en blanco puro.
-  - **Fase 3 (T10-T11) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — `/listings` instantáneo
+  - **Fase 3 (T10-T11) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §22) — `/listings` instantáneo
     desde cualquier entrada:
     - `lib/listingsCache.ts` (T10): el `Map` de resultados/scroll/filtros se espeja en
       `sessionStorage` (`mi_listings_cache_v1`), hidratado una vez de forma perezosa. Persiste solo
@@ -376,7 +379,7 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
       prerenderizado con 10 `<article>`/`<a href="/listings/N">` reales (antes: 0, solo spinner);
       runtime (`next start`) sirviendo las mismas cards con `x-nextjs-cache: STALE` +
       `Cache-Control: s-maxage=60, stale-while-revalidate`.
-  - **Fase 4 (T12-T13) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §21) — payloads más chicos:
+  - **Fase 4 (T12-T13) EN PRODUCCIÓN** desde 2026-07-08 (commit ver §22) — payloads más chicos:
     - `app/listings/[id]/ListingDetailClient.tsx` (T12): la query del detalle ya no pide `*` +
       `listing_photos(*)`. Ahora lista columnas explícitas (auditadas por uso real con grep de
       `full.`/`listing.`, más un margen seguro de escalares baratos: `id, status, category_id,
@@ -392,7 +395,7 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
     - Verificado: `npm run build` = 52 páginas, `/favorites` y `/listings` siguen `○ Static`,
       detalle `● SSG` — ninguna ruta se degradó; type-check limpio.
   - **Cortina azul al abrir desde el navegador — EN PRODUCCIÓN** desde 2026-07-08 (commit ver
-    §21, fuera del plan V2 formal, pedida aparte por el usuario). Implementación **100% CSS, sin
+    §22, fuera del plan V2 formal, pedida aparte por el usuario). Implementación **100% CSS, sin
     JS** (decisión tras revisión: la 1ª versión usaba un `<script>` inline y era frágil — ver
     §18). `app/layout.tsx`: `<div id="browser-splash" aria-hidden>` con el logo, primer hijo de
     `<body>`. `globals.css`: `#browser-splash` cubre la pantalla (`position:fixed; inset:0;
@@ -409,6 +412,33 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   - Plan V2 completo salvo la **Fase 5 (T14)**: validación con Web Vitals reales (Speed Insights),
     sin código — el usuario pidió retomarlo el **20 de julio de 2026** y comparar contra la foto
     inicial. Esfuerzo bajo.
+- **Fix parpadeo + demoras post-V3 (2026-07-15)** — diagnóstico verificado con mediciones (detalle
+  ~250ms, feed 60 anuncios ~200-550ms desde el servidor: la DB nunca fue el problema, todo era
+  client-side). Prompt completo en `PROMPT_FIX_PARPADEO_Y_DEMORAS.md`. Tres fixes:
+  - **Parpadeo de imágenes al abrir el home:** `ListingsFeed.tsx` (compartido por home/`/listings`/
+    categorías, nuevo del rediseño de navegación `3d80e9b`) había perdido el `priority={i<4}` que
+    el `HomeClient` viejo pasaba a las primeras cards — quedaban todas `lazy` y las fotos "caían"
+    tras la hidratación. Restaurado en el `.map()` de `sortedListings`. Además el indicador
+    "Atualizando…" se insertaba como bloque nuevo arriba del grid en casi cada apertura (caché >60s
+    de vieja) empujando todo hacia abajo y de vuelta — ahora es un overlay absoluto centrado
+    DENTRO de la fila Ordenar/Filtrar (que ya reservaba altura con `minHeight:52`), cero layout shift.
+  - **Descripción del detalle lenta:** la cadena era serial (tap → payload RSC → mount → recién ahí
+    la query a Supabase). Nuevo `lib/listingDetailPrefetch.ts` (Map tope 10, TTL 30s,
+    fire-and-forget deduplicado): `ListingCard` dispara `prefetchListingDetail(id)` en el mismo
+    `onClick` donde ya guarda el preview optimista, así la query completa viaja EN PARALELO con la
+    navegación. `ListingDetailClient.load()` consume esa promesa si existe (`LISTING_DETAIL_SELECT`,
+    select único compartido en `lib/listingsApi.ts` — cero drift); sin prefetch (deep link/F5) cae
+    al fallback normal, sin cambios.
+  - **Perfil con datos que "llegaban tarde":** `prewarmProfile` (`lib/profileCache.ts`) tenía el
+    select desactualizado desde que se agregaron las miniaturas a "Meus anúncios" (2026-06-30,
+    commit `e7e47b3`) — no traía `listing_photos` ni `categories(is_product)`, así que el perfil
+    pintaba del caché sin fotos (🛍️) ni botón "Vendido" hasta que respondía la query completa de la
+    página. Alineado el select + se sumó el prewarm del RPC `get_my_listings_stats` (contadores
+    👁️/💬 también instantáneos). `CachedProfile` ahora incluye `statsMap`.
+  - Verificado: `npm run build` sin errores, ninguna ruta cambió de tipo (`/`, `/listings` ISR;
+    `/listings/[id]`, `/profile` estáticas); smoke test en `next start` confirmando
+    `fetchPriority="high"` + preload en las primeras 4 imágenes del home y 0 apariciones del bloque
+    viejo de "Atualizando…" en el HTML estático.
 
 ## 14. TRACKING PRE-MONETIZACIÓN (2026-06-18, commit `57ce23d`)
 
@@ -554,6 +584,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   contenido estable, el SW los servía cache-first y el navegador mostraba JS de un build viejo pese
   a que el código fuente ya estaba actualizado. Fix: registro del SW gateado a
   `NODE_ENV === "production"`. Commit `80181f1`.
+- **Un rediseño de componente puede resucitar bugs ya arreglados (2026-07-15):** el rediseño de
+  navegación (commit `3d80e9b`) reemplazó el `HomeClient` viejo por `ListingsFeed.tsx` compartido,
+  y en el camino se perdió silenciosamente el `priority={i<4}` de las primeras cards (fix de LCP
+  de la Fase 1 del plan V1) — nadie lo notó porque el build sigue pasando igual, el síntoma es
+  visual (parpadeo) y solo aparece en la app real. **Regla:** al reemplazar/unificar un componente
+  que ya tenía optimizaciones de rendimiento, auditar explícitamente qué props/comportamientos del
+  componente viejo NO llegaron al nuevo — el build y el type-check no detectan esta clase de
+  regresión. Ver fix completo en §13.
 
 ## 19. PENDIENTES / IDEAS
 
@@ -606,9 +644,39 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   automáticos no sobreviven tantos días — así que si se abre sesión cerca de esa fecha, avisar
   y comparar p75 de LCP/INP/CLS por ruta contra la foto inicial (guardada en §13). Recordar de
   paso el hallazgo del **CLS 0.47 en `/store/[id]`** (pendiente aparte, ver arriba en §19).
-- (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§21.)
+- (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§22.)
+- **Correr `supabase/fase-26-lojas-directory.sql` en el SQL Editor de Supabase** (RPC `get_stores`
+  que necesita el directorio `/lojas`, ver §20) — no hay confirmación de que el usuario ya lo haya
+  corrido; verificar antes de asumir que la RPC existe en producción.
 
-## 20. CORRER LOCALMENTE
+## 20. DIRETÓRIO DE LOJAS (`/lojas`) + FAVORITOS NO HOME (2026-07-15)
+
+Prompt de ejecución: `PROMPT_LOJAS_FAVORITOS.md` (mejoras pre-aprobadas por el usuario, no
+volver a preguntarlas si se retoma esta feature).
+
+- **Favoritos se mudó del perfil al home:** el pill "❤️ Favoritos" (con contador para
+  logueados, leído del caché client-side que ya existía — sin query extra) vive ahora en la
+  fila Ordenar/Filtrar del feed, activado por la nueva prop `homeExtras` de `ListingsFeed.tsx`
+  (`justifyContent: space-between`, pills nuevos a la izquierda). Solo el home la activa —
+  `/listings` y las páginas de categoría no la ven (siguen con `flex-end`, sin extras). En
+  `/profile` la grilla quedó en 2 columnas (Minha loja / Compartilhar).
+- **Nuevo pill "🏪 Lojas"** en la misma fila → `/lojas`.
+- **`/lojas`** (`frontend/app/lojas/page.tsx` + `LojasClient.tsx`, ruta `○ Static`): buscador
+  con sugerencias mientras se escribe (mismo patrón que `BuscaAutocomplete.tsx`: debounce,
+  `searchNorm` sin acentos, AbortSignal), filtro por localidad, orden (Mais anúncios / Mais
+  procuradas / Nome A-Z) vía `OrdenarSheet`/`FiltrarSheet` reutilizados, paginación "Ver mais".
+  Solo lista tiendas con ≥1 anuncio activo; cada card muestra avatar, nombre, cantidad de
+  anuncios y chips de localidades donde tiene anuncios activos.
+- **Fuente de datos:** `frontend/lib/lojasApi.ts` (`fetchStores`) → RPC `get_stores`
+  (`supabase/fase-26-lojas-directory.sql`, **verificar si ya se corrió en el SQL Editor de
+  Supabase**, ver §19). Una sola consulta (sin N+1): id/nombre/avatar/conteo de anuncios
+  activos/localidades. Orden "Mais procuradas" = contactos por WhatsApp de los últimos 30 días
+  (agregado sobre `whatsapp_clicks`, que tiene RLS solo-admin — la RPC expone únicamente el
+  conteo, `security definer`, `set search_path = public`, `grant execute` a `anon` +
+  `authenticated`). Solo expone datos públicos, los mismos que `profiles_public` (jamás
+  `whatsapp` ni `role`).
+
+## 21. CORRER LOCALMENTE
 
 ```bash
 cd frontend
@@ -620,11 +688,21 @@ Deploy: repo GitHub conectado a Vercel (root `frontend`), región `gru1`. Auth E
 habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; primer usuario con
 `role=admin`.
 
-## 21. CHANGELOG DE SESIONES
+## 22. CHANGELOG DE SESIONES
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-15** — **Dos entregas en un mismo cierre: fix parpadeo/demoras + directorio de Lojas.**
+  **Desplegado** (commit `PENDIENTE`, push a `main`).
+  - **Fix parpadeo + demoras post-V3** (sesión Opus, diagnóstico verificado con mediciones):
+    prioridad de imagen restaurada en las primeras 4 cards del home, "Atualizando…" ya no
+    empuja el grid, prefetch de la query completa del detalle al tocar una card, prewarm del
+    perfil alineado con miniaturas + stats. Detalle técnico: §13; lección de la regresión: §18.
+  - **Directorio de Lojas (`/lojas`) + Favoritos movido al home** (sesión previa, prompt
+    `PROMPT_LOJAS_FAVORITOS.md`): pills "🏪 Lojas"/"❤️ Favoritos" en la fila Ordenar/Filtrar del
+    home, RPC `get_stores` (fase-26). Detalle completo: §20. **SQL `fase-26-lojas-directory.sql`
+    con corrida sin confirmar** — ver §19.
 - **2026-07-13** — **El contorno dorado de "destacados" ahora viaja por todas las pantallas.**
   **Desplegado** (commit `05aba05`, push a `main`).
   - Antes solo se veía en el inicio. Se agregó `frontend/lib/featuredCache.ts` (caché de

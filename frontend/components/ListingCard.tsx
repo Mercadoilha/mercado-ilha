@@ -4,6 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { setListingPreview } from "../lib/listingPreview";
+import { prefetchListingDetail } from "../lib/listingDetailPrefetch";
 
 type ListingCardProps = {
   listing: any;
@@ -69,7 +70,7 @@ export default memo(function ListingCard({
       />
       <Link
         href={`/listings/${listing.id}`}
-        onClick={() =>
+        onClick={() => {
           setListingPreview({
             id: listing.id,
             title: listing.title,
@@ -78,8 +79,11 @@ export default memo(function ListingCard({
             condition: listing.condition ?? null,
             firstPhoto,
             localityName: locationText,
-          })
-        }
+          });
+          // Dispara la query completa del detalle en paralelo con la navegación (barato,
+          // async) → la descripción y las demás fotos llegan al toque.
+          prefetchListingDetail(listing.id);
+        }}
         style={{
           display: "flex",
           flexDirection: "column",

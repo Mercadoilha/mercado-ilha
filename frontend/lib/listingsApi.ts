@@ -7,6 +7,21 @@
 export const LISTINGS_SELECT =
   "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
 
+// Select completo del detalle del anuncio (app/listings/[id]). Fuente única compartida
+// entre la página de detalle y su prefetch (lib/listingDetailPrefetch) → cero drift, misma
+// query exacta. Debe coincidir con el select de ListingDetailClient.load(). Trae más
+// columnas que LISTINGS_SELECT (description, joins de categoría/subcategoría/localidad) —
+// por eso vive separado y NO se mezcla con el select de las listas.
+export const LISTING_DETAIL_SELECT = `
+          id, user_id, title, description, price, price_text, condition, status,
+          location_type, covers_all_island, locality_id, subzone_id, other_location_text,
+          category_id, subcategory_id, created_at,
+          listing_photos(id, photo_url, sort_order),
+          categories(id, name, slug, contact_button_text, whatsapp_message),
+          subcategories(id, name),
+          localities(id, name)
+        `;
+
 // Variante para el feed del inicio: mismo select + bumped_at, que es la columna de orden
 // y de cursor keyset del feed. Se separa de LISTINGS_SELECT para no engordar los payloads
 // de /listings, que ordena por created_at y no necesita bumped_at. (covers_all_island se
