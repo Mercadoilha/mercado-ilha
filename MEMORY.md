@@ -759,7 +759,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-16** — **Desplegado** (commit PENDIENTE, push a `main`). Card de datos del
+- **2026-07-16** — **Desplegado** (commit `d60e8c2`, push a `main`). Card de datos del
   perfil pasó a fondo azul (mismo degradado del banner de la loja) con todo su contenido
   adaptado a tonos claros; espaciado de `/store/[id]` ajustado para que los anuncios queden
   pegados al banner igual que entre sí. Ver §6.
