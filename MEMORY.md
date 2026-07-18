@@ -840,12 +840,12 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-18** — **Desplegado** (push a `main`). **Rediseño de logo "Equilíbrio clássico"**
+- **2026-07-18** — **Desplegado** (commit `2285c3b`, push a `main`). **Rediseño de logo "Equilíbrio clássico"**
   (wordmark vectorizado, "Tinharé" naranja centrado bajo "Mercado ilha") + **horários de barcos
   volta Valença→Morro** (selector de sentido en `BarcosWidget.tsx`) + **fix e-mails con
   `logo.svg` blanco invisible** → pasaron a `logo-dark.svg` (`api/upload/route.ts`,
   `api/cron/expire-listings/route.ts`). Detalle del logo en §6, barcos en §16.
-- **2026-07-18** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Fix definitivo:
+- **2026-07-18** — **Desplegado** (commit `2285c3b`, push a `main`). **Fix definitivo:
   descripción lenta la primera vez del día.** El fix del 2026-07-16 (prefetch + prewarm) no
   alcanzaba: seguía dependiendo de una query cliente. Ahora `description` viaja server-rendered
   con el feed (`LISTINGS_SELECT`/`STORE_SELECT`) y se pinta desde el preview de la card al
