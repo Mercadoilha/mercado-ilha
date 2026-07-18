@@ -26,7 +26,7 @@ export default function ListingDetailPage() {
   const preview = getListingPreview(listingId);
   const [listing, setListing] = useState<any>(
     preview
-      ? { id: preview.id, title: preview.title, price: preview.price, price_text: preview.price_text, condition: preview.condition }
+      ? { id: preview.id, title: preview.title, price: preview.price, price_text: preview.price_text, condition: preview.condition, description: preview.description }
       : null
   );
   const [photos, setPhotos] = useState<any[]>(
@@ -89,7 +89,7 @@ export default function ListingDetailPage() {
     // desde el preview del nuevo id (los initializers de useState solo corren al montar).
     if (didInitRef.current) {
       const p = getListingPreview(listingId);
-      setListing(p ? { id: p.id, title: p.title, price: p.price, price_text: p.price_text, condition: p.condition } : null);
+      setListing(p ? { id: p.id, title: p.title, price: p.price, price_text: p.price_text, condition: p.condition, description: p.description } : null);
       setPhotos(p?.firstPhoto ? [{ id: -1, photo_url: p.firstPhoto, sort_order: 0 }] : []);
       setLocality(p?.localityName ? { name: p.localityName } : null);
       setSeller(null); setSubzone(null); setServiceZones([]); setCategory(null); setSubcategory(null);
@@ -501,14 +501,16 @@ export default function ListingDetailPage() {
           {price}
         </div>
 
-        {/* Descripción (skeleton mientras llega la query completa — T9) */}
-        {fullyLoaded ? (
-          listing.description ? (
-            <p style={{ fontSize: "1.05rem", color: "#111", lineHeight: 1.65, marginBottom: 16 }}>
-              {listing.description}
-            </p>
-          ) : null
-        ) : (
+        {/* Descripción: si el preview del feed ya la trajo (LISTINGS_SELECT/STORE_SELECT),
+            se pinta al instante aunque la query del detalle no haya vuelto. Si todavía no
+            hay descripción y la query no confirmó (!fullyLoaded), skeleton. El "sin
+            descripción" (render vacío) solo se resuelve cuando fullyLoaded confirma que
+            realmente no hay — un preview con description:null (caché viejo) no lo prueba. */}
+        {listing.description ? (
+          <p style={{ fontSize: "1.05rem", color: "#111", lineHeight: 1.65, marginBottom: 16 }}>
+            {listing.description}
+          </p>
+        ) : fullyLoaded ? null : (
           <div style={{ marginBottom: 16 }} aria-hidden>
             {[92, 88, 70].map((w, i) => (
               <div key={i} style={{ height: 12, width: `${w}%`, background: "#eef2f7", borderRadius: 6, marginBottom: 8 }} />

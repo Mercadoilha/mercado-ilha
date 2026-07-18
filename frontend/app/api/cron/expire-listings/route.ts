@@ -115,7 +115,7 @@ function buildExpiredEmail(name: string, listings: ListingForEmail[]) {
       : `${listings.length} anúncios seus foram desativados`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
-        <img src="${SITE_URL}/logo.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
+        <img src="${SITE_URL}/logo-dark.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
         <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${escapeHtml(name)}!</h2>
         <p style="color:#475569;font-size:0.95rem;line-height:1.6;margin-bottom:16px">
           ${single ? "O seguinte anúncio atingiu" : "Os seguintes anúncios atingiram"} o prazo de
@@ -160,7 +160,7 @@ function buildDeletionWarningEmail(name: string, listings: ListingForEmail[]) {
       : `Última chance: ${listings.length} anúncios seus serão excluídos amanhã`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
-        <img src="${SITE_URL}/logo.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
+        <img src="${SITE_URL}/logo-dark.svg" alt="Mercado Ilha" style="height:44px;margin-bottom:20px" />
         <h2 style="color:#1e293b;font-size:1.1rem;margin-bottom:8px">Olá, ${escapeHtml(name)}!</h2>
         <p style="color:#475569;font-size:0.95rem;line-height:1.6;margin-bottom:16px">
           ${single ? "O seguinte anúncio está" : "Os seguintes anúncios estão"} inativo há 14 dias:

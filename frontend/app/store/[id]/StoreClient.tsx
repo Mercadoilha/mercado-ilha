@@ -19,8 +19,11 @@ import { cursorFromLast, applyKeysetCursor } from "../../../lib/listingsApi";
 // acá no hay 2 columnas de filtros previos: la lista es más corta en general.
 const STORE_PAGE_SIZE = 30;
 
+// `description` viaja acá igual que en LISTINGS_SELECT: las cards de la loja son
+// ListingCard y siembran el preview optimista, así el detalle pinta la descripción al
+// instante sin esperar la query cliente del detalle.
 const STORE_SELECT =
-  "id,title,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name)";
+  "id,title,description,price,price_text,condition,created_at,category_id,listing_photos(photo_url,sort_order),localities(name)";
 
 export default function StorePage() {
   const params = useParams();

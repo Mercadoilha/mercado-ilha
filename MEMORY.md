@@ -121,7 +121,19 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 - **Paleta:** azul principal `#185FA5`, azul mid `#1a6fbd`, azul claro `#B5D4F4`, azul xlight
   `#E6F1FB`, arena `#EF9F27`, arena light `#FAC775`, verde-mar `#9FE1CB`, verde oscuro `#0F6E56`.
   Variables CSS en `globals.css` (`--blue-main`, `--sand`, etc.).
-- **Logo:** SVG en `/public/logo.svg` (bolsa de compras con montículo de arena + faro).
+- **Logo — rediseño "Equilíbrio clássico" (2026-07-18):** wordmark vectorizado (paths, no texto
+  vivo — generado con fontTools desde Arial Rounded Bold, ya que esa fuente no existe en
+  Android/Windows) en 3 archivos idénticos en el ícono, distintos en color de "Mercado ilha":
+  `public/logo.svg` (blanco, sobre azul — header + cortina de entrada), `public/logo-dark.svg` y
+  `public/logo-entrada.svg` (azul oscuro `#123f66`, sobre fondo claro — login/Instalar/popup/
+  e-mails, idénticos entre sí). "Tinharé" siempre **naranja `#ef9f27`**, centrado bajo "Mercado
+  ilha" (viewBox `0 0 540 148`, ambos con intrinsic size `width="540" height="148"` para que el
+  `<img>` no quede sin dimensiones al cargar). Ícono = bolsa de compras con montículo de arena +
+  faro adentro. Reemplaza el wordmark simple negro de 2026-07-10. Emails de
+  `api/upload/route.ts` y `api/cron/expire-listings/route.ts` (×2) pasaron a `logo-dark.svg`
+  (con `logo.svg` blanco quedaban invisibles sobre fondo blanco). **Pendiente:** confirmar con el
+  usuario mayúscula/minúscula en "ilha"; los PNG de ícono/splash (atajo, apple-touch-icon,
+  splash iOS) NO se regeneraron, siguen con el logo viejo.
 - **Cards de anuncios (actualizado 2026-07-06):** grid 2 columnas edge-to-edge (clase compartida
   `.listing-grid` en `globals.css`, usada en home/listings/store) — el `<article>` de
   `ListingCard.tsx` NO tiene borde ni sombra propios; la separación la dan líneas divisorias del
@@ -372,6 +384,21 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   hasta que hay intención. Dos detalles que hacen falta: `loadFavoritesList()` devuelve `null`
   ante error (el llamador conserva lo que muestra, no vacía la pantalla) y `mutationEpoch`
   descarta la respuesta de una query que salió **antes** de un toggle (ver §18).
+- **Descripción del detalle viaja con el feed en vez de esperar la query cliente
+  (2026-07-18):** el fix del 2026-07-16 (prefetch en `onPointerDown` + prewarm de sesión, ver
+  §18) **no alcanzó** — el usuario confirmó que la primera vez que abre un anuncio en el día
+  la descripción seguía tardando varios segundos, porque toda mitigación seguía dependiendo
+  de una query cliente que paga el arranque en frío (conexión + refresh de token). Fix
+  estructural: `description` se sumó a `LISTINGS_SELECT` (hereda `LISTINGS_SELECT_BUMP`) y a
+  `STORE_SELECT` (`StoreClient.tsx`) → llega server-rendered vía ISR junto con el resto de la
+  card, sin ninguna query cliente de por medio. `ListingPreview` (`lib/listingPreview.ts`)
+  ganó el campo `description`; `ListingCard` la siembra en `setListingPreview` (pointerdown y
+  click); `ListingDetailClient.tsx` la pinta apenas existe en el preview, ya no gateada por
+  `fullyLoaded` (el mensaje "sem descrição" sigue reservado a cuando `fullyLoaded` confirma
+  que de verdad no hay, para no mostrarlo de un preview viejo en caché sin la columna).
+  Favoritos y perfil no usan `ListingCard` → sus selects no se tocaron. Verificado: build OK
+  (`/` sigue `○ Static`, `/listings/[id]` sigue `●` SSG), home servido en runtime con las
+  descripciones embebidas (~73KB HTML crudo / ~11KB gzip, aceptable). Ver §18, §22.
 - **`next/dynamic`** para módulos pesados de uso raro (`AvatarCropModal`, PhotoUploader).
 - **`next/image`** (AVIF/WebP, remotePatterns) para fotos.
 - Widgets secundarios (marés, barcos) cargan post-render y nunca rompen la home si fallan.
@@ -573,8 +600,10 @@ Query de `/profile` trae `categories(is_product)` embebido en el `select` de `li
   `cheerio` server-side. API `app/api/mares/route.ts` con `unstable_cache` (revalida 6h). Carga con
   `useEffect` post-render; si falla, no aparece (la home no se rompe). Fondo `#E6F1FB`, grid 2 col.
 - **Barcos (`BarcosWidget.tsx`):** datos **hardcodeados** (referencia estática, no administrable).
-  Sentido único Morro → Valença: Lancha rápida (12 horarios 07:00–18:00) + Barco convencional (24).
-  Mismo estilo que MaresWidget. **Pendiente:** horarios de vuelta (Valença → Morro).
+  Selector de sentido (botones "Morro → Valença" / "Valença → Morro", estado `useState` local,
+  default "ida"): cada sentido con su Lancha rápida y Barco convencional propios. Morro→Valença:
+  12 + 24 horarios (07:00–18:00). Valença→Morro: 10 + 17 horarios (06:00–18:20). Mismo estilo que
+  MaresWidget. Leyenda fija: "O translado passa pelo atracadouro."
 
 ## 17. EXPIRACIÓN DE ANUNCIOS (regla fija)
 
@@ -684,6 +713,15 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   interceptando la RPC: con 1 y 2 cortes de red la lista carga igual (el usuario nunca ve el
   error), con caída total aparece el cartel y el botón trae las lojas; cambiar el orden dispara
   exactamente 1 consulta (sin reintentos espurios por el abort).
+- **Un prefetch/prewarm en el cliente acorta el arranque en frío, no lo elimina (2026-07-18):**
+  el fix del 2026-07-16 para la descripción lenta "primera vez del día" (prefetch en
+  `onPointerDown` + query de precalentado en `SessionContext`) seguía dependiendo de una query
+  cliente que corre después de tocar el anuncio — la ventana que gana es real pero acotada, y
+  el usuario reportó que el síntoma volvió al probarlo a la mañana siguiente. **Regla:** si un
+  dato puede viajar server-rendered (ISR) en vez de necesitar una query cliente, preferir
+  moverlo ahí antes que optimizar la query cliente — elimina la clase de problema en vez de
+  acortarla. Fix aplicado: `description` ahora viaja en `LISTINGS_SELECT`/`STORE_SELECT` y se
+  pinta desde el preview de la card, sin esperar ninguna query. Ver §13.
 - **Un rediseño de componente puede resucitar bugs ya arreglados (2026-07-15):** el rediseño de
   navegación (commit `3d80e9b`) reemplazó el `HomeClient` viejo por `ListingsFeed.tsx` compartido,
   y en el camino se perdió silenciosamente el `priority={i<4}` de las primeras cards (fix de LCP
@@ -802,6 +840,19 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-18** — **Desplegado** (push a `main`). **Rediseño de logo "Equilíbrio clássico"**
+  (wordmark vectorizado, "Tinharé" naranja centrado bajo "Mercado ilha") + **horários de barcos
+  volta Valença→Morro** (selector de sentido en `BarcosWidget.tsx`) + **fix e-mails con
+  `logo.svg` blanco invisible** → pasaron a `logo-dark.svg` (`api/upload/route.ts`,
+  `api/cron/expire-listings/route.ts`). Detalle del logo en §6, barcos en §16.
+- **2026-07-18** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Fix definitivo:
+  descripción lenta la primera vez del día.** El fix del 2026-07-16 (prefetch + prewarm) no
+  alcanzaba: seguía dependiendo de una query cliente. Ahora `description` viaja server-rendered
+  con el feed (`LISTINGS_SELECT`/`STORE_SELECT`) y se pinta desde el preview de la card al
+  instante, sin esperar ninguna query. Archivos: `lib/listingsApi.ts`, `lib/listingPreview.ts`,
+  `components/ListingCard.tsx`, `app/listings/[id]/ListingDetailClient.tsx`,
+  `app/store/[id]/StoreClient.tsx`. Verificado: `npm run build` OK, `/` `○ Static`,
+  `/listings/[id]` `●` SSG. Ver §13 y §18.
 - **2026-07-16** — **Desplegado** (commit `8d9277d`, push a `main`). **Latencia al entrar a
   `/favorites` + miniaturas 20% más grandes.** La demora no era la red ni la query: `/favorites`
   era la única pantalla con datos-con-auth **sin caché ni prefetch** (el perfil se prewarmea en

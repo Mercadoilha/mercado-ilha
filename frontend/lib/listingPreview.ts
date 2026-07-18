@@ -1,7 +1,7 @@
 // Traspaso card → detalle (T9 del plano de otimização). La card guarda los datos
 // mínimos que ya tiene al hacer click; el detalle los pinta al instante (título,
-// precio, primera foto, localidad) mientras llega la query completa. Mismo origen
-// de navegación garantizado → un Map de módulo alcanza (se pierde en deep link /
+// precio, primera foto, localidad, descripción) mientras llega la query completa. Mismo
+// origen de navegación garantizado → un Map de módulo alcanza (se pierde en deep link /
 // refresh, donde el detalle cae al skeleton, que es lo correcto).
 
 export type ListingPreview = {
@@ -12,6 +12,10 @@ export type ListingPreview = {
   condition: string | null;
   firstPhoto: string | null;
   localityName: string | null;
+  // Viaja con el feed (LISTINGS_SELECT / STORE_SELECT) → el detalle la pinta al instante
+  // sin esperar la query cliente. `null` cuando la card no la tenía (caché viejo en
+  // memoria sin la columna): el detalle cae al comportamiento anterior, sin regresión.
+  description: string | null;
 };
 
 const previews = new Map<number, ListingPreview>();
@@ -31,10 +35,10 @@ export function getListingPreview(id: number): ListingPreview | null {
   return previews.get(id) ?? null;
 }
 
-// Invalidar após uma edição bem-sucedida: se o preview otimista ficasse com o título/preço
-// antigos, ao voltar para o detalhe apareceriam por um instante antes da query completa
-// sobrescrever (flash de dado velho). Sem preview, o detalhe cai no spinner normal até
-// chegar o dado fresco — melhor do que mostrar algo errado.
+// Invalidar após uma edição bem-sucedida: se o preview otimista ficasse com o título/preço/
+// descrição antigos, ao voltar para o detalhe apareceriam por um instante antes da query
+// completa sobrescrever (flash de dado velho). Sem preview, o detalhe cai no spinner normal
+// até chegar o dado fresco — melhor do que mostrar algo errado.
 export function clearListingPreview(id: number): void {
   previews.delete(id);
 }

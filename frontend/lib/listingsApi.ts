@@ -4,14 +4,20 @@
 
 // 1 foto por anúncio (a primeira por sort_order); localidade para o card.
 // subzones NÃO é usado pelo card. Debe coincidir con el select de app/listings/page.tsx.
+// `description` viaja acá a propósito: el feed llega server-rendered (ISR, sin query
+// cliente) y la card siembra la descripción en el preview optimista, así el detalle la
+// pinta al instante sin esperar la primera query cliente del día (que paga el arranque en
+// frío: conexión + refresh de token). Es el único dato "pesado" que sumamos al card select;
+// crece el payload en texto (comprime bien) — trade-off aceptado a cambio de la latencia.
 export const LISTINGS_SELECT =
-  "id, title, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
+  "id, title, description, price, price_text, condition, locality_id, subzone_id, category_id, subcategory_id, created_at, listing_photos(photo_url, sort_order), localities(name)";
 
 // Select completo del detalle del anuncio (app/listings/[id]). Fuente única compartida
 // entre la página de detalle y su prefetch (lib/listingDetailPrefetch) → cero drift, misma
 // query exacta. Debe coincidir con el select de ListingDetailClient.load(). Trae más
-// columnas que LISTINGS_SELECT (description, joins de categoría/subcategoría/localidad) —
-// por eso vive separado y NO se mezcla con el select de las listas.
+// columnas que LISTINGS_SELECT (status, location_type, other_location_text, fotos con id,
+// joins de categoría/subcategoría/localidad) — por eso vive separado y NO se mezcla con el
+// select de las listas. (La descripción sí viaja ya en LISTINGS_SELECT, ver arriba.)
 export const LISTING_DETAIL_SELECT = `
           id, user_id, title, description, price, price_text, condition, status,
           location_type, covers_all_island, locality_id, subzone_id, other_location_text,

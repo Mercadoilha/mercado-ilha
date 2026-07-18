@@ -84,6 +84,7 @@ export default memo(function ListingCard({
             condition: listing.condition ?? null,
             firstPhoto,
             localityName: locationText,
+            description: listing.description ?? null,
           });
           // Dispara la query completa del detalle en paralelo con la navegación (barato,
           // async) → la descripción y las demás fotos llegan al toque.
@@ -98,6 +99,7 @@ export default memo(function ListingCard({
             condition: listing.condition ?? null,
             firstPhoto,
             localityName: locationText,
+            description: listing.description ?? null,
           });
           prefetchListingDetail(listing.id);
         }}
