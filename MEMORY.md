@@ -131,9 +131,14 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   `<img>` no quede sin dimensiones al cargar). Ícono = bolsa de compras con montículo de arena +
   faro adentro. Reemplaza el wordmark simple negro de 2026-07-10. Emails de
   `api/upload/route.ts` y `api/cron/expire-listings/route.ts` (×2) pasaron a `logo-dark.svg`
-  (con `logo.svg` blanco quedaban invisibles sobre fondo blanco). **Pendiente:** confirmar con el
-  usuario mayúscula/minúscula en "ilha"; los PNG de ícono/splash (atajo, apple-touch-icon,
-  splash iOS) NO se regeneraron, siguen con el logo viejo.
+  (con `logo.svg` blanco quedaban invisibles sobre fondo blanco). **Splash nativo iOS actualizado
+  (commit `c5d8d6b`, 2026-07-18):** las 8 `public/splash/apple-splash-*.png` (referenciadas por
+  `apple-touch-startup-image` en `layout.tsx`) tenían el wordmark viejo (estáticas, sin script de
+  generación en el repo); regeneradas con sharp desde `logo.svg`, fondo `#185FA5`, logo centrado
+  al 58% del ancho de pantalla (misma proporción/posición que las anteriores). El ícono cuadrado
+  (`icon-192/512`, `apple-touch-icon`, maskable) NO se tocó: sale de `Icono.svg` (solo la bolsa,
+  sin texto) vía `generate-icons.js`, no tiene wordmark y no le afecta el rediseño. **Pendiente:**
+  confirmar con el usuario mayúscula/minúscula en "ilha".
 - **Cards de anuncios (actualizado 2026-07-06):** grid 2 columnas edge-to-edge (clase compartida
   `.listing-grid` en `globals.css`, usada en home/listings/store) — el `<article>` de
   `ListingCard.tsx` NO tiene borde ni sombra propios; la separación la dan líneas divisorias del
@@ -840,6 +845,10 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-18** — **Desplegado** (commit `c5d8d6b`, push a `main`). **Fix splash nativo iPhone**:
+  las 8 imágenes `apple-splash-*.png` todavía tenían el wordmark viejo (se generan por fuera del
+  repo, quedaron desactualizadas al aplicar el rediseño de logo); regeneradas con el logo nuevo.
+  Detalle en §6.
 - **2026-07-18** — **Desplegado** (commit `2285c3b`, push a `main`). **Rediseño de logo "Equilíbrio clássico"**
   (wordmark vectorizado, "Tinharé" naranja centrado bajo "Mercado ilha") + **horários de barcos
   volta Valença→Morro** (selector de sentido en `BarcosWidget.tsx`) + **fix e-mails con
