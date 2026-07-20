@@ -51,6 +51,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <head>
+        {/* CSS crítico INLINE de la cortina de entrada (azul + logo). Va acá, no en
+            globals.css, para que se pinte en el PRIMER paint sin depender de la carga del
+            stylesheet externo hasheado. Antes la cortina vivía solo en globals.css: cuando ese
+            archivo tardaba (p. ej. tras un bump de versión del service worker que vacía su
+            caché), la primera pintura salía en blanco y el azul aparecía recién al llegar el
+            CSS. Estos mismos valores están replicados en globals.css (idénticos → no reinician
+            la animación). Azul hardcodeado (#185FA5) porque la variable --blue-main también
+            vive en el CSS externo. Respeta standalone / android-pwa / reduced-motion. */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              "#browser-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#185FA5;animation:browser-splash-out 700ms ease-out forwards;pointer-events:none}#browser-splash img{width:auto;height:64px}@keyframes browser-splash-out{0%,45%{opacity:1}100%{opacity:0;visibility:hidden}}@media (display-mode:standalone){#browser-splash{display:none}}html.android-pwa #browser-splash{display:flex}@media (prefers-reduced-motion:reduce){#browser-splash{display:none}}",
+          }}
+        />
         {/* Android PWA: el splash nativo solo pinta el ícono cuadrado (la bolsa), no admite
             imagen propia como iOS. Este script (síncrono, corre antes del primer paint) marca
             <html> cuando es Android instalado; el CSS muestra ahí la cortina con el logo
