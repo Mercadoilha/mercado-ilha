@@ -853,7 +853,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-20** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Prewarm del catálogo de
+- **2026-07-20** — **Desplegado** (commit `20ab1f0`, push a `main`). **Prewarm del catálogo de
   categorías + fix barra de Safari.** (1) `CategoriasClient.tsx`: precalienta en idle el catálogo
   de categorías (`loadCategories()`) al pintar `/categorias`, para que la primera categoría SIN
   subcategorías que se toca en la sesión abra con un solo viaje de red en vez de dos (antes tenía
