@@ -368,6 +368,9 @@ export default function ListingDetailPage() {
   const price = listing.price != null
     ? `R$ ${Number(listing.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
     : listing.price_text ?? "Consulte";
+  // Quando há preço fixo, o texto de preço vira uma nota curta abaixo do valor (mesma
+  // regra do card em components/ListingCard.tsx).
+  const priceNote = listing.price != null ? (listing.price_text?.trim() || null) : null;
 
   // Requiere user_id conocido (llega con la query completa) para no marcar "dueño"
   // durante el render optimista, cuando aún no sabemos de quién es el anuncio.
@@ -498,9 +501,17 @@ export default function ListingDetailPage() {
             <span className="badge badge-sand" style={{ flexShrink: 0, marginTop: 2 }}>{listing.condition}</span>
           )}
         </div>
-        <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--blue-main)", marginBottom: 12 }}>
+        <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--blue-main)", marginBottom: priceNote ? 2 : 16 }}>
           {price}
         </div>
+
+        {/* Detalhe opcional do preço (ex: "por unidade", "a combinar"): mesma nota que já
+            aparece no card, menor e logo abaixo do preço. */}
+        {priceNote && (
+          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: 16 }}>
+            {priceNote}
+          </div>
+        )}
 
         {/* Descripción: si el preview del feed ya la trajo (LISTINGS_SELECT/STORE_SELECT),
             se pinta al instante aunque la query del detalle no haya vuelto. Si todavía no
