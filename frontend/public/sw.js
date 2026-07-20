@@ -18,8 +18,13 @@
 //   60 cards) podía llenar/evacuar el caché de imágenes entero, y la visita siguiente re-baja
 //   todo del edge (latencia en 4G + edge requests contra el cupo). 150 cubre navegar varias
 //   vistas sin desalojar (~2–5 MB extra de storage, acotado). Estrategias por tipo intactas.
+// v8 (2026-07-20): bump para forzar refresh del logo. El rediseño de logo (commit 2285c3b,
+//   2026-07-18) cambió logo.svg / logo-dark.svg / logo-entrada.svg pero NO subió la versión,
+//   y como los assets de /public se sirven cache-first, los dispositivos que abrieron la app
+//   antes seguían mostrando el logo viejo precacheado. Subir la versión borra mi-*-v7 en
+//   activate y vuelve a bajar el logo nuevo. Estrategias por tipo intactas.
 
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const STATIC_CACHE = `mi-static-${CACHE_VERSION}`; // shell, íconos, /_next/static (inmutable)
 const PAGES_CACHE = `mi-pages-${CACHE_VERSION}`;   // navegaciones HTML + payloads RSC
 const IMAGES_CACHE = `mi-images-${CACHE_VERSION}`; // /_next/image + fotos R2
