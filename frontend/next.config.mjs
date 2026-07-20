@@ -70,6 +70,21 @@ const nextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      {
+        // Íconos de "agregar a inicio" (iOS/Android): por default Next los sirve con
+        // max-age=0/must-revalidate, así que el teléfono los vuelve a bajar de la red
+        // en el momento exacto de crear el atajo (demora visible del logo). 1 día de
+        // caché real + hasta 7 días de stale-while-revalidate: repetir la acción en ese
+        // lapso es instantáneo (disco, sin red), y una foto vieja nunca dura más que esa
+        // ventana. Ventana corta a propósito: si se rediseña el logo de nuevo, además
+        // de subir CACHE_VERSION en sw.js (ver ese archivo, incidente commit 191fd82),
+        // hay que recordar que el ícono viejo puede persistir hasta 24h en teléfonos que
+        // ya lo tenían en caché de disco antes del cambio.
+        source: "/:icon(apple-touch-icon|icon-192|icon-512|icon-maskable-192|icon-maskable-512).png",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
   },
 };

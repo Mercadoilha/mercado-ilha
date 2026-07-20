@@ -796,6 +796,16 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   y comparar p75 de LCP/INP/CLS por ruta contra la foto inicial (guardada en §13). Recordar de
   paso el hallazgo del **CLS 0.47 en `/store/[id]`** (pendiente aparte, ver arriba en §19).
 - (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§22.)
+- **PENDIENTE DE COMMIT (sin subir aún, 2026-07-20):** `frontend/next.config.mjs` — regla de
+  headers agregada para cachear 1 día (+ `stale-while-revalidate` 7 días) los íconos estáticos
+  `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` / `icon-maskable-192.png` /
+  `icon-maskable-512.png`. Motivo: el usuario reportó demora al ver el logo del ícono al crear
+  el acceso directo en iPhone — antes esos archivos se servían con `max-age=0, must-revalidate`
+  (recarga de red en cada request). Verificado con `npm run build` + `next start` local: el header
+  nuevo solo aplica a esos 5 archivos, el resto de la app (home, `logo.svg`, cortina de entrada)
+  sigue igual. El usuario pidió explícitamente NO subirlo todavía, sino dejarlo para que una
+  próxima sesión lo incluya en su próximo commit — no hacer commit/push de esto solo, empaquetarlo
+  junto con el trabajo de esa sesión.
 - (Confirmada ✅ fase-26-lojas-directory.sql: corrida por el usuario — RPC `get_stores` en
   producción, ver §20.)
 

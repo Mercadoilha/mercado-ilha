@@ -19,7 +19,7 @@ export const LISTINGS_SELECT =
 // joins de categoría/subcategoría/localidad) — por eso vive separado y NO se mezcla con el
 // select de las listas. (La descripción sí viaja ya en LISTINGS_SELECT, ver arriba.)
 export const LISTING_DETAIL_SELECT = `
-          id, user_id, title, description, price, price_text, condition, status,
+          id, user_id, title, description, description_rich, price, price_text, condition, status,
           location_type, covers_all_island, locality_id, subzone_id, other_location_text,
           category_id, subcategory_id, created_at,
           listing_photos(id, photo_url, sort_order),

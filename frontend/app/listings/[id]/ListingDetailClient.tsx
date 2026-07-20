@@ -11,6 +11,7 @@ import { compartilhar } from "../../../lib/share";
 import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import { getListingPreview } from "../../../lib/listingPreview";
+import RichText from "../../../components/RichText";
 import { takeListingDetailPrefetch } from "../../../lib/listingDetailPrefetch";
 import { LISTING_DETAIL_SELECT } from "../../../lib/listingsApi";
 import { getCachedFavorites, loadFavorites, addFavorite, removeFavorite } from "../../../lib/favoritesCache";
@@ -506,10 +507,12 @@ export default function ListingDetailPage() {
             hay descripción y la query no confirmó (!fullyLoaded), skeleton. El "sin
             descripción" (render vacío) solo se resuelve cuando fullyLoaded confirma que
             realmente no hay — un preview con description:null (caché viejo) no lo prueba. */}
-        {listing.description ? (
-          <p style={{ fontSize: "1.05rem", color: "#111", lineHeight: 1.65, marginBottom: 16 }}>
-            {listing.description}
-          </p>
+        {listing.description || listing.description_rich ? (
+          <RichText
+            rich={listing.description_rich}
+            plain={listing.description}
+            style={{ fontSize: "1.05rem", color: "#111", lineHeight: 1.65, marginBottom: 16 }}
+          />
         ) : fullyLoaded ? null : (
           <div style={{ marginBottom: 16 }} aria-hidden>
             {[92, 88, 70].map((w, i) => (

@@ -9,6 +9,8 @@ import { compressImage, normalizeFile } from "../../../../lib/imageUtils";
 import { getCategoryPlaceholders } from "../../../../lib/categoryPlaceholders";
 import ExtraCategoriesPicker, { ExtraCategoryEntry } from "../../../../components/ExtraCategoriesPicker";
 import type { PhotoAdjustResult } from "../../../../components/PhotoAdjustModal";
+import RichTextEditor from "../../../../components/RichTextEditor";
+import { richHasContent, initialEditorHtml } from "../../../../lib/richText";
 import { safeBack } from "../../../../lib/safeBack";
 import { clearListingPreview } from "../../../../lib/listingPreview";
 import { clearListingDetailPrefetch } from "../../../../lib/listingDetailPrefetch";
@@ -54,6 +56,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
   const [otherLocation, setOtherLocation] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionRich, setDescriptionRich] = useState("");
   const [price, setPrice] = useState("");
   const [priceText, setPriceText] = useState("");
   const [condition, setCondition] = useState("");
@@ -105,6 +108,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
       setOtherLocation(data.other_location_text ?? "");
       setTitle(data.title ?? "");
       setDescription(data.description ?? "");
+      setDescriptionRich(richHasContent(data.description_rich) ? data.description_rich : "");
       setPrice(data.price != null ? String(data.price) : "");
       setPriceText(data.price_text ?? "");
       setCondition(data.condition ?? "");
@@ -284,6 +288,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
         other_location_text: otherText,
         title: title.trim(),
         description: description.trim(),
+        description_rich: descriptionRich || null,
         price: price ? Number(price.replace(",", ".")) : null,
         price_text: !price && priceText ? priceText : null,
         condition: condition || null,
@@ -603,7 +608,16 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
           <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "2px 0 6px" }}>
             Dedique alguns minutos para descrever bem seu anúncio: uma boa descrição vende mais e mais rápido.
           </p>
-          <textarea className="form-textarea" placeholder={ph.description} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} required />
+          <RichTextEditor
+            initialHtml={initialEditorHtml(descriptionRich, description)}
+            placeholder={ph.description}
+            ariaLabel="Descrição do anúncio"
+            maxLength={1000}
+            onChange={(rich, plain) => {
+              setDescription(plain);
+              setDescriptionRich(richHasContent(rich) ? rich : "");
+            }}
+          />
         </div>
 
         {/* Precio */}
