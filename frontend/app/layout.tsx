@@ -75,6 +75,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "window.__deferredInstallPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__deferredInstallPrompt=e;window.dispatchEvent(new Event('bip-ready'))});window.addEventListener('appinstalled',function(){window.__deferredInstallPrompt=null});",
           }}
         />
+        {/* Fix bug conocido de Safari mobile (solo navegador, no PWA instalado): en la carga
+            inicial la barra de Safari a veces queda "expandida" tapando parte del banner azul
+            del topo, y solo se acomoda cuando el usuario hace scroll. Un scroll de 1px, forzado
+            apenas termina de cargar, hace que Safari recalcule su chrome sin que se note
+            (overscroll-behavior:none evita cualquier rebote visible). No corre en standalone
+            (ahí no existe esa barra) y no bloquea ni retrasa nada del render. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if(!matchMedia('(display-mode: standalone)').matches){addEventListener('load',function(){if(scrollY===0)scrollTo(0,1)})}",
+          }}
+        />
         {/* Pre-establish connections to external services before JS executes */}
         <link rel="preconnect" href="https://ywminblmiwjsxbntszbc.supabase.co" />
         <link rel="dns-prefetch" href="https://ywminblmiwjsxbntszbc.supabase.co" />

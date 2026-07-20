@@ -404,6 +404,14 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
   Favoritos y perfil no usan `ListingCard` → sus selects no se tocaron. Verificado: build OK
   (`/` sigue `○ Static`, `/listings/[id]` sigue `●` SSG), home servido en runtime con las
   descripciones embebidas (~73KB HTML crudo / ~11KB gzip, aceptable). Ver §18, §22.
+- **Prewarm del catálogo de categorías en `/categorias` (2026-07-20):** al abrir una categoría
+  SIN subcategorías, `/listings?category=` necesita resolver el slug contra el catálogo
+  (`lib/catalogCache.ts`) antes de poder pedir los anuncios — sin caché tibio eso son dos
+  viajes de red en serie (catálogo → anuncios) solo la primera vez de la sesión.
+  `CategoriasClient.tsx` ahora precalienta `loadCategories()` en idle (mismo patrón que el
+  prewarm de `/listings` en `HomeClient.tsx`, más arriba) apenas se pinta la pantalla de
+  categorías, así el catálogo ya está en caché de sesión cuando el usuario toca una categoría.
+  No bloquea el render ni cambia nada visible.
 - **`next/dynamic`** para módulos pesados de uso raro (`AvatarCropModal`, PhotoUploader).
 - **`next/image`** (AVIF/WebP, remotePatterns) para fotos.
 - Widgets secundarios (marés, barcos) cargan post-render y nunca rompen la home si fallan.
@@ -845,6 +853,17 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-20** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Prewarm del catálogo de
+  categorías + fix barra de Safari.** (1) `CategoriasClient.tsx`: precalienta en idle el catálogo
+  de categorías (`loadCategories()`) al pintar `/categorias`, para que la primera categoría SIN
+  subcategorías que se toca en la sesión abra con un solo viaje de red en vez de dos (antes tenía
+  que resolver el slug antes de poder pedir los anuncios). Sin cambios visibles. Detalle en §13.
+  (2) `app/layout.tsx`: fix de un bug conocido de Safari mobile (solo navegador, no PWA
+  instalado) donde la barra de Safari queda expandida tapando parte del banner azul del topo en
+  la carga inicial — se fuerza un scroll de 1px al terminar de cargar (`scrollTo(0,1)`, solo si
+  `scrollY===0` y no está en modo standalone) para que Safari recalcule su chrome sin que se
+  note. Verificado: `npm run build` OK, ninguna ruta pasó a dinámica (`/categorias` sigue
+  `○ Static`).
 - **2026-07-18** — **Desplegado** (commit `c5d8d6b`, push a `main`). **Fix splash nativo iPhone**:
   las 8 imágenes `apple-splash-*.png` todavía tenían el wordmark viejo (se generan por fuera del
   repo, quedaron desactualizadas al aplicar el rediseño de logo); regeneradas con el logo nuevo.
