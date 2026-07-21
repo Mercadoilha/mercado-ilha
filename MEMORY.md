@@ -254,6 +254,17 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   ningún código lo lee.)
 - Varios activos en misma posición → rotan cada 4s con dots. Sin banners → placeholder "Seu
   negócio aqui! + Fale conosco".
+- **Orden de aparición (2026-07-20):** el primer banner que se ve al entrar a la página es el de
+  menor `sort_order`. Desde `/admin` tab "Banners" ahora hay flechas ↑↓ (`moveBanner`, mismo
+  patrón que categorías/subcategorías) para reordenar la lista completa (mezcla banners `home` y
+  `listado`, pero cada posición igual respeta su orden relativo al filtrar por `.eq("position",…)`).
+  Antes solo se podía agregar (al final), pausar o borrar — no había forma de cambiar el orden.
+- ⚠️ **Posición `listado` sin usar todavía:** el admin permite crear un banner con posición
+  `listado`, pero ningún componente actual llama a `BannerRotativo` con `position="listado"` en
+  la página de listados (`/listings`, `ListingsClient.tsx`) — solo se renderiza en el home
+  (`HomeClient.tsx`, `CategoriasClient.tsx`). Si se carga un banner con esa posición hoy, no se
+  ve en ningún lado. Pendiente: si el usuario quiere banners también en `/listings`, hay que
+  agregar el fetch + `<BannerRotativo position="listado">` ahí.
 - **Layout:** ancho completo, sin border-radius ni etiqueta "PUBLICIDADE", pegado al header.
   Componente `BannerRotativo.tsx`.
 - **Imágenes:** en `frontend/public/banners/`, URL `https://mercadoilha.vercel.app/banners/<x>.png`
@@ -796,16 +807,9 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   y comparar p75 de LCP/INP/CLS por ruta contra la foto inicial (guardada en §13). Recordar de
   paso el hallazgo del **CLS 0.47 en `/store/[id]`** (pendiente aparte, ver arriba en §19).
 - (Resuelta ✅ splash azul al abrir desde el navegador: implementada 2026-07-08, ver §13/§22.)
-- **PENDIENTE DE COMMIT (sin subir aún, 2026-07-20):** `frontend/next.config.mjs` — regla de
-  headers agregada para cachear 1 día (+ `stale-while-revalidate` 7 días) los íconos estáticos
-  `apple-touch-icon.png` / `icon-192.png` / `icon-512.png` / `icon-maskable-192.png` /
-  `icon-maskable-512.png`. Motivo: el usuario reportó demora al ver el logo del ícono al crear
-  el acceso directo en iPhone — antes esos archivos se servían con `max-age=0, must-revalidate`
-  (recarga de red en cada request). Verificado con `npm run build` + `next start` local: el header
-  nuevo solo aplica a esos 5 archivos, el resto de la app (home, `logo.svg`, cortina de entrada)
-  sigue igual. El usuario pidió explícitamente NO subirlo todavía, sino dejarlo para que una
-  próxima sesión lo incluya en su próximo commit — no hacer commit/push de esto solo, empaquetarlo
-  junto con el trabajo de esa sesión.
+- (Resuelta ✅ cache 1 día de los íconos de instalación (`apple-touch-icon.png` etc.) en
+  `frontend/next.config.mjs`: iba pendiente de una sesión anterior, se empaquetó y subió junto
+  con el commit `3d881f9` del 2026-07-20 — descripción con formato.)
 - (Confirmada ✅ fase-26-lojas-directory.sql: corrida por el usuario — RPC `get_stores` en
   producción, ver §20.)
 
@@ -863,6 +867,20 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-20** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Reordenar banners +
+  fix avatar quebrado.** (1) `/admin` tab "Banners": flechas ↑↓ para reordenar (`moveBanner`,
+  actualiza `sort_order` de todos vía `Promise.all`, mismo patrón que categorías) — pedido del
+  usuario al notar que siempre arrancaba con el mismo banner al entrar a la página. Detalle en §7.
+  (2) Fix de una sesión anterior sin commitear: en `AvatarUpload.tsx` la key del avatar en R2 pasó
+  a incluir `profiles/{userId}/…` (antes solo `profiles/{uuid}.ext`) para que `/api/delete-file`
+  pueda validar dueño por el path de la key en vez de comparar contra `profiles.avatar_url` (que
+  puede quedar desactualizado justo después de subir uno nuevo); además el `UPDATE` de
+  `avatar_url` en la tabla ahora corre ANTES de borrar el archivo viejo en R2, para no dejar el
+  campo apuntando a un archivo ya eliminado si el update fallara. También se agregó fallback
+  `onError` (ícono 👤/🏪 en vez de imagen rota) en los avatares de `/listings/[id]`, `/store/[id]`,
+  `/lojas` y `AvatarUpload` — relacionado con el 404 de avatar roto en R2 que ya se había detectado
+  como preexistente el 2026-07-06 (ver §22 más abajo, Fase 3). Verificado: `npm run build` OK, sin
+  cambios de rutas estáticas/ISR.
 - **2026-07-20** — **Desplegado** (commit `20ab1f0`, push a `main`). **Prewarm del catálogo de
   categorías + fix barra de Safari.** (1) `CategoriasClient.tsx`: precalienta en idle el catálogo
   de categorías (`loadCategories()`) al pintar `/categorias`, para que la primera categoría SIN

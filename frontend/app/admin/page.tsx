@@ -696,6 +696,22 @@ function Banners() {
     setBanners((prev) => prev.filter((b) => b.id !== id));
   };
 
+  const moveBanner = async (idx: number, dir: -1 | 1) => {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= banners.length) return;
+    const next = [...banners];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    const results = await Promise.all(
+      next.map((b, i) => supabase.from("banners").update({ sort_order: i }).eq("id", b.id))
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      alert("Erro ao salvar ordem: " + failed.error.message);
+      return;
+    }
+    setBanners(next.map((b, i) => ({ ...b, sort_order: i })));
+  };
+
   const saveBanner = async () => {
     if (!bImageUrl.trim()) { setBMsg("URL da imagem é obrigatória."); return; }
     if (!bWhatsapp.trim()) { setBMsg("WhatsApp do anunciante é obrigatório."); return; }
@@ -783,7 +799,7 @@ function Banners() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {banners.map((b) => {
+        {banners.map((b, bIdx) => {
           const waMatch = b.link_url?.match(/wa\.me\/(\d+)/);
           const waNumber = waMatch ? `+${waMatch[1]}` : null;
           return (
@@ -800,6 +816,18 @@ function Banners() {
                     📱 {waNumber}
                   </div>
                 )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                <button type="button" title="Mover para cima" disabled={bIdx === 0}
+                  onClick={() => moveBanner(bIdx, -1)}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: bIdx === 0 ? "default" : "pointer", fontSize: "0.65rem", color: bIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                  ↑
+                </button>
+                <button type="button" title="Mover para baixo" disabled={bIdx === banners.length - 1}
+                  onClick={() => moveBanner(bIdx, 1)}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: bIdx === banners.length - 1 ? "default" : "pointer", fontSize: "0.65rem", color: bIdx === banners.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                  ↓
+                </button>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                 <button type="button" onClick={() => toggleBanner(b.id, !b.active)}

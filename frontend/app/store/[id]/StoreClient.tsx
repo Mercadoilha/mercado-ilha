@@ -42,6 +42,7 @@ export default function StorePage() {
   const [featuredIds, setFeaturedIds] = useState<Set<number> | null>(() => getFeaturedIdsSync());
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   // T5: paginación "Ver mais anúncios" (keyset por created_at, id). totalCount es el
   // conteo exacto de activos del vendedor (para el encabezado "X anúncios ativos"),
   // independiente de cuántos haya cargados en pantalla.
@@ -88,6 +89,7 @@ export default function StorePage() {
       }
       const rows = listingsRes.data ?? [];
       setSeller(sellerRes.data);
+      setAvatarError(false);
       setListings(rows);
       setTotalCount(listingsRes.count ?? rows.length);
       setHasMore(rows.length >= STORE_PAGE_SIZE);
@@ -215,7 +217,7 @@ export default function StorePage() {
         }}
       >
         <div
-          onClick={() => { if (seller.avatar_url) setAvatarOpen(true); }}
+          onClick={() => { if (seller.avatar_url && !avatarError) setAvatarOpen(true); }}
           style={{
             width: 84,
             height: 84,
@@ -228,11 +230,11 @@ export default function StorePage() {
             margin: "0 auto 0.75rem",
             overflow: "hidden",
             border: "2px solid rgba(255,255,255,0.5)",
-            cursor: seller.avatar_url ? "zoom-in" : "default",
+            cursor: seller.avatar_url && !avatarError ? "zoom-in" : "default",
           }}
         >
-          {seller.avatar_url ? (
-            <Image src={seller.avatar_url} alt={seller.full_name} width={84} height={84} sizes="84px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {seller.avatar_url && !avatarError ? (
+            <Image src={seller.avatar_url} alt={seller.full_name} width={84} height={84} sizes="84px" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setAvatarError(true)} />
           ) : "👤"}
         </div>
         <div style={{ fontWeight: 800, fontSize: "1.2rem", marginBottom: 4 }}>{seller.full_name}</div>

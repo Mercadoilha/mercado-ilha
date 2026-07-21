@@ -156,7 +156,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const key = `${folder}/${randomUUID()}-${Date.now()}.${ext}`;
+    // Avatares: el user.id va en la key para poder validar dueño en /api/delete-file
+    // sin depender de que la url siga siendo la "atual" en profiles.avatar_url.
+    const key = folder === "profiles"
+      ? `profiles/${user.id}/${randomUUID()}-${Date.now()}.${ext}`
+      : `${folder}/${randomUUID()}-${Date.now()}.${ext}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 

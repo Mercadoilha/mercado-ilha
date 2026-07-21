@@ -32,8 +32,13 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   const initials = getInitials(fullName || "U");
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [currentAvatarUrl]);
 
   // Revoke objectURL on unmount to avoid memory leaks
   useEffect(() => {
@@ -87,7 +92,16 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
 
       const newUrl: string = uploadData.url;
 
-      // Delete previous avatar from R2 (API skips non-R2 URLs gracefully)
+      // Persist new URL in profiles table first — only delete the previous
+      // avatar from R2 once we know the DB actually points to the new one.
+      // (Deleting it earlier could leave avatar_url pointing at a file that
+      // no longer exists if this update ever failed.)
+      const { error: dbErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: newUrl })
+        .eq("id", userId);
+      if (dbErr) throw new Error(dbErr.message);
+
       if (currentAvatarUrl) {
         fetch("/api/delete-file", {
           method: "POST",
@@ -95,13 +109,6 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
           body: JSON.stringify({ url: currentAvatarUrl }),
         }).catch(() => {});
       }
-
-      // Persist new URL in profiles table
-      const { error: dbErr } = await supabase
-        .from("profiles")
-        .update({ avatar_url: newUrl })
-        .eq("id", userId);
-      if (dbErr) throw new Error(dbErr.message);
 
       onUpdate(newUrl);
       setMsg({ text: "Foto atualizada!", ok: true });
@@ -137,7 +144,7 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
             width: 104,
             height: 104,
             borderRadius: "50%",
-            background: currentAvatarUrl ? "transparent" : "var(--blue-light)",
+            background: currentAvatarUrl && !avatarError ? "transparent" : "var(--blue-light)",
             border: "3px solid rgba(255,255,255,0.7)",
             display: "flex",
             alignItems: "center",
@@ -149,9 +156,9 @@ export default function AvatarUpload({ userId, currentAvatarUrl, fullName, onUpd
             flexShrink: 0,
           }}
         >
-          {currentAvatarUrl ? (
+          {currentAvatarUrl && !avatarError ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentAvatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={currentAvatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setAvatarError(true)} />
           ) : (
             <span>{initials}</span>
           )}

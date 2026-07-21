@@ -375,6 +375,7 @@ export default function LojasClient() {
 
 // Card de tienda: ancho completo, toda la card navega a /store/[id].
 function StoreRow({ store, localityName, onOpen }: { store: Store; localityName: Map<number, string>; onOpen: () => void }) {
+  const [avatarError, setAvatarError] = useState(false);
   const names = store.locality_ids.map((id) => localityName.get(id)).filter(Boolean) as string[];
   const shown = names.slice(0, 3);
   const extra = names.length - shown.length;
@@ -387,9 +388,9 @@ function StoreRow({ store, localityName, onOpen }: { store: Store; localityName:
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       style={{ display: "flex", gap: "0.75rem", background: "#fff", borderRadius: 12, border: "1px solid var(--border)", padding: "0.75rem", alignItems: "center", cursor: "pointer" }}
     >
-      <div style={{ width: 56, height: 56, borderRadius: "50%", background: store.avatar_url ? "#fff" : "var(--blue-xlight)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", overflow: "hidden", flexShrink: 0, position: "relative" }}>
-        {store.avatar_url ? (
-          <Image src={store.avatar_url} alt={store.full_name} fill sizes="56px" style={{ objectFit: "cover" }} />
+      <div style={{ width: 56, height: 56, borderRadius: "50%", background: store.avatar_url && !avatarError ? "#fff" : "var(--blue-xlight)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", overflow: "hidden", flexShrink: 0, position: "relative" }}>
+        {store.avatar_url && !avatarError ? (
+          <Image src={store.avatar_url} alt={store.full_name} fill sizes="56px" style={{ objectFit: "cover" }} onError={() => setAvatarError(true)} />
         ) : "🏪"}
       </div>
 

@@ -41,11 +41,12 @@ export async function POST(req: NextRequest) {
     // Authorization: must be admin OR verified owner of the resource
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("role, avatar_url")
+      .select("role")
       .eq("id", user.id)
       .single();
 
     const isAdmin = profile?.role === "admin";
+    const key = url.slice(publicUrl.length + 1); // strip leading "/"
 
     if (!isAdmin) {
       if (listingId != null) {
@@ -64,14 +65,14 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
         }
       } else {
-        // Avatar: verify the URL is the user's own current avatar_url
-        if (!profile?.avatar_url || profile.avatar_url !== url) {
+        // Avatar: a key's ownership is baked into its path ("profiles/{userId}/...")
+        // at upload time, so this holds regardless of what profiles.avatar_url
+        // currently points to (e.g. right after a newer avatar was already saved).
+        if (!key.startsWith(`profiles/${user.id}/`)) {
           return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
         }
       }
     }
-
-    const key = url.slice(publicUrl.length + 1); // strip leading "/"
 
     await r2.send(
       new DeleteObjectCommand({

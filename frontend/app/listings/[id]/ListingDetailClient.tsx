@@ -34,6 +34,7 @@ export default function ListingDetailPage() {
     preview?.firstPhoto ? [{ id: -1, photo_url: preview.firstPhoto, sort_order: 0 }] : []
   );
   const [seller, setSeller] = useState<any>(null);
+  const [avatarError, setAvatarError] = useState(false);
   const [category, setCategory] = useState<any>(null);
   const [subcategory, setSubcategory] = useState<any>(null);
   const [locality, setLocality] = useState<any>(preview?.localityName ? { name: preview.localityName } : null);
@@ -93,7 +94,7 @@ export default function ListingDetailPage() {
       setListing(p ? { id: p.id, title: p.title, price: p.price, price_text: p.price_text, condition: p.condition, description: p.description } : null);
       setPhotos(p?.firstPhoto ? [{ id: -1, photo_url: p.firstPhoto, sort_order: 0 }] : []);
       setLocality(p?.localityName ? { name: p.localityName } : null);
-      setSeller(null); setSubzone(null); setServiceZones([]); setCategory(null); setSubcategory(null);
+      setSeller(null); setAvatarError(false); setSubzone(null); setServiceZones([]); setCategory(null); setSubcategory(null);
       setPhotoIdx(0);
       setLoading(!p);
       setFullyLoaded(false);
@@ -602,8 +603,8 @@ export default function ListingDetailPage() {
                 overflow: "hidden",
               }}
             >
-              {seller.avatar_url ? (
-                <Image src={seller.avatar_url} alt={seller.full_name} width={44} height={44} sizes="44px" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {seller.avatar_url && !avatarError ? (
+                <Image src={seller.avatar_url} alt={seller.full_name} width={44} height={44} sizes="44px" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setAvatarError(true)} />
               ) : "👤"}
             </div>
             <div style={{ flex: 1 }}>
