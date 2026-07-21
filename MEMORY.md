@@ -867,7 +867,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-20** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Reordenar banners +
+- **2026-07-20** — **Desplegado** (commit `4aab594`, push a `main`). **Reordenar banners +
   fix avatar quebrado.** (1) `/admin` tab "Banners": flechas ↑↓ para reordenar (`moveBanner`,
   actualiza `sort_order` de todos vía `Promise.all`, mismo patrón que categorías) — pedido del
   usuario al notar que siempre arrancaba con el mismo banner al entrar a la página. Detalle en §7.
