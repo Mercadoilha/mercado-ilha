@@ -25,7 +25,7 @@ export default async function CategoriasPage() {
     admin
       .from("banners")
       .select("id,title,image_url,link_url")
-      .eq("position", "home")
+      .eq("position", "categorias")
       .eq("active", true)
       .order("sort_order"),
   ]);

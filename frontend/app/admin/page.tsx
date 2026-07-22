@@ -659,7 +659,7 @@ function Banners() {
   const [bTitle, setBTitle] = useState("");
   const [bImageUrl, setBImageUrl] = useState("");
   const [bWhatsapp, setBWhatsapp] = useState("");
-  const [bPosition, setBPosition] = useState<"home" | "listado">("home");
+  const [bPosition, setBPosition] = useState<"home" | "categorias">("home");
   const [bSaving, setBSaving] = useState(false);
   const [bMsg, setBMsg] = useState("");
 
@@ -696,20 +696,28 @@ function Banners() {
     setBanners((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const moveBanner = async (idx: number, dir: -1 | 1) => {
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= banners.length) return;
-    const next = [...banners];
-    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+  // Reordena DENTRO de um grupo de posição (home / categorias / …). Cada posição tem sua
+  // própria numeração de sort_order, então mover um banner de "Categorias" nunca afeta a
+  // ordem dos banners do "Início".
+  const moveBanner = async (position: string, groupIdx: number, dir: -1 | 1) => {
+    const group = banners
+      .filter((b) => b.position === position)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const newIdx = groupIdx + dir;
+    if (newIdx < 0 || newIdx >= group.length) return;
+    [group[groupIdx], group[newIdx]] = [group[newIdx], group[groupIdx]];
     const results = await Promise.all(
-      next.map((b, i) => supabase.from("banners").update({ sort_order: i }).eq("id", b.id))
+      group.map((b, i) => supabase.from("banners").update({ sort_order: i }).eq("id", b.id))
     );
     const failed = results.find((r) => r.error);
     if (failed?.error) {
       alert("Erro ao salvar ordem: " + failed.error.message);
       return;
     }
-    setBanners(next.map((b, i) => ({ ...b, sort_order: i })));
+    const orderMap = new Map(group.map((b, i) => [b.id, i]));
+    setBanners((prev) =>
+      prev.map((b) => (orderMap.has(b.id) ? { ...b, sort_order: orderMap.get(b.id)! } : b))
+    );
   };
 
   const saveBanner = async () => {
@@ -725,7 +733,8 @@ function Banners() {
       image_url: bImageUrl.trim(),
       link_url: linkUrl,
       position: bPosition,
-      sort_order: banners.length,
+      // novo banner vai ao fim da lista da sua própria posição
+      sort_order: banners.filter((b) => b.position === bPosition).length,
       active: true,
     }).select().single();
     if (error) { setBMsg("Erro: " + error.message); }
@@ -734,6 +743,23 @@ function Banners() {
   };
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
+
+  // Agrupamos os banners por posição para gerir cada tela separadamente. "home" e
+  // "categorias" aparecem sempre (para poder adicionar); posições antigas (listado/splash)
+  // só se ainda houver algum banner cadastrado nelas.
+  const POSITION_LABELS: Record<string, string> = {
+    home: "🏠 Tela inicial (Início)",
+    categorias: "🗂️ Tela de Categorias",
+    listado: "📋 Listagem",
+    splash: "🚀 Abertura (splash)",
+  };
+  const positionOrder = ["home", "categorias", "listado", "splash"];
+  const presentPositions = Array.from(new Set(banners.map((b) => b.position)));
+  const knownGroups = positionOrder.filter(
+    (p) => p === "home" || p === "categorias" || presentPositions.includes(p)
+  );
+  const unknownGroups = presentPositions.filter((p) => !positionOrder.includes(p));
+  const allGroups = [...knownGroups, ...unknownGroups];
 
   return (
     <div>
@@ -785,10 +811,10 @@ function Banners() {
             </p>
           </div>
           <div className="form-group">
-            <label className="form-label">Posição</label>
-            <select className="form-select" value={bPosition} onChange={(e) => setBPosition(e.target.value as "home" | "listado")}>
-              <option value="home">Home</option>
-              <option value="listado">Listado</option>
+            <label className="form-label">Onde aparece</label>
+            <select className="form-select" value={bPosition} onChange={(e) => setBPosition(e.target.value as "home" | "categorias")}>
+              <option value="home">Tela inicial (Início)</option>
+              <option value="categorias">Tela de Categorias</option>
             </select>
           </div>
           {bMsg && <p className="text-error">{bMsg}</p>}
@@ -798,52 +824,66 @@ function Banners() {
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {banners.map((b, bIdx) => {
-          const waMatch = b.link_url?.match(/wa\.me\/(\d+)/);
-          const waNumber = waMatch ? `+${waMatch[1]}` : null;
-          return (
-            <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "center" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={b.image_url} alt={b.title ?? ""} style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "var(--blue-xlight)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "#1e293b" }}>{b.title ?? "Banner"}</div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                  {b.position} · {b.active ? "✅ Ativo" : "⏸️ Inativo"}
-                </div>
-                {waNumber && (
-                  <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 600 }}>
-                    📱 {waNumber}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-                <button type="button" title="Mover para cima" disabled={bIdx === 0}
-                  onClick={() => moveBanner(bIdx, -1)}
-                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: bIdx === 0 ? "default" : "pointer", fontSize: "0.65rem", color: bIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
-                  ↑
-                </button>
-                <button type="button" title="Mover para baixo" disabled={bIdx === banners.length - 1}
-                  onClick={() => moveBanner(bIdx, 1)}
-                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: bIdx === banners.length - 1 ? "default" : "pointer", fontSize: "0.65rem", color: bIdx === banners.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
-                  ↓
-                </button>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                <button type="button" onClick={() => toggleBanner(b.id, !b.active)}
-                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem" }}>
-                  {b.active ? "⏸️" : "▶️"}
-                </button>
-                <button type="button" onClick={() => deleteBanner(b.id)}
-                  style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", color: "#dc2626", fontSize: "0.75rem" }}>
-                  🗑️
-                </button>
-              </div>
+      {allGroups.map((position) => {
+        const group = banners
+          .filter((b) => b.position === position)
+          .sort((a, b) => a.sort_order - b.sort_order);
+        return (
+          <div key={position} style={{ marginBottom: "1.25rem" }}>
+            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--blue-main)", marginBottom: "0.5rem", paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
+              {POSITION_LABELS[position] ?? position} ({group.length})
             </div>
-          );
-        })}
-        {banners.length === 0 && !showForm && <p className="text-muted text-center" style={{ paddingTop: "1rem" }}>Nenhum banner cadastrado.</p>}
-      </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {group.map((b, gIdx) => {
+                const waMatch = b.link_url?.match(/wa\.me\/(\d+)/);
+                const waNumber = waMatch ? `+${waMatch[1]}` : null;
+                return (
+                  <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "center" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={b.image_url} alt={b.title ?? ""} style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "var(--blue-xlight)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "#1e293b" }}>{b.title ?? "Banner"}</div>
+                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                        {b.active ? "✅ Ativo" : "⏸️ Inativo"}
+                      </div>
+                      {waNumber && (
+                        <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 600 }}>
+                          📱 {waNumber}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+                      <button type="button" title="Mover para cima" disabled={gIdx === 0}
+                        onClick={() => moveBanner(position, gIdx, -1)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: gIdx === 0 ? "default" : "pointer", fontSize: "0.65rem", color: gIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                        ↑
+                      </button>
+                      <button type="button" title="Mover para baixo" disabled={gIdx === group.length - 1}
+                        onClick={() => moveBanner(position, gIdx, 1)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: gIdx === group.length - 1 ? "default" : "pointer", fontSize: "0.65rem", color: gIdx === group.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
+                        ↓
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <button type="button" onClick={() => toggleBanner(b.id, !b.active)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem" }}>
+                        {b.active ? "⏸️" : "▶️"}
+                      </button>
+                      <button type="button" onClick={() => deleteBanner(b.id)}
+                        style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", color: "#dc2626", fontSize: "0.75rem" }}>
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {group.length === 0 && (
+                <p className="text-muted" style={{ fontSize: "0.75rem", padding: "0.25rem 0" }}>Nenhum banner nesta tela.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

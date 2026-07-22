@@ -37,7 +37,7 @@ export default function CategoriasClient({ categories, adminWa, banners, bannerI
       <SearchHeader />
 
       {/* ── Banner publicitário ── */}
-      <BannerRotativo position="home" banners={banners} adminWa={adminWa} bannerInterval={bannerInterval} />
+      <BannerRotativo position="categorias" banners={banners} adminWa={adminWa} bannerInterval={bannerInterval} />
 
       {/* ── Categorias Destacadas + seções temáticas ── */}
       <CategoriesBlocks categories={categories} />

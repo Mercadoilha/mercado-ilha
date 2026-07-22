@@ -13,7 +13,7 @@ type Banner = {
 };
 
 type Props = {
-  position?: "home" | "listado";
+  position?: "home" | "listado" | "categorias";
   banners: Banner[];
   adminWa: string;
   bannerInterval: number;
@@ -22,7 +22,16 @@ type Props = {
 export default function BannerRotativo({ position, banners, adminWa, bannerInterval }: Props) {
   const [idx, setIdx] = useState(0);
   const [resetKey, setResetKey] = useState(0);
+  const [entered, setEntered] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fade-in de entrada: ao abrir a tela (Início ou Categorias) o carrossel sempre começa
+  // no primeiro banner. Sem isto ele aparecia de forma seca. Só um fade de CSS no
+  // primeiro quadro — não atrasa nada nem adia o carregamento da imagem.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -77,8 +86,10 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
     );
   }
 
-  const current = banners[idx];
-
+  // ── Carrossel: todos os slides num trilho horizontal que desliza (translateX).
+  // Cada slide é seu próprio link, então a imagem que aparece sempre leva ao anunciante
+  // correto — inclusive durante a transição, quando dois slides ficam visíveis. Só o
+  // primeiro carrega com priority; os demais sob demanda (não pesam no carregamento inicial).
   const content = (
     <div
       style={{
@@ -87,18 +98,54 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
         overflow: "hidden",
         height: 130,
         background: "var(--blue-xlight)",
+        opacity: entered ? 1 : 0,
+        transition: "opacity 0.45s ease",
       }}
     >
-
-      <Image
-        key={current.id}
-        src={current.image_url}
-        alt={current.title ?? "Banner"}
-        fill
-        sizes="100vw"
-        priority
-        style={{ objectFit: "cover", display: "block", transition: "opacity 0.4s" }}
-      />
+      <div
+        style={{
+          display: "flex",
+          height: "100%",
+          width: `${banners.length * 100}%`,
+          transform: `translateX(-${idx * (100 / banners.length)}%)`,
+          transition: "transform 0.5s ease",
+        }}
+      >
+        {banners.map((b, i) => {
+          const slide = (
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              <Image
+                src={b.image_url}
+                alt={b.title ?? "Banner"}
+                fill
+                sizes="100vw"
+                priority={i === 0}
+                style={{ objectFit: "cover", display: "block" }}
+              />
+            </div>
+          );
+          return (
+            <div
+              key={b.id}
+              style={{ width: `${100 / banners.length}%`, height: "100%", flexShrink: 0 }}
+            >
+              {b.link_url ? (
+                <a
+                  href={b.link_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackBannerClick(b.id, position ?? null)}
+                  style={{ textDecoration: "none", display: "block", width: "100%", height: "100%" }}
+                >
+                  {slide}
+                </a>
+              ) : (
+                slide
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {banners.length > 1 && (
         <div
@@ -137,13 +184,7 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
 
   return (
     <div style={{ margin: 0 }}>
-      {current.link_url ? (
-        <a href={current.link_url} target="_blank" rel="noreferrer" onClick={() => trackBannerClick(current.id, position ?? null)} style={{ textDecoration: "none", display: "block" }}>
-          {content}
-        </a>
-      ) : (
-        content
-      )}
+      {content}
       <p style={{ textAlign: "center", padding: "0.4rem 1rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>
         Quer anunciar aqui?{" "}
         <a
