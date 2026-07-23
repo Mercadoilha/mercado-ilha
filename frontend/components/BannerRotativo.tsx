@@ -19,8 +19,17 @@ type Props = {
   bannerInterval: number;
 };
 
+const SLIDE_MS = 500;
+
 export default function BannerRotativo({ position, banners, adminWa, bannerInterval }: Props) {
+  const total = banners.length;
+  const loop = total > 1;
+  // Clone do primeiro banner no fim do trilho: assim o carrossel sempre corre para a
+  // esquerda. Ao chegar no clone volta ao início sem animação (o olho não percebe).
+  const slides = loop ? [...banners, banners[0]] : banners;
+
   const [idx, setIdx] = useState(0);
+  const [animate, setAnimate] = useState(true);
   const [resetKey, setResetKey] = useState(0);
   const [entered, setEntered] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -28,22 +37,58 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
   // Fade-in de entrada: ao abrir a tela (Início ou Categorias) o carrossel sempre começa
   // no primeiro banner. Sem isto ele aparecia de forma seca. Só um fade de CSS no
   // primeiro quadro — não atrasa nada nem adia o carregamento da imagem.
+  // Dois requestAnimationFrame: o navegador precisa pintar o opacity 0 antes de mudar
+  // para 1, senão junta as duas mudanças num frame só e não há transição nenhuma.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setEntered(true));
-    return () => cancelAnimationFrame(raf);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, []);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (!loop) return;
     timer.current = setInterval(() => {
-      setIdx((i) => (i + 1) % banners.length);
+      setAnimate(true);
+      setIdx((i) => i + 1);
     }, bannerInterval);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [banners.length, bannerInterval, resetKey]);
+  }, [loop, bannerInterval, resetKey]);
+
+  // Chegou no clone → salta de volta ao primeiro com a animação desligada.
+  useEffect(() => {
+    if (!loop || idx !== total) return;
+    const t = setTimeout(() => {
+      setAnimate(false);
+      setIdx(0);
+      setResetKey((k) => k + 1);
+    }, SLIDE_MS + 20);
+    return () => clearTimeout(t);
+  }, [idx, total, loop]);
+
+  // Religa a animação só depois que o salto já foi pintado.
+  useEffect(() => {
+    if (animate) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setAnimate(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [animate]);
+
+  const active = idx % total || 0;
 
   const goTo = (i: number) => {
+    setAnimate(true);
     setIdx(i);
     setResetKey((k) => k + 1);
   };
@@ -99,19 +144,19 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
         height: 130,
         background: "var(--blue-xlight)",
         opacity: entered ? 1 : 0,
-        transition: "opacity 0.45s ease",
+        transition: "opacity 0.6s ease",
       }}
     >
       <div
         style={{
           display: "flex",
           height: "100%",
-          width: `${banners.length * 100}%`,
-          transform: `translateX(-${idx * (100 / banners.length)}%)`,
-          transition: "transform 0.5s ease",
+          width: `${slides.length * 100}%`,
+          transform: `translateX(-${idx * (100 / slides.length)}%)`,
+          transition: animate ? `transform ${SLIDE_MS}ms ease` : "none",
         }}
       >
-        {banners.map((b, i) => {
+        {slides.map((b, i) => {
           const slide = (
             <div style={{ position: "relative", width: "100%", height: "100%" }}>
               <Image
@@ -126,8 +171,8 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
           );
           return (
             <div
-              key={b.id}
-              style={{ width: `${100 / banners.length}%`, height: "100%", flexShrink: 0 }}
+              key={`${b.id}-${i}`}
+              style={{ width: `${100 / slides.length}%`, height: "100%", flexShrink: 0 }}
             >
               {b.link_url ? (
                 <a
@@ -166,10 +211,10 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
               type="button"
               onClick={(e) => { e.preventDefault(); goTo(i); }}
               style={{
-                width: i === idx ? 18 : 6,
+                width: i === active ? 18 : 6,
                 height: 6,
                 borderRadius: 999,
-                background: i === idx ? "#fff" : "rgba(255,255,255,0.5)",
+                background: i === active ? "#fff" : "rgba(255,255,255,0.5)",
                 border: "none",
                 cursor: "pointer",
                 padding: 0,
