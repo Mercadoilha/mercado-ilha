@@ -267,9 +267,19 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   agregar el fetch + `<BannerRotativo position="listado">` ahí.
 - **Layout:** ancho completo, sin border-radius ni etiqueta "PUBLICIDADE", pegado al header.
   Componente `BannerRotativo.tsx`.
-- **Imágenes:** en `frontend/public/banners/`, URL `https://mercadoilha.vercel.app/banners/<x>.png`
-  (va directo en `image_url`). Dimensión recomendada 1200×300 (4:1); Higgsfield genera 1584×672
-  (21:9) con `objectFit: cover` → diseñar contenido centrado verticalmente.
+- **Imágenes — DOS orígenes posibles, no asumir uno solo (⚠️ 2026-07-22):** la mayoría vive como
+  archivo estático en `frontend/public/banners/` (URL `https://mercadoilha.vercel.app/banners/<x>.png`,
+  va directo en `image_url`) pero alguno puede haberse subido directo a Cloudflare R2 (URL
+  `https://pub-....r2.dev/banners/<uuid>-<timestamp>.png`) sin pasar por `/api/upload` (que hoy
+  solo permite carpetas `listings`/`profiles`, no `banners`). **Antes de mover o borrar cualquier
+  archivo de `public/banners/`, confirmar contra la tabla `banners` real** (no contra un supuesto)
+  qué `image_url` está en uso — ver incidente en §18. Dimensión recomendada 1200×300 (4:1);
+  Higgsfield genera 1584×672 (21:9) con `objectFit: cover` → diseñar contenido centrado
+  verticalmente.
+- **Borrado de banner (commit `e994fc0`, 2026-07-22):** `deleteBanner` en `/admin` ahora llama a
+  `/api/delete-file` con el `image_url` antes de borrar la fila — limpia el archivo en R2 si la
+  imagen vive ahí (silencioso si no, p.ej. si es un archivo estático de `public/banners/`, que no
+  se puede borrar por API: requiere sacarlo del repo a mano).
 - **Skill `/banner-institucional`** (`.claude/skills/SKILL_BANNER_INSTITUCIONAL.md`): genera con
   Higgsfield, descarga, sube a `public/banners/`, push, retorna URL. ⚠️ correr
   `git config http.postBuffer 524288000` antes del push de imágenes.
@@ -642,6 +652,15 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 18. BUGS RESUELTOS — LECCIONES
 
+- **Limpieza de repo rompió 2 banners activos en producción por asumir sin verificar
+  (2026-07-22, commits `e994fc0` → fix `1223534`):** al ordenar el repo se movieron 4 PNGs de
+  `public/banners/` a `historico/` asumiendo (mensaje del commit) que "hoy los banners viven en
+  R2, no en el proyecto" — dato no verificado contra la tabla `banners` real. 3 de esos 4
+  archivos seguían siendo el `image_url` de banners ACTIVOS de la Início → imagen rota en
+  producción hasta el fix (minutos después). **Lección: antes de mover/borrar un asset "sin uso",
+  confirmar contra la fuente de verdad en vivo (la tabla, no una suposición ni lo que dice un
+  doc), sobre todo cuando el mismo tipo de dato puede tener DOS orígenes distintos** (acá:
+  algunos banners son archivo estático del repo, otros viven en R2 — ver §7).
 - **`/favorites` lenta: la pantalla que quedó fuera de todas las optimizaciones (2026-07-16):**
   latencia al entrar reportada por el usuario. **No era la red ni la query**: era la única
   pantalla con datos-con-auth sin caché **ni** prefetch, mientras todo a su alrededor sí los
@@ -867,6 +886,16 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-22** — **Desplegado** (commits `e994fc0` y fix `1223534`, push a `main`). **Borrado
+  de banner ahora limpia R2 + fix de incidente de la limpieza de repo.** (1) `deleteBanner` en
+  `/admin` ya no deja el archivo huérfano: llama a `/api/delete-file` con el `image_url` antes de
+  borrar la fila (limpia si vive en R2; no hace nada si es un estático de `public/banners/`, ver
+  §7). (2) El mismo commit `e994fc0` (de otra sesión en paralelo) reordenó el repo en `historico/`
+  pero movió por error 3 banners de `public/banners/` que seguían activos en la tabla → 2 banners
+  rotos brevemente en la Início. Fix inmediato en `1223534`: se restauraron
+  banner-institucional/comodidade/identidade a `public/banners/`; solo `banner-anuncie.png`
+  (sin uso real) quedó en `historico/`. Detalle y lección en §18. Build verificado ambas veces:
+  `/` y `/categorias` siguen `○ Static`.
 - **2026-07-20** — **Desplegado** (commit `4aab594`, push a `main`). **Reordenar banners +
   fix avatar quebrado.** (1) `/admin` tab "Banners": flechas ↑↓ para reordenar (`moveBanner`,
   actualiza `sort_order` de todos vía `Promise.all`, mismo patrón que categorías) — pedido del

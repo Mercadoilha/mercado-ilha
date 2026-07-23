@@ -38,5 +38,13 @@ Imágenes que ya no referencia ningún archivo de la app.
 
 - `coco.svg`, `mercado-ilha-icone.svg`, `mercado-ilha-logo.svg` — logos previos al
   rediseño; los vigentes son `logo.svg`, `logo-dark.svg`, `logo-entrada.svg`, `Icono.svg`.
-- `banners/` — los 4 banners originales. Hoy los banners se cargan desde `/admin`
-  y viven en Cloudflare R2, no en el proyecto.
+- `banners/banner-anuncie.png` — único banner realmente sin uso (ningún registro de
+  la tabla `banners` lo referencia). ⚠️ Los otros 3 que estuvieron acá brevemente
+  (institucional/comodidade/identidade) **fueron restaurados a `frontend/public/banners/`
+  el 2026-07-22** (commit `1223534`): seguían referenciados por banners ACTIVOS en la
+  Início y su remoción rompió esas imágenes en producción por un momento. Los banners
+  de Mercado Ilha viven en **dos lugares distintos** según cómo se cargaron — archivo
+  estático en `public/banners/` (URL `mercadoilha.vercel.app/banners/...`) o subida
+  directa a R2 (URL `pub-....r2.dev/...`) — **nunca asumir que todos están en uno solo**;
+  confirmar contra la tabla `banners` antes de mover/borrar cualquier archivo de esta
+  carpeta. Ver MEMORY.md §7 y §18.
