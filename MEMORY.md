@@ -197,6 +197,20 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   sobre una sugerencia de **término** SIEMPRE completa la barra, aunque el término sea idéntico a
   lo escrito (antes ese caso buscaba directo y cortaba el tipeo de la segunda palabra: escribir
   "iphone" y tocar la sugerencia se iba a resultados en vez de dejar "iphone " para agregar "13").
+  **Fix toque caía en el banner + navegación categoría/subcategoría (2026-07-23):** en móvil el
+  navegador dispara el `click` al SOLTAR el dedo; como la lista de sugerencias se cerraba en el
+  `pointerdown` (al apoyar), ese click llegaba al banner de abajo y lo abría. Fix: la selección
+  ahora ocurre en `onClick` (pointerdown solo evita perder el foco/teclado) + `swallowGhostClick()`
+  descarta el próximo click que llegue tras cerrar la lista. También: tocar una sugerencia de
+  **categoría** ya no va directo a `/listings?category=slug` — si esa categoría tiene
+  subcategorías, lleva primero a `/category/[slug]` (mismo criterio que los botones del home,
+  `loadCategorySlugsWithSubs()` en `catalogCache.ts`, arma el set desde los catálogos ya cacheados
+  sin query nueva). Tocar una sugerencia de **subcategoría** agrega `&from=busca` a la URL de
+  `/listings`; con eso la flecha ← de esa pantalla (`goBack()` en `ListingsClient.tsx`) hace
+  `router.replace` a `/category/[slug]` en vez de `router.back()` — así volver pasa primero por la
+  lista de subcategorías y recién el siguiente toque vuelve a la pantalla de origen (home o
+  `/categorias`). Nuevo componente `BackButton.tsx` (usa `safeBack`) para la flecha de
+  `/category/[slug]` (Server Component, no puede usar `router.back()` directo).
   Queda el cursor al final, después del espacio (`caretToEndRef` + `setSelectionRange` en un
   `useEffect` sobre `query`: corre cuando el DOM ya tiene el valor nuevo; el input nunca pierde el
   foco porque los ítems cancelan el `pointerdown`, así que en móvil el teclado sigue abierto). El
@@ -902,6 +916,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-23** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Fix buscador: toque
+  caía en el banner + navegación categoría→subcategorías con volver escalonado.** Ver detalle en
+  §13 (busca `2026-07-23` dentro de la entrada de Búsqueda autocomplete). Resumen: (1) en móvil el
+  toque sobre una sugerencia a veces abría el banner de abajo por el timing pointerdown/click —
+  resuelto. (2) Sugerencia de categoría con subcategorías ahora lleva a la lista de subcategorías
+  (no directo a los anuncios); volver desde los anuncios (llegado por sugerencia de subcategoría)
+  pasa primero por esa lista y después a la pantalla de origen. Build verificado: `/listings` y
+  `/category/[slug]` sin cambios de tipo de ruta.
 - **2026-07-23** — **Desplegado** (commit `189a8cb`, push a `main`). **Subcategoria de busca
   (sem botão "Vendido") + banners com link livre.** (1) fase-28: nueva columna
   `subcategories.is_product` (default `true`, SQL corrida por el usuario). Excepción por

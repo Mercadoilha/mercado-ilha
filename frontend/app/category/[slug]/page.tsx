@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import BackButton from "../../../components/BackButton";
 
 export const revalidate = 300;
 
@@ -42,7 +43,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href="/categorias" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <BackButton fallbackHref="/categorias" />
         <h1>{catWithSubs.name ?? slug}</h1>
       </header>
 

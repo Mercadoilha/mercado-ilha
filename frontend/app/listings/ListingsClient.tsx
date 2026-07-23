@@ -94,6 +94,18 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
 
   const pageTitle = categorySlug ? categoryLabel || "Anúncios" : "Todos os anúncios";
 
+  // Volver: normalmente la pantalla anterior. Excepción: se llegó desde una sugerencia de
+  // subcategoría del buscador (from=busca), que salta el paso de la lista de subcategorías;
+  // ahí volver muestra primero esa lista y recién el siguiente toque vuelve al inicio.
+  // Se usa replace para no dejar los anuncios en el historial (si no, volver rebotaría).
+  const goBack = () => {
+    if (searchParams.get("from") === "busca" && categorySlug) {
+      router.replace(`/category/${categorySlug}`);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <div className="page-body">
       {isSearch ? (
@@ -126,7 +138,7 @@ function ListingsContent({ initialDefault }: { initialDefault: any[] }) {
         <header className="page-header">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={goBack}
             aria-label="Voltar"
             style={{ background: "none", border: "none", color: "#fff", fontSize: "1.2rem", cursor: "pointer", padding: 0, lineHeight: 1, flexShrink: 0 }}
           >

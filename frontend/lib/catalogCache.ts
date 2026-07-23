@@ -11,7 +11,7 @@ const TTL = 5 * 60 * 1000; // 5 min
 
 export type CatalogCategory = { id: number; slug: string; name: string; icon: string | null };
 export type CatalogLocality = { id: number; name: string };
-export type CatalogSubcategory = { id: number; name: string };
+export type CatalogSubcategory = { id: number; name: string; category_id: number; is_active: boolean };
 export type CatalogSubzone = { id: number; name: string; locality_id: number };
 
 type Cached<T> = { data: T; ts: number };
@@ -145,7 +145,10 @@ export async function loadSubzones(): Promise<CatalogSubzone[]> {
 // ---------------- Subcategorías (T6 del plan V3) ----------------
 // Todo el catálogo (id, name) en una sola carga, igual que categorías: el label de
 // subcategoría en /listings pasa de 1 query por visita a 1 query cada 5 min.
-const SUBCAT_SS = "mi_subcat_catalog_v1";
+// También trae category_id/is_active: con eso el buscador sabe, sin ninguna consulta
+// extra, si una categoría tiene subcategorías (→ sugerirla lleva a la lista de
+// subcategorías) o no (→ va directo a los anuncios). Mismo criterio que el home.
+const SUBCAT_SS = "mi_subcat_catalog_v2"; // v2: el registro guardado ahora trae 2 campos más
 let subcatMem: Cached<CatalogSubcategory[]> | null = null;
 let subcatInFlight: Promise<CatalogSubcategory[]> | null = null;
 
@@ -165,7 +168,7 @@ export async function loadSubcategories(): Promise<CatalogSubcategory[]> {
   if (sync) return sync;
   if (subcatInFlight) return subcatInFlight;
   subcatInFlight = (async () => {
-    const { data } = await supabase.from("subcategories").select("id, name");
+    const { data } = await supabase.from("subcategories").select("id, name, category_id, is_active");
     const rows = (data ?? []) as CatalogSubcategory[];
     const entry = { data: rows, ts: Date.now() };
     subcatMem = entry;
@@ -174,4 +177,13 @@ export async function loadSubcategories(): Promise<CatalogSubcategory[]> {
     return rows;
   })();
   return subcatInFlight;
+}
+
+// Slugs de las categorías que tienen al menos una subcategoría activa. Se arma con los
+// dos catálogos ya cacheados (categorías + subcategorías), sin consulta propia.
+export async function loadCategorySlugsWithSubs(): Promise<Set<string>> {
+  const [cats, subs] = await Promise.all([loadCategories(), loadSubcategories()]);
+  const withSubs = new Set<number>();
+  for (const s of subs) if (s.is_active) withSubs.add(s.category_id);
+  return new Set(cats.filter((c) => withSubs.has(c.id)).map((c) => c.slug));
 }

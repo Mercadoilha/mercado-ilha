@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import { fold, foldWords, prefixFilter } from "../lib/searchNorm";
+import { loadCategorySlugsWithSubs } from "../lib/catalogCache";
 
 // Tres tipos de sugerencia, en este orden de prioridad:
 //  - "term": la búsqueda particular (texto). Primera y más específica.
@@ -24,7 +25,7 @@ const cache = new Map<string, Suggestion[]>();
 // son instantáneas también tras recargar la página o reabrir el PWA, no solo dentro
 // de la misma carga. Mismo patrón que lib/catalogCache. El Map en memoria sigue
 // siendo la fuente rápida; sessionStorage solo lo hidrata una vez y lo persiste.
-const SS_KEY = "mi_busca_cache_v1";
+const SS_KEY = "mi_busca_cache_v2"; // v2: cambiaron los destinos de las sugerencias
 const SS_TTL = 10 * 60 * 1000; // 10 min
 const SS_MAX = 50; // tope de queries persistidas (las más viejas se descartan)
 let ssHydrated = false;
@@ -69,6 +70,22 @@ function persistToSS(key: string, data: Suggestion[]) {
 
 function norm(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// En móvil el navegador dispara el `click` recién al LEVANTAR el dedo. Si para entonces la
+// lista de sugerencias ya se cerró (o la pantalla ya cambió), ese click cae sobre lo que
+// quedó debajo — el banner — y lo abre sin querer. Se descarta el primer click que llegue
+// justo después de cerrar la lista. No afecta al click propio de la sugerencia: un listener
+// agregado durante el despacho del evento no se ejecuta para ese mismo evento.
+function swallowGhostClick() {
+  if (typeof document === "undefined") return;
+  const stop = (e: MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    document.removeEventListener("click", stop, true);
+  };
+  document.addEventListener("click", stop, true);
+  setTimeout(() => document.removeEventListener("click", stop, true), 400);
 }
 
 // Ordena las palabras de los títulos que EMPIEZAN por `word` (ya normalizada
@@ -127,7 +144,7 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
     subQ = subQ.or(prefixFilter("name_norm", w));
   }
 
-  const [listRes, catRes, subRes] = await Promise.all([
+  const [listRes, catRes, subRes, slugsWithSubs] = await Promise.all([
     // Anuncios que coinciden por título: de aquí salen los términos
     // particulares y las categorías/subcategorías relacionadas.
     listQ.limit(20).abortSignal(signal),
@@ -135,6 +152,9 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
     catQ.limit(5).abortSignal(signal),
     // Coincidencia directa por nombre de subcategoría.
     subQ.limit(5).abortSignal(signal),
+    // Catálogos ya cacheados en la sesión: dicen qué categorías tienen subcategorías.
+    // En paralelo con las de arriba → no agrega espera.
+    loadCategorySlugsWithSubs().catch(() => new Set<string>()),
   ]);
 
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
@@ -176,7 +196,7 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
       const k = `${subParentSlug}:${sub.id}`;
       const e = subMap.get(k) ?? {
         label: sub.name,
-        href: `/listings?category=${subParentSlug}&subcategory_id=${sub.id}`,
+        href: `/listings?category=${subParentSlug}&subcategory_id=${sub.id}&from=busca`,
         hint: sub.categories?.name ?? "Categoria",
         count: 0,
       };
@@ -201,7 +221,9 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
     const k = `${parentSlug}:${ss.id}`;
     const e = subMap.get(k) ?? {
       label: ss.name,
-      href: `/listings?category=${parentSlug}&subcategory_id=${ss.id}`,
+      // from=busca: al volver desde los anuncios se pasa antes por la lista de
+      // subcategorías de esa categoría, en vez de saltar de una a la pantalla anterior.
+      href: `/listings?category=${parentSlug}&subcategory_id=${ss.id}&from=busca`,
       hint: ss.categories?.name ?? "Categoria",
       count: 0,
     };
@@ -246,7 +268,11 @@ async function fetchSuggestions(q: string, signal: AbortSignal): Promise<Suggest
   // 2) Categorías relacionadas (máx 3).
   const cats = [...catMap.values()].sort((a, b) => b.count - a.count).slice(0, 3);
   for (const c of cats) {
-    add({ label: c.label, href: `/listings?category=${c.slug}`, hint: "Categoria", kind: "nav" });
+    // Si la categoría tiene subcategorías, primero se muestran ellas (ahí arriba está
+    // "Todas as publicações" para quien quiera ver todo). Si no tiene, va directo a los
+    // anuncios. Mismo criterio que los botones de categoría del home.
+    const href = slugsWithSubs.has(c.slug) ? `/category/${c.slug}` : `/listings?category=${c.slug}`;
+    add({ label: c.label, href, hint: "Categoria", kind: "nav" });
   }
 
   // 3) Subcategorías relacionadas (máx 3).
@@ -354,6 +380,7 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
   }, []);
 
   function goHref(href: string) {
+    swallowGhostClick();
     setOpen(false);
     router.push(href);
   }
@@ -362,6 +389,7 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
   function goFreeText(term: string) {
     const q = term.trim();
     if (!q) return;
+    swallowGhostClick();
     setOpen(false);
     router.push(`/listings?q=${encodeURIComponent(q)}`);
   }
@@ -522,7 +550,8 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
             <div
               role="option"
               aria-selected={false}
-              onPointerDown={(e) => { e.preventDefault(); goFreeText(query); }}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => goFreeText(query)}
               style={{ padding: "0.75rem 1rem", display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}
             >
               <span aria-hidden="true" style={{ fontSize: "0.9rem", opacity: 0.5 }}>🔍</span>
@@ -590,7 +619,11 @@ function SuggestionItem({
       id={id}
       role="option"
       aria-selected={active}
-      onPointerDown={(e) => { e.preventDefault(); onSelect(); }}
+      // pointerdown solo evita que el input pierda el foco (en móvil el teclado sigue
+      // abierto). La elección va en el click: así el toque se consume acá y no cae en el
+      // banner de abajo, y arrastrar el dedo para deslizar la lista ya no navega.
+      onPointerDown={(e) => e.preventDefault()}
+      onClick={onSelect}
       onMouseEnter={onHover}
       style={{
         display: "flex",
