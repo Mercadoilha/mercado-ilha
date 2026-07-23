@@ -916,7 +916,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-23** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Fix buscador: toque
+- **2026-07-23** — **Desplegado** (commit `0390acc`, push a `main`). **Fix buscador: toque
   caía en el banner + navegación categoría→subcategorías con volver escalonado.** Ver detalle en
   §13 (busca `2026-07-23` dentro de la entrada de Búsqueda autocomplete). Resumen: (1) en móvil el
   toque sobre una sugerencia a veces abría el banner de abajo por el timing pointerdown/click —
