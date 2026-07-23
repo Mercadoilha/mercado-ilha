@@ -32,7 +32,7 @@ export async function prewarmProfile(uid: string): Promise<void> {
       supabase.from("profiles").select("*").eq("id", uid).single(),
       supabase
         .from("listings")
-        .select("id,title,price,price_text,status,created_at,expires_at,bumped_at,categories(is_product),listing_photos(photo_url,sort_order)")
+        .select("id,title,price,price_text,status,created_at,expires_at,bumped_at,categories(is_product),subcategories(is_product),listing_photos(photo_url,sort_order)")
         .order("sort_order", { referencedTable: "listing_photos" })
         .limit(1, { referencedTable: "listing_photos" })
         .eq("user_id", uid)

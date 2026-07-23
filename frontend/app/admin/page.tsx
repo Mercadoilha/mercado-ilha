@@ -658,7 +658,11 @@ function Banners() {
   // New banner form
   const [bTitle, setBTitle] = useState("");
   const [bImageUrl, setBImageUrl] = useState("");
+  // Destino ao clicar no banner: WhatsApp (arma o link wa.me sozinho) ou um link livre
+  // (site, Instagram, etc. — vai direto para o endereço informado).
+  const [bLinkType, setBLinkType] = useState<"whatsapp" | "url">("whatsapp");
   const [bWhatsapp, setBWhatsapp] = useState("");
+  const [bLink, setBLink] = useState("");
   const [bPosition, setBPosition] = useState<"home" | "categorias">("home");
   const [bSaving, setBSaving] = useState(false);
   const [bMsg, setBMsg] = useState("");
@@ -735,10 +739,17 @@ function Banners() {
 
   const saveBanner = async () => {
     if (!bImageUrl.trim()) { setBMsg("URL da imagem é obrigatória."); return; }
-    if (!bWhatsapp.trim()) { setBMsg("WhatsApp do anunciante é obrigatório."); return; }
-    const raw = bWhatsapp.replace(/\D/g, "");
-    const number = raw.startsWith("55") ? raw : `55${raw}`;
-    const linkUrl = `https://wa.me/${number}?text=${encodeURIComponent("Olá! Vi o anúncio no Mercado Ilha e gostaria de saber mais.")}`;
+    let linkUrl: string;
+    if (bLinkType === "whatsapp") {
+      if (!bWhatsapp.trim()) { setBMsg("WhatsApp do anunciante é obrigatório."); return; }
+      const raw = bWhatsapp.replace(/\D/g, "");
+      const number = raw.startsWith("55") ? raw : `55${raw}`;
+      linkUrl = `https://wa.me/${number}?text=${encodeURIComponent("Olá! Vi o anúncio no Mercado Ilha e gostaria de saber mais.")}`;
+    } else {
+      if (!bLink.trim()) { setBMsg("O link de destino é obrigatório."); return; }
+      // Aceita colar "instagram.com/..." sem http — completa com https:// automaticamente.
+      linkUrl = /^https?:\/\//i.test(bLink.trim()) ? bLink.trim() : `https://${bLink.trim()}`;
+    }
     setBSaving(true);
     setBMsg("");
     const { data, error } = await supabase.from("banners").insert({
@@ -751,7 +762,7 @@ function Banners() {
       active: true,
     }).select().single();
     if (error) { setBMsg("Erro: " + error.message); }
-    else { setBanners((prev) => [...prev, data]); setShowForm(false); setBTitle(""); setBImageUrl(""); setBWhatsapp(""); }
+    else { setBanners((prev) => [...prev, data]); setShowForm(false); setBTitle(""); setBImageUrl(""); setBWhatsapp(""); setBLink(""); setBLinkType("whatsapp"); }
     setBSaving(false);
   };
 
@@ -817,12 +828,29 @@ function Banners() {
             <input className="form-input" type="url" placeholder="https://..." value={bImageUrl} onChange={(e) => setBImageUrl(e.target.value)} />
           </div>
           <div className="form-group">
-            <label className="form-label">WhatsApp do anunciante *</label>
-            <input className="form-input" type="tel" placeholder="75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
-            <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
-              Ao clicar no banner, o usuário será redirecionado a este número.
-            </p>
+            <label className="form-label">Ao clicar no banner, ir para *</label>
+            <select className="form-select" value={bLinkType} onChange={(e) => setBLinkType(e.target.value as "whatsapp" | "url")}>
+              <option value="whatsapp">WhatsApp (número)</option>
+              <option value="url">Link (site, Instagram, etc.)</option>
+            </select>
           </div>
+          {bLinkType === "whatsapp" ? (
+            <div className="form-group">
+              <label className="form-label">WhatsApp do anunciante *</label>
+              <input className="form-input" type="tel" placeholder="75 99999-9999" value={bWhatsapp} onChange={(e) => setBWhatsapp(e.target.value)} maxLength={20} />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
+                Ao clicar no banner, o usuário será redirecionado a este número.
+              </p>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label className="form-label">Link de destino *</label>
+              <input className="form-input" type="text" placeholder="instagram.com/seu_perfil" value={bLink} onChange={(e) => setBLink(e.target.value)} />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>
+                Ao clicar no banner, o usuário abrirá este endereço (Instagram, site, etc.).
+              </p>
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Onde aparece</label>
             <select className="form-select" value={bPosition} onChange={(e) => setBPosition(e.target.value as "home" | "categorias")}>
@@ -850,6 +878,10 @@ function Banners() {
               {group.map((b, gIdx) => {
                 const waMatch = b.link_url?.match(/wa\.me\/(\d+)/);
                 const waNumber = waMatch ? `+${waMatch[1]}` : null;
+                // Link que não é WhatsApp (site, Instagram, etc.) — mostra o endereço curtinho.
+                const otherLink = !waNumber && b.link_url
+                  ? b.link_url.replace(/^https?:\/\//i, "").replace(/\/$/, "")
+                  : null;
                 return (
                   <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "center" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -862,6 +894,11 @@ function Banners() {
                       {waNumber && (
                         <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 600 }}>
                           📱 {waNumber}
+                        </div>
+                      )}
+                      {otherLink && (
+                        <div style={{ fontSize: "0.7rem", color: "var(--blue-main)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          🔗 {otherLink}
                         </div>
                       )}
                     </div>
@@ -966,7 +1003,7 @@ function Categories() {
   const loadSubcats = async (catId: number) => {
     if (subcats[catId] !== undefined) return;
     setLoadingSubcats((p) => ({ ...p, [catId]: true }));
-    const { data } = await supabase.from("subcategories").select("id,name,icon,is_active,sort_order").eq("category_id", catId).order("sort_order");
+    const { data } = await supabase.from("subcategories").select("id,name,icon,is_active,sort_order,is_product").eq("category_id", catId).order("sort_order");
     setSubcats((p) => ({ ...p, [catId]: data ?? [] }));
     setLoadingSubcats((p) => ({ ...p, [catId]: false }));
   };
@@ -1106,6 +1143,14 @@ function Categories() {
   const toggleSubcat = async (subcatId: number, catId: number, current: boolean) => {
     await supabase.from("subcategories").update({ is_active: !current }).eq("id", subcatId);
     setSubcats((p) => ({ ...p, [catId]: (p[catId] ?? []).map((s) => s.id === subcatId ? { ...s, is_active: !current } : s) }));
+  };
+
+  // Alternar se a subcategoria é produto (mostra "Vendido") ou busca (não mostra).
+  // Só relevante quando a categoria é de produto.
+  const toggleSubcatProduct = async (subcatId: number, catId: number, current: boolean) => {
+    await supabase.from("subcategories").update({ is_product: !current }).eq("id", subcatId);
+    setSubcats((p) => ({ ...p, [catId]: (p[catId] ?? []).map((s) => s.id === subcatId ? { ...s, is_product: !current } : s) }));
+    flash(!current ? "Marcada como produto." : "Marcada como busca (sem botão Vendido).");
   };
 
   const deleteSubcat = async (subcatId: number, catId: number) => {
@@ -1430,6 +1475,13 @@ function Categories() {
                               ↓
                             </button>
                           </div>
+                          {cat.is_product && (
+                            <button type="button" onClick={() => toggleSubcatProduct(sub.id, cat.id, sub.is_product !== false)}
+                              title={sub.is_product !== false ? "É produto (mostra botão Vendido). Clique para marcar como busca." : "É busca (sem botão Vendido). Clique para marcar como produto."}
+                              style={{ background: sub.is_product !== false ? "none" : "#fef3c7", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
+                              {sub.is_product !== false ? "🏷️" : "🔍"}
+                            </button>
+                          )}
                           <button type="button" onClick={() => toggleSubcat(sub.id, cat.id, sub.is_active)}
                             style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.2rem 0.45rem", cursor: "pointer", fontSize: "0.72rem", flexShrink: 0 }}>
                             {sub.is_active ? "✅" : "⏸️"}

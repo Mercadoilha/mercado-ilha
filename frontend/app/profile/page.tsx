@@ -83,7 +83,7 @@ export default function ProfilePage() {
       // Profile y listings no dependen entre sí (ambos usan uid) → en paralelo
       const [profileRes, listRes, statsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).single(),
-        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at,categories(is_product),listing_photos(photo_url,sort_order)")
+        supabase.from("listings").select("id,title,price,price_text,status,created_at,expires_at,bumped_at,categories(is_product),subcategories(is_product),listing_photos(photo_url,sort_order)")
           .order("sort_order", { referencedTable: "listing_photos" })
           .limit(1, { referencedTable: "listing_photos" })
           .eq("user_id", uid)
@@ -509,7 +509,7 @@ export default function ProfilePage() {
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
-                  {l.categories?.is_product && l.status !== "blocked" && l.status !== "sold" && (
+                  {l.categories?.is_product && l.subcategories?.is_product !== false && l.status !== "blocked" && l.status !== "sold" && (
                     <button
                       type="button"
                       onClick={() => { setSoldModal({ id: l.id, title: l.title }); setSoldStep("confirm"); }}

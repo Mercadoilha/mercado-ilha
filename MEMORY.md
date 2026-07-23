@@ -102,6 +102,14 @@ default `false` para todas. Se activa por categoría desde `/admin` → tab Cate
 categoría → checkbox "Produto vendável" (badge verde "produto" en la fila cuando está activo).
 Controla si el anuncio de esa categoría muestra el botón "Vendido" en `/profile` (ver §8 y §15).
 
+**Subcategoria de busca (`subcategories.is_product`, fase-28, corrida 2026-07-23):** columna
+boolean, default `true`. Excepción por subcategoría dentro de una categoría de producto: una
+subcategoría de **busca** (ej. "Procuro comprar" en Casas e terrenos) es una búsqueda, no un
+item à venda, y NO debe mostrar el botón "Vendido". Se marca desde `/admin` → tab Categorias →
+abrir la categoría (solo aparece si la categoría es producto) → botón 🏷️/🔍 en la fila de la
+subcategoría (`toggleSubcatProduct`; 🏷️=produto, 🔍=busca fondo ámbar). El botón "Vendido" ahora
+requiere `categories.is_product && subcategories.is_product !== false` (ver §8).
+
 ## 5. SECCIONES DEL HOME (tabla `home_sections`, fase-11 ✅)
 
 Controla cómo se agrupan las categorías en el home. `home_section_id = null` → no aparece.
@@ -252,6 +260,12 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   se eliminó junto con el splash propio de la app — ver §13/§19. La DB aún acepta el valor
   `splash` por la migración `fase-splash-sponsor.sql`, pero el admin ya no lo ofrece y
   ningún código lo lee.)
+- **Destino ao clicar (2026-07-23):** al crear un banner, un selector "Ao clicar no banner, ir
+  para" elige entre **WhatsApp (número)** — arma solo el link `wa.me/55…?text=…` como antes — o
+  **Link (site, Instagram, etc.)** — campo de texto libre que se guarda en `link_url` tal cual
+  (si el usuario pega sin `http`, se completa `https://` automáticamente). En la lista del admin,
+  los de WhatsApp muestran `📱 +55…` y los de link muestran `🔗 dominio.com/...` (todo en
+  `Banners()` de `frontend/app/admin/page.tsx`). Antes solo se podía WhatsApp.
 - Varios activos en misma posición → rotan cada 4s con dots. Sin banners → placeholder "Seu
   negócio aqui! + Fale conosco".
 - **Orden de aparición (2026-07-20):** el primer banner que se ve al entrar a la página es el de
@@ -617,7 +631,9 @@ búsqueda, tienda del vendedor, favoritos), sin costo de velocidad.
 
 Solo para anuncios de categorías marcadas `is_product=true` en `/admin` (ver §4, §8). En
 `/profile`, junto a Pausar/Destacar, aparece botón "Vendido" (sin emoji, verde `#0F6E56`) cuando
-`categories.is_product && status !== 'blocked' && status !== 'sold'`. Al tocarlo abre un modal
+`categories.is_product && subcategories.is_product !== false && status !== 'blocked' && status !== 'sold'`
+(la parte de `subcategories.is_product` es la excepción de "busca" agregada en fase-28, 2026-07-23,
+ver §4; el select de `/profile` y `profileCache.ts` traen `subcategories(is_product)`). Al tocarlo abre un modal
 propio (no `confirm()` nativo) con 3 pasos: confirmación ("Parabéns pela venda!" + advertencia de
 que es permanente) → procesando (spinner) → éxito ("Muito bem!"). Al confirmar **elimina el
 anuncio por completo** (fotos en R2 + fila en `listings`), mismo circuito que el botón 🗑
@@ -886,7 +902,16 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-22** — **Desplegado** (commits `e994fc0` y fix `1223534`, push a `main`). **Borrado
+- **2026-07-23** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Subcategoria de busca
+  (sem botão "Vendido") + banners com link livre.** (1) fase-28: nueva columna
+  `subcategories.is_product` (default `true`, SQL corrida por el usuario). Excepción por
+  subcategoría dentro de una categoría de producto: "Procuro comprar" (Casas e terrenos) y
+  cualquier subcategoría de búsqueda se marcan como 🔍 desde `/admin` (botón `toggleSubcatProduct`,
+  solo visible si la categoría es producto) y dejan de mostrar el botón "Vendido". El botón ahora
+  exige `categories.is_product && subcategories.is_product !== false`; el select de `/profile` y
+  `profileCache.ts` trae `subcategories(is_product)`. Ver §4 y §15.1. (2) De otra sesión en
+  paralelo: los banners ahora pueden apuntar a un **link libre** (site, Instagram, etc.) además de
+  WhatsApp — selector en `/admin` tab Banners. Ver §7. Build verificado: `/profile` sigue `○ Static`.
   de banner ahora limpia R2 + fix de incidente de la limpieza de repo.** (1) `deleteBanner` en
   `/admin` ya no deja el archivo huérfano: llama a `/api/delete-file` con el `image_url` antes de
   borrar la fila (limpia si vive en R2; no hace nada si es un estático de `public/banners/`, ver
