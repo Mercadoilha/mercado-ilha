@@ -902,7 +902,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-23** — **Desplegado** (commit `PENDIENTE`, push a `main`). **Subcategoria de busca
+- **2026-07-23** — **Desplegado** (commit `189a8cb`, push a `main`). **Subcategoria de busca
   (sem botão "Vendido") + banners com link livre.** (1) fase-28: nueva columna
   `subcategories.is_product` (default `true`, SQL corrida por el usuario). Excepción por
   subcategoría dentro de una categoría de producto: "Procuro comprar" (Casas e terrenos) y
