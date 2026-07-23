@@ -692,6 +692,19 @@ function Banners() {
 
   const deleteBanner = async (id: number) => {
     if (!confirm("Deletar banner?")) return;
+
+    // Clean up the R2 image before deleting the banner row
+    const imageUrl = banners.find((b) => b.id === id)?.image_url;
+    if (imageUrl) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token ?? "";
+      await fetch("/api/delete-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ url: imageUrl }),
+      });
+    }
+
     await supabase.from("banners").delete().eq("id", id);
     setBanners((prev) => prev.filter((b) => b.id !== id));
   };

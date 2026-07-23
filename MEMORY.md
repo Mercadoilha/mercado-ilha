@@ -315,7 +315,6 @@ categoría/subcategoría con UI optimista (revierte si falla).
 | `/lojas` | Directorio público de tiendas (buscar, filtrar por lugar, ordenar). Ver §20. `○ Static`. |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
 | `/forgot-password` | 1 paso, solo email. `resetPasswordForEmail`. |
-| `/reset-password` | Nueva contraseña desde link. PKCE: `?code` → `exchangeCodeForSession`. |
 | `/termos` | Termos e Condições de Uso (pública). |
 | `/admin` | Panel admin (requiere rol admin). |
 | `/api/admin` | Server-side con service role (stats dashboard + DELETE usuario). Exige sesión + rol. |
@@ -333,7 +332,7 @@ frontend/
 │   ├── layout.tsx               BottomNav + RegisterSW + meta PWA
 │   ├── page.tsx                 home (ISR revalidate 60)
 │   ├── not-found.tsx            404 con marca
-│   ├── signin/ termos/ profile/ publish/ store/[id]/ admin/ forgot-password/ reset-password/
+│   ├── signin/ termos/ profile/ publish/ store/[id]/ admin/ forgot-password/
 │   ├── category/[slug]/page.tsx Server Component
 │   ├── listings/page.tsx  listings/[id]/page.tsx  listings/[id]/edit/page.tsx
 │   └── api/  admin/ upload/ delete-file/ mares/ revalidate/ cron/expire-listings/
@@ -674,8 +673,9 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   `user_metadata.full_name` como fallback. Ver `project_registration_fix`.
 - **Recuperação de senha:** `resetPasswordForEmail` envía tokens de **8 dígitos** (`maxLength={8}`).
   NO usar `redirectTo` salvo que la URL esté en Supabase → Redirect URLs. Template del email requiere
-  `{{ .Token }}`. En `/reset-password`, tras `exchangeCodeForSession` el SDK dispara `SIGNED_IN` (no
-  `PASSWORD_RECOVERY`) → mostrar el form directo, no esperar el evento (evita timeout; commit `63b5b0a`).
+  `{{ .Token }}` (código de 8 dígitos, NO link). Todo el flujo vive en `/forgot-password`
+  (pide email → valida token → `updateUser`). La ruta `/reset-password` (flujo por link/PKCE) quedó
+  muerta al pasar al código y **fue eliminada el 2026-07-22**.
   Tras 3 logins fallidos: card "Criar nova senha" → `/forgot-password?email=`. Error genérico "Email
   ou senha incorretos" a propósito (evita enumeración). Ver `fix_recuperacion_senha_signin`, skill
   `.claude/skills/recuperacion de senha.md`.

@@ -35,9 +35,10 @@ velocidad de navegación dentro de la página. El objetivo permanente es que la 
   rendimiento, analizar navegación, agregar features, arreglar queries, mejorar PWA, o
   cualquier tarea de código pesada.
 - `GUIA_PASO_A_PASO.md` — guía para el dueño (no técnico). No es para Claude.
-- `PROMPT_CLAUDE_CODE.md` — **registro histórico** del build inicial (Fases 1-8, ya
-  completadas). Sus datos son del arranque y NO reflejan el estado actual; consultar
-  solo por contexto, nunca como fuente de verdad.
+- `historico/` — archivos que **ya cumplieron su función** (planes de optimización V1-V3
+  ejecutados, prompts de features ya en producción, docs iniciales del repo, assets sin
+  uso). NO son fuente de verdad ni reflejan el estado actual: consultar solo por contexto.
+  Índice en `historico/README.md`.
 
 ## Stack
 Next.js 14 (App Router) + TypeScript + CSS inline con variables CSS (**sin Tailwind**) +

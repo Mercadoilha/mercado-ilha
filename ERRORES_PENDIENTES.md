@@ -1,7 +1,7 @@
 # Errores pendientes — Mercado Ilha
 
 > Lista corta de problemas detectados pero **no resueltos todavía**. No son
-> tareas planificadas (esas viven en `OPTIMIZATION_MASTER_PLAN_V2.md` o en
+> tareas planificadas (esas viven en `historico/planes/OPTIMIZATION_MASTER_PLAN_V2.md` o en
 > `MEMORY.md §19`) — son *hallazgos sueltos* que quedaron anotados para no
 > perderlos. Regla: si en el camino de otra tarea aparece la oportunidad de
 > arreglar uno de estos, mencionarlo o resolverlo de paso; si no, esperar a
