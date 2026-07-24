@@ -500,9 +500,12 @@ function Metrics() {
     );
   }
 
+  // fase-30: "contatos a vendedores" (anúncio ou loja) separado dos botões
+  // "Fale conosco", que escrevem para o dono do site — misturá-los inflava o
+  // número. O ?? mantém o painel funcionando se a migração ainda não rodou.
   const cards = [
-    { label: "Clicks WhatsApp (total)", value: summary.whatsapp_total ?? 0, icon: "💬", color: "#059669" },
-    { label: "Clicks WhatsApp (7 dias)", value: summary.whatsapp_last_7d ?? 0, icon: "🔥", color: "#059669" },
+    { label: "Contatos a vendedores (total)", value: summary.wa_sellers_total ?? summary.whatsapp_total ?? 0, icon: "💬", color: "#059669" },
+    { label: "Contatos a vendedores (7 dias)", value: summary.wa_sellers_7d ?? summary.whatsapp_last_7d ?? 0, icon: "🔥", color: "#059669" },
     { label: "Visualizações (total)", value: summary.views_total ?? 0, icon: "👁️", color: "var(--blue-main)" },
     { label: "Visualizações (7 dias)", value: summary.views_last_7d ?? 0, icon: "📅", color: "var(--blue-main)" },
     { label: "Clicks em banners (total)", value: summary.banner_total ?? 0, icon: "🖼️", color: "var(--sand)" },
@@ -520,6 +523,28 @@ function Metrics() {
             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>{c.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* "Fale conosco" = quem escreveu PARA VOCÊ (banner "Quer anunciar aqui?" e
+          sugestões do perfil). Não é venda entre usuários, por isso fica fora dos
+          cartões e aparece como linha à parte. */}
+      <div className="card" style={{ padding: "0.75rem 0.875rem", marginTop: "0.625rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>
+            📨 Fale conosco (escreveram para você)
+          </span>
+          <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#1e293b", whiteSpace: "nowrap" }}>
+            {summary.wa_admin_total ?? 0}
+            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "var(--text-muted)" }}>
+              {" "}· {summary.wa_admin_7d ?? 0} em 7 dias
+            </span>
+          </span>
+        </div>
+        <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "0.5rem", lineHeight: 1.45 }}>
+          Contagem reiniciada em 24/07/2026, sem os testes de desenvolvimento. Não conta
+          seus próprios acessos, e o mesmo aparelho tocando o mesmo botão duas vezes
+          seguidas conta uma só.
+        </p>
       </div>
 
       <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "1.25rem 0 0.75rem" }}>

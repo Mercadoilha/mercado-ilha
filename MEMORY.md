@@ -595,7 +595,9 @@ WhatsApp y roles a cualquier anónimo. Fix en `supabase/security-fix-profiles.sq
 
 Estrategia: **lanzar 100% gratis**, solo recolectar datos (lo irrecuperable). Features de cobro
 se posponen hasta tener tracción. Plan completo en `comisiones.md`.
-- **DB `supabase/fase-monetizacion-tracking.sql`** (idempotente) — ⚠️ **pendiente de correr**:
+- **DB `supabase/fase-monetizacion-tracking.sql`** (idempotente) — ✅ corrido (confirmado por los
+  datos acumulados desde el 2026-06-18); varias de sus RPCs quedaron **reemplazadas por fase-30**
+  (ver §14.2):
   tablas `whatsapp_clicks`, `banner_clicks` (insert solo vía RPC `security definer`);
   `track_listing_view` pasó a `security definer` (antes fallaba para visitantes → las vistas nunca
   se grababan). RPCs: `track_whatsapp_click`, `track_banner_click`, `get_tracking_summary`,
@@ -644,6 +646,46 @@ se posponen hasta tener tracción. Plan completo en `comisiones.md`.
   explica qué significa cada número de las pestañas Métricas y Dashboard, la diferencia
   visitas-vs-pessoas y los 4 números a mirar siempre. Actualizarlo si se agregan métricas.
 - ⚠️ Los datos **arrancan de cero el 2026-07-23**: el tráfico anterior no existe, nunca se guardó.
+  (Reseteados de nuevo el 2026-07-24 junto con el resto del tracking — ver §14.2.)
+
+## 14.2 MÉTRICAS REALES — RESET + ANTI-DUPLICADOS (2026-07-24, `fase-30-metricas-reais.sql`)
+
+**Síntoma:** el dueño vio "Clicks WhatsApp (total) = 91" y un anuncio con 58 contactos el mismo
+día que recién compartía la app. Verificado con `supabase/diagnostico-clicks-whatsapp.sql`
+(consulta de solo-lectura, clicks + aparatos distintos + rango de fechas por anuncio): **pocos
+visitor_id, muchos clicks** → eran pruebas de desarrollo.
+
+**Tres causas reales, ninguna era un bug de conteo:**
+1. El contador acumulaba desde el **2026-06-18** (§14) e incluía todo el desarrollo. "Total"
+   se leía como "hoy".
+2. **Ningún tracking deduplicaba.** Cada toque insertaba una fila; en móvil el usuario toca
+   varias veces porque WhatsApp tarda en abrir (ver §18, el fix de `window.open` bloqueado:
+   ese bug se depuró tocando el botón decenas de veces, y todo quedó contado).
+3. `whatsapp_total` **mezclaba** contactos entre usuarios con los botones que escriben al
+   admin: `banner_cta` ("Quer anunciar aqui?") y `suggestion` ("Sugestões ou problemas?").
+
+**Qué hace `fase-30-metricas-reais.sql`:**
+- **Reset:** `truncate` de `whatsapp_clicks`, `banner_clicks`, `listing_views`, `app_visits` +
+  `listing_statistics.views_count = 0` (sin borrar filas: `favorites_count` intacto).
+  `search_queries` **se conserva** (material de análisis del buscador, no métrica del panel).
+- **Admin excluido:** las 4 RPCs de tracking arrancan con `if public.is_admin() then return`.
+  Solo aplica con sesión iniciada; en incógnito o sin loguearse el dueño cuenta como visitante.
+- **Anti-duplicado de 30 min** por `visitor_id` en WhatsApp (mismo botón + mismo anuncio),
+  banners (mismo banner) y vistas (mismo anuncio). En `app_visits` **no** se deduplica: abrir
+  varias pantallas es la métrica misma (el cliente ya evita rutas consecutivas repetidas).
+- `listing_views` **no tenía `visitor_id`** → columna nueva + índice `idx_listing_views_dedup`,
+  y `lib/tracking.ts` ahora lo manda. `track_listing_view` pasó de 4 a 5 parámetros: se
+  **dropea y recrea** con `default null` en el 5º (no sobrecarga: PostgREST no debe elegir).
+- Se quitó la policy `"Listing views public insert"` (resto de fase-2): permitía insertar vistas
+  salteándose la RPC — y por lo tanto el anti-duplicado. Ahora todo entra por la RPC, como el
+  resto del tracking.
+- `get_tracking_summary` suma `wa_sellers_total/7d` (`listing`+`store`) y `wa_admin_total/7d`
+  (`banner_cta`+`suggestion`); las claves viejas siguen para no romper nada.
+- **Panel:** las tarjetas dicen "Contatos a vendedores"; "Fale conosco" bajó a una línea aparte
+  con la nota de que la cuenta se reinició el 24/07 y no incluye los accesos del admin.
+- ⚠️ **El contador cuenta que se abrió WhatsApp con el mensaje listo, no que se haya enviado.**
+  Decir "contactos iniciados" es correcto; "mensajes enviados" no. Escrito también en
+  `METRICAS_EXPLICACION.txt`, que se actualizó entero con estos cambios.
 
 ## 15. DESTACAR ANÚNCIO / BUMP (2026-07-05, commit `4368069`, en producción)
 
@@ -962,6 +1004,19 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, push a `main`).
+  **Métricas reales: reset a cero + anti-duplicados + admin excluido.** Detalle estructural en
+  **§14.2**. Resumen: el dueño reportó números imposibles (91 clicks WA, 58 en un anuncio) el día
+  que recién compartía la app. Diagnóstico con `diagnostico-clicks-whatsapp.sql`: pocos aparatos
+  y muchos clicks → pruebas de desarrollo acumuladas desde el 2026-06-18, sin ninguna
+  deduplicación y mezclando contactos a vendedores con los "Fale conosco" que escriben al admin.
+  `fase-30-metricas-reais.sql` (⚠️ **el usuario debe correrlo en Supabase**; borra tracking a
+  propósito) resetea los contadores, excluye al admin de las 4 RPCs, deduplica 30 min por
+  `visitor_id`, agrega `visitor_id` a `listing_views`, cierra la policy de insert público de
+  fase-2 y separa `wa_sellers_*` de `wa_admin_*`. Frontend: `lib/tracking.ts` manda el
+  `visitor_id` en las vistas y `/admin` › Métricas renombra las tarjetas. `MEMORY.md` §14, §14.2
+  y `METRICAS_EXPLICACION.txt` actualizados.
 
 - **2026-07-23** — **Desplegado** (commits `75eb698` + `d8f4352`, push a `main`).
   **Estadísticas de visitas del app (audiencia) + doc de métricas para el dueño.** Detalle

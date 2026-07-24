@@ -87,6 +87,9 @@ export function trackListingView(listingId: number, profileId: string | null): v
       // El truncado real vive en la RPC (fase-20); esto es defensa en
       // profundidad: el user-agent completo no lo usa ningún reporte.
       _visitor_device: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 120) : null,
+      // fase-30: permite no contar dos veces la misma vista (mismo
+      // aparato + mismo anuncio dentro de 30 min). Id anónimo.
+      _visitor_id: getVisitorId(),
     })
     .then(() => {}, () => {});
 }

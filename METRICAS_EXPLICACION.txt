@@ -9,7 +9,31 @@ Donde se ve todo esto:
   mercadoilha.vercel.app/admin
   (hay que estar con tu cuenta de administrador)
 
-Ultima actualizacion: 23 de julio de 2026
+Ultima actualizacion: 24 de julio de 2026
+
+
+-----------------------------------------------------------
+IMPORTANTE: TODO SE CUENTA DESDE EL 24 DE JULIO DE 2026
+-----------------------------------------------------------
+
+Ese dia se pusieron todos los contadores en cero, porque los
+numeros anteriores estaban inflados: venian acumulando desde
+mediados de junio e incluian todas las pruebas de desarrollo.
+
+Desde esa fecha ademas:
+
+  - TUS PROPIOS TOQUES NO SE CUENTAN. Mientras estes con tu
+    cuenta de administrador, podes navegar, abrir anuncios y
+    tocar botones tranquilo: nada de eso ensucia los numeros.
+
+  - NO SE CUENTA DOS VECES LO MISMO. Si la misma persona toca
+    el mismo boton (o abre el mismo anuncio) varias veces
+    dentro de media hora, cuenta una sola vez. Esto es comun
+    en celular, cuando WhatsApp tarda en abrir y la persona
+    toca de nuevo.
+
+Resultado: los numeros son mas bajos que antes, pero ahora
+son de verdad. Se pueden mostrar a un anunciante sin riesgo.
 
 
 ===========================================================
@@ -150,7 +174,8 @@ UNA ACLARACION SOBRE PRIVACIDAD
 No se guarda nada personal: ni nombre, ni telefono, ni
 ubicacion, ni desde que aparato entra. Solo un numero al azar
 que sirve para no contar dos veces a la misma persona.
-Tus propias visitas al panel de administracion NO se cuentan.
+Tus propios movimientos no se cuentan en ningun lado, mientras
+estes con tu cuenta de administrador.
 
 
 ===========================================================
@@ -160,20 +185,39 @@ Tus propias visitas al panel de administracion NO se cuentan.
 Esta parte ya existia de antes y responde otra pregunta:
 QUE HACE LA GENTE UNA VEZ QUE ESTA ADENTRO.
 
-CLICKS WHATSAPP (TOTAL)
+CONTATOS A VENDEDORES (TOTAL)
   Cuantas veces alguien apreto un boton de WhatsApp para
-  contactar a un vendedor, desde que se empezo a medir.
+  contactar a un VENDEDOR, sea desde un anuncio o desde una
+  loja. Solo contactos entre usuarios.
   --> ESTE ES EL NUMERO QUE DEMUESTRA QUE LA APP SIRVE.
-      Cada click es una conversacion real que empezo gracias
+      Cada contacto es una conversacion real que empezo gracias
       a Mercado Ilha. Es el argumento mas fuerte que tenes,
       tanto frente a un vendedor como frente a un anunciante.
 
-CLICKS WHATSAPP (7 DIAS)
+  Ojo con como lo decis: cuenta el TOQUE al boton, o sea que
+  se abrio WhatsApp con el mensaje listo. No hay forma de
+  saber si despues la persona apreto enviar, porque eso ya
+  pasa adentro de WhatsApp. Es el mismo criterio que usa
+  cualquier plataforma; decir "contactos iniciados" es
+  correcto, decir "mensajes enviados" no.
+
+CONTATOS A VENDEDORES (7 DIAS)
   Lo mismo, pero solo de la ultima semana.
   Sirve para ver si va creciendo.
 
+FALE CONOSCO (ESCREVERAM PARA VOCE)
+  Es la linea gris que esta debajo de las tarjetas.
+  Cuenta a la gente que te escribio A VOS: el "Quer anunciar
+  aqui?" del banner y el "Sugestoes ou problemas?" del perfil.
+  Antes esto estaba sumado adentro de los contactos y hacia
+  parecer que habia mas movimiento entre usuarios del que
+  habia. Ahora va aparte.
+  Sirve para ver cuanto interes hay en poner publicidad.
+
 VISUALIZAÇOES (TOTAL)
-  Cuantas veces se abrieron anuncios en total, historico.
+  Cuantas veces se abrieron anuncios en total.
+  Si la misma persona vuelve a abrir el mismo anuncio un rato
+  despues, cuenta una sola vez (media hora de margen).
 
 VISUALIZAÇOES (7 DIAS)
   Cuantas veces se abrieron anuncios en la ultima semana.
@@ -184,7 +228,7 @@ CLICKS EM BANNERS (TOTAL) y (7 DIAS)
       para justificar el precio.
 
 UNA CUENTA UTIL:
-  Dividi los clicks de WhatsApp por las visualizaciones.
+  Dividi los contactos a vendedores por las visualizaciones.
   Ejemplo: 40 clicks sobre 400 visualizaciones = 10%.
   Eso quiere decir que 1 de cada 10 personas que abre un
   anuncio termina escribiendo al vendedor. Cuanto mas alto,
@@ -231,7 +275,7 @@ BANNERS ATIVOS    Cuantos banners se estan mostrando.
 ===========================================================
 
 1. PESSOAS (7 DIAS)          --> cuanta gente te usa
-2. CLICKS WHATSAPP (7 DIAS)  --> cuantos negocios generaste
+2. CONTATOS A VENDEDORES (7 DIAS) --> cuantos negocios generaste
 3. PESSOAS QUE VOLTARAM      --> si la app se volvio un habito
 4. ANUNCIOS ATIVOS           --> si hay suficiente para ver
 
