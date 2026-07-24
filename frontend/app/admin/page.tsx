@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
@@ -1051,6 +1051,19 @@ function Banners() {
   const unknownGroups = presentPositions.filter((p) => !positionOrder.includes(p));
   const allGroups = [...knownGroups, ...unknownGroups];
 
+  // Botões de ação de cada card: todos com o mesmo tamanho e visual, para uma barra
+  // de ações alinhada e proporcional (nada de botõezinhos soltos de tamanhos diferentes).
+  const actionBtn: CSSProperties = {
+    width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+    background: "#fff", border: "1px solid var(--border)", borderRadius: 8, padding: 0,
+    cursor: "pointer", fontSize: "0.9rem", lineHeight: 1, color: "var(--blue-main)",
+  };
+  const clearDateBtn: CSSProperties = {
+    width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+    background: "#fff", border: "1px solid var(--border)", borderRadius: 6, padding: 0,
+    cursor: "pointer", fontSize: "0.75rem", lineHeight: 1, color: "var(--text-muted)", flexShrink: 0,
+  };
+
   return (
     <div>
       {/* Rotation interval config */}
@@ -1161,67 +1174,89 @@ function Banners() {
                   ? b.link_url.replace(/^https?:\/\//i, "").replace(/\/$/, "")
                   : null;
                 return (
-                  <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div key={b.id} className="card" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                    {/* Banner completo no topo, ocupando toda a largura (horizontal, sem cortar). */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={b.image_url} alt={b.title ?? ""} style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "var(--blue-xlight)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "#1e293b" }}>{b.title ?? "Banner"}</div>
-                      <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                        {b.active ? "✅ Ativo" : "⏸️ Inativo"}
-                      </div>
-                      {waNumber && (
-                        <div style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 600 }}>
-                          📱 {waNumber}
+                    <img
+                      src={b.image_url}
+                      alt={b.title ?? ""}
+                      style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", background: "var(--blue-xlight)", borderBottom: "1px solid var(--border)" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                    <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      {/* Cabeçalho: título + estado/destino à esquerda, ações à direita. */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#1e293b" }}>{b.title ?? "Banner"}</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", marginTop: 3 }}>
+                            <span style={{ fontSize: "0.7rem", fontWeight: 600, color: b.active ? "#059669" : "var(--text-muted)" }}>
+                              {b.active ? "✅ Ativo" : "⏸️ Inativo"}
+                            </span>
+                            {waNumber && (
+                              <span style={{ fontSize: "0.7rem", color: "#059669", fontWeight: 600 }}>📱 {waNumber}</span>
+                            )}
+                            {otherLink && (
+                              <span style={{ fontSize: "0.7rem", color: "var(--blue-main)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>🔗 {otherLink}</span>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {otherLink && (
-                        <div style={{ fontSize: "0.7rem", color: "var(--blue-main)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          🔗 {otherLink}
+                        {/* Barra de ações alinhada — todos os botões do mesmo tamanho. */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button type="button" title="Mover para cima" disabled={gIdx === 0}
+                            onClick={() => moveBanner(position, gIdx, -1)}
+                            style={{ ...actionBtn, cursor: gIdx === 0 ? "default" : "pointer", color: gIdx === 0 ? "#cbd5e1" : "var(--blue-main)" }}>
+                            ↑
+                          </button>
+                          <button type="button" title="Mover para baixo" disabled={gIdx === group.length - 1}
+                            onClick={() => moveBanner(position, gIdx, 1)}
+                            style={{ ...actionBtn, cursor: gIdx === group.length - 1 ? "default" : "pointer", color: gIdx === group.length - 1 ? "#cbd5e1" : "var(--blue-main)" }}>
+                            ↓
+                          </button>
+                          <button type="button" title={b.active ? "Pausar" : "Ativar"} onClick={() => toggleBanner(b.id, !b.active)} style={actionBtn}>
+                            {b.active ? "⏸️" : "▶️"}
+                          </button>
+                          <button type="button" title="Deletar" onClick={() => deleteBanner(b.id)}
+                            style={{ ...actionBtn, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
+                            🗑️
+                          </button>
                         </div>
-                      )}
-                      {/* Janela de exibição — editável direto no card. Vazio = sem limite. */}
-                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        <label style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 3, flex: "1 1 120px", minWidth: 120 }}>
-                          De
-                          <input
-                            type="date"
-                            value={b.valid_from ?? ""}
-                            onChange={(e) => saveDates(b.id, e.target.value, b.valid_until ?? "")}
-                            style={{ width: "100%", fontSize: "0.72rem", padding: "5px 7px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
-                          />
-                        </label>
-                        <label style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 3, flex: "1 1 120px", minWidth: 120 }}>
-                          Até
-                          <input
-                            type="date"
-                            value={b.valid_until ?? ""}
-                            onChange={(e) => saveDates(b.id, b.valid_from ?? "", e.target.value)}
-                            style={{ width: "100%", fontSize: "0.72rem", padding: "5px 7px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
-                          />
-                        </label>
                       </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-                      <button type="button" title="Mover para cima" disabled={gIdx === 0}
-                        onClick={() => moveBanner(position, gIdx, -1)}
-                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: gIdx === 0 ? "default" : "pointer", fontSize: "0.65rem", color: gIdx === 0 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
-                        ↑
-                      </button>
-                      <button type="button" title="Mover para baixo" disabled={gIdx === group.length - 1}
-                        onClick={() => moveBanner(position, gIdx, 1)}
-                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0px 6px", cursor: gIdx === group.length - 1 ? "default" : "pointer", fontSize: "0.65rem", color: gIdx === group.length - 1 ? "#cbd5e1" : "var(--blue-main)", lineHeight: "16px" }}>
-                        ↓
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                      <button type="button" onClick={() => toggleBanner(b.id, !b.active)}
-                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem" }}>
-                        {b.active ? "⏸️" : "▶️"}
-                      </button>
-                      <button type="button" onClick={() => deleteBanner(b.id)}
-                        style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", color: "#dc2626", fontSize: "0.75rem" }}>
-                        🗑️
-                      </button>
+                      {/* Janela de exibição — editável direto no card. Vazio = aparece sempre; o ✕ limpa a data. */}
+                      <div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <div style={{ flex: "1 1 140px", minWidth: 130 }}>
+                            <label style={{ fontSize: "0.64rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Primeiro dia</label>
+                            <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                              <input
+                                type="date"
+                                value={b.valid_from ?? ""}
+                                onChange={(e) => saveDates(b.id, e.target.value, b.valid_until ?? "")}
+                                style={{ flex: 1, minWidth: 0, fontSize: "0.72rem", padding: "7px 8px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
+                              />
+                              {b.valid_from && (
+                                <button type="button" title="Limpar data" onClick={() => saveDates(b.id, "", b.valid_until ?? "")} style={clearDateBtn}>✕</button>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ flex: "1 1 140px", minWidth: 130 }}>
+                            <label style={{ fontSize: "0.64rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Último dia</label>
+                            <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                              <input
+                                type="date"
+                                value={b.valid_until ?? ""}
+                                onChange={(e) => saveDates(b.id, b.valid_from ?? "", e.target.value)}
+                                style={{ flex: 1, minWidth: 0, fontSize: "0.72rem", padding: "7px 8px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
+                              />
+                              {b.valid_until && (
+                                <button type="button" title="Limpar data" onClick={() => saveDates(b.id, b.valid_from ?? "", "")} style={clearDateBtn}>✕</button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: "0.64rem", color: "var(--text-muted)", marginTop: 6 }}>
+                          Deixe em branco (ou toque no ✕) para exibir sempre, sem limite de datas.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 );
