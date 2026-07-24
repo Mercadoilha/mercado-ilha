@@ -332,7 +332,8 @@ Acceso desde perfil (botón "⚙️ Painel de administração", solo admins). **
 - **Banners** — CRUD (URL + link + posición, activar/pausar, eliminar).
 - **Config** — WhatsApp del admin + atalho personalizable de la barra inferior.
 - **Denúncias** — lista con borde de color por estado, "Ocultar anúncio + resolver" en 1 clic.
-- **📈 Métricas** — solo lectura: totales (vistas, clicks WA, clicks banner) + top anuncios por WA.
+- **📈 Métricas** — solo lectura, dos bloques: **"Visitas do app"** (audiencia, §14.1) arriba +
+  **"Métricas de engajamento"** (vistas, clicks WA, clicks banner + top anuncios por WA) abajo.
 
 **Optimizaciones admin (2026-06-25, commit `30b4d37`):** rol cacheado en `sessionStorage` por
 userId; tabs con `display:none` (montan 1 vez, cambio instantáneo sin re-fetch); guardar
@@ -378,6 +379,7 @@ frontend/
 │   ├── BottomNav.tsx (session-aware)   BannerRotativo.tsx   BuscaAutocomplete.tsx
 │   ├── HomeClient.tsx   MaresWidget.tsx   BarcosWidget.tsx   InstallAppBanner.tsx
 │   ├── ListingCard.tsx   RegisterSW.tsx   ShareIcon.tsx   AvatarUpload/AvatarCropModal
+│   ├── VisitTracker.tsx  (§14.1 — audiencia; solo usePathname, idle callback)
 ├── lib/
 │   ├── supabaseClient.ts (anon)   supabaseAdmin.ts (service role, server-only)
 │   ├── adminSettings.ts   share.ts   whatsappUrl.ts   tracking.ts   visitorId.ts
@@ -605,6 +607,43 @@ se posponen hasta tener tracción. Plan completo en `comisiones.md`.
   por `auth.uid()`) — enganche de retención hacia un plan Pro futuro. Dos banners informativos bajo
   la lista: amarillo (validez 30d + eliminación tras 15d inactivo) y azul ("O que significam os
   números?", necesario porque en móvil los `title` HTML no funcionan al tocar).
+
+## 14.1 VISITAS DEL APP — AUDIENCIA (2026-07-23, commit `75eb698`, en producción)
+
+§14 medía **engagement** (qué hace la gente con los anuncios) pero no había ninguna medida de
+**audiencia**: cuánta gente entra, si vuelve, qué pantallas usa. Esto lo cierra.
+
+- **DB `supabase/fase-29-visitas-app.sql`** (idempotente, ✅ **ejecutada por el usuario
+  2026-07-23**): tabla `app_visits` (`path`, `visitor_id`, `session_id`, `is_pwa`, `is_logged`,
+  `visited_at`) + índices por `visited_at`, `(visitor_id, visited_at)` y `(path, visited_at)`.
+  RLS igual que `whatsapp_clicks`: **sin policy de insert público**, solo lectura/borrado admin;
+  toda escritura entra por RPC `security definer`.
+  RPCs: `track_app_visit` (anon+auth), `get_visits_summary`, `get_visits_daily(_days)`,
+  `get_top_pages(_days,_limit)` (las tres exigen `is_admin()`).
+  **`prune_tracking()` reemplazada**: conserva todo lo de fase-20 y agrega `app_visits` > 180 días
+  (es la tabla que más rápido crece: una fila por pantalla abierta). La llama el cron diario.
+- **Frontend:** `components/VisitTracker.tsx` montado en `layout.tsx` dentro de `SessionProvider`.
+  Registra la carga inicial **y** las navegaciones internas. `lib/visitorId.ts` suma
+  `getSessionId()` (sessionStorage); `lib/tracking.ts` suma `trackAppVisit(path)`.
+  - ⚠️ **Usa SOLO `usePathname`**. `useSearchParams` obligaría a envolverlo en `<Suspense>` y
+    sacaría del render estático a las rutas que hoy son `○ Static`/ISR — violaría el pilar de
+    velocidad. Verificado en el build: ninguna ruta cambió de tipo.
+  - Envío diferido a `requestIdleCallback` (fallback `setTimeout 300ms`), fire-and-forget: nunca
+    compite con la pintura ni con la transición entre rutas.
+  - `normalizePath()`: ids numéricos y UUIDs → `:id` (`/listings/482` → `/listings/:id`), pero el
+    **slug de categoría se conserva** (`/category/pousadas`) — así el ranking muestra qué categoría
+    se visita más. Ignora `/admin` (el tráfico propio no ensucia los números).
+- **Panel (`/admin` › Métricas › "Visitas do app"):** 6 tarjetas (visitas/pessoas hoy, 7d, 30d),
+  gráfico de barras CSS de 14 días (zero-filled por `generate_series`, la barra de hoy siempre va
+  baja porque el día no terminó), 4 líneas de detalle (entradas/sesiones 7d, telas por entrada,
+  **pessoas que voltaram** = fidelidad, % de visitas desde PWA instalado) y ranking de telas más
+  visitadas con nombres legibles (`PAGE_LABELS` en `admin/page.tsx`).
+- **Privacidad:** nada personal — ni IP, ni user-agent, ni identidad. Solo el id anónimo de
+  localStorage que ya usaba §14 + un id de sesión. Coherente con §12 (LGPD).
+- **Doc para el dueño:** `METRICAS_EXPLICACION.txt` (raíz del repo, en español, no técnico)
+  explica qué significa cada número de las pestañas Métricas y Dashboard, la diferencia
+  visitas-vs-pessoas y los 4 números a mirar siempre. Actualizarlo si se agregan métricas.
+- ⚠️ Los datos **arrancan de cero el 2026-07-23**: el tráfico anterior no existe, nunca se guardó.
 
 ## 15. DESTACAR ANÚNCIO / BUMP (2026-07-05, commit `4368069`, en producción)
 
@@ -861,6 +900,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   con el commit `3d881f9` del 2026-07-20 — descripción con formato.)
 - (Confirmada ✅ fase-26-lojas-directory.sql: corrida por el usuario — RPC `get_stores` en
   producción, ver §20.)
+- (Confirmada ✅ fase-29-visitas-app.sql: corrida por el usuario 2026-07-23 — tabla `app_visits`
+  + RPCs de audiencia en producción, ver §14.1.)
+- **Visitas: revisar recién a partir del 2026-07-30.** La medición arrancó de cero el 2026-07-23;
+  "pessoas que voltaram" y el gráfico de 14 días no dicen nada útil hasta tener una semana
+  completa de datos. Cuando haya números reales, cruzarlos con los clicks de WhatsApp (§14) para
+  armar el argumento de venta de banners.
+- **Si se agregan métricas nuevas al panel, actualizar `METRICAS_EXPLICACION.txt`** (raíz del
+  repo) — es la guía no técnica del dueño y queda desactualizada en silencio.
 
 ## 20. DIRETÓRIO DE LOJAS (`/lojas`) + FAVORITOS NO HOME (2026-07-15)
 
@@ -916,6 +963,22 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-23** — **Desplegado** (commits `75eb698` + `PENDIENTE`, push a `main`).
+  **Estadísticas de visitas del app (audiencia) + doc de métricas para el dueño.** Detalle
+  estructural en **§14.1**. Resumen: hasta ahora solo se medía engagement (vistas de anuncios,
+  clicks WA, banners, búsquedas); no había forma de saber cuánta gente entra a la app. Se agregó
+  `fase-29-visitas-app.sql` (tabla `app_visits` + RPCs `track_app_visit`, `get_visits_summary`,
+  `get_visits_daily`, `get_top_pages`; `prune_tracking` ahora poda `app_visits` > 180d), el
+  componente `VisitTracker` y la sección "Visitas do app" en `/admin` › Métricas (visitas y
+  personas hoy/7d/30d, gráfico de 14 días, sesiones, telas por entrada, recurrencia, % PWA,
+  ranking de telas). SQL corrida por el usuario el mismo día. **Decisión de rendimiento:
+  `VisitTracker` usa solo `usePathname` y difiere el envío a `requestIdleCallback`** — con
+  `useSearchParams` habría hecho falta `<Suspense>` y las rutas ISR habrían pasado a dinámicas.
+  Build verificado: todas las rutas conservan `○ Static`/SSG. Se sumó `METRICAS_EXPLICACION.txt`
+  (raíz, español, no técnico) explicando cada número del panel. En el mismo push salieron dos
+  cambios que habían quedado sin publicar de una sesión anterior: el toque fuera del autocomplete
+  ya no activa el banner de abajo (`openRef` + `swallowGhostClick` en `BuscaAutocomplete.tsx`) y
+  la descripción del `manifest.json` se acortó a "Marketplace de Tinharé".
 - **2026-07-23** — **Desplegado** (commit `0390acc`, push a `main`). **Fix buscador: toque
   caía en el banner + navegación categoría→subcategorías con volver escalonado.** Ver detalle en
   §13 (busca `2026-07-23` dentro de la entrada de Búsqueda autocomplete). Resumen: (1) en móvil el

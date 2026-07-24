@@ -1,0 +1,240 @@
+===========================================================
+  MERCADO ILHA - QUE SIGNIFICA CADA NUMERO DEL PANEL
+===========================================================
+
+Este archivo explica, en lenguaje simple, cada dato que aparece
+en la pagina de administracion. No hace falta saber nada tecnico.
+
+Donde se ve todo esto:
+  mercadoilha.vercel.app/admin
+  (hay que estar con tu cuenta de administrador)
+
+Ultima actualizacion: 23 de julio de 2026
+
+
+===========================================================
+  PESTAÑA "METRICAS" - PARTE 1: VISITAS DO APP
+===========================================================
+
+Esta parte responde: CUANTA GENTE ENTRA A LA APP.
+Empezo a medir el 23 de julio de 2026. Antes de esa fecha no
+hay datos, porque no se guardaban.
+
+-----------------------------------------------------------
+DOS PALABRAS QUE CONVIENE NO CONFUNDIR
+-----------------------------------------------------------
+
+VISITAS  = cuantas pantallas se abrieron.
+           Si una persona entra y mira 5 anuncios, eso son
+           varias visitas.
+
+PESSOAS  = cuanta gente distinta.
+           Esa misma persona cuenta como UNA sola, aunque
+           haya abierto 20 pantallas.
+
+Entonces: "Pessoas" te dice el tamaño de tu publico.
+          "Visitas" te dice cuanto lo usan.
+
+-----------------------------------------------------------
+LAS SEIS TARJETAS DE ARRIBA
+-----------------------------------------------------------
+
+VISITAS HOJE
+  Pantallas abiertas desde las 00:00 de hoy.
+  Sirve para el dia a dia: ver si una publicacion en redes o
+  un cartel en la calle movio la aguja.
+
+PESSOAS HOJE
+  Cuanta gente distinta entro hoy.
+
+VISITAS (7 DIAS)
+  Pantallas abiertas en la ultima semana.
+
+PESSOAS (7 DIAS)
+  Cuanta gente distinta uso la app en la ultima semana.
+  --> ESTE ES EL NUMERO MAS IMPORTANTE PARA VENDER PUBLICIDAD.
+      Es el que le vas a mostrar a un comercio que quiera un
+      banner: "tantas personas por semana".
+
+VISITAS (30 DIAS)
+  Pantallas abiertas en el ultimo mes.
+
+PESSOAS (30 DIAS)
+  Cuanta gente distinta uso la app en el ultimo mes.
+  Es tu alcance real. Suele ser bastante mas alto que el de
+  7 dias, porque incluye a los que entran de vez en cuando.
+
+-----------------------------------------------------------
+EL GRAFICO "ULTIMOS 14 DIAS"
+-----------------------------------------------------------
+
+Una barra por dia, de hace dos semanas hasta hoy.
+Cuanto mas alta la barra, mas visitas ese dia.
+Arriba de cada barra esta el numero exacto.
+
+Para que sirve:
+  - Ver si la app crece, se mantiene o baja.
+  - Descubrir que dias de la semana hay mas movimiento
+    (tipicamente los fines de semana y la alta temporada).
+  - Ver el efecto de algo que hiciste: si el martes repartiste
+    folletos, la barra del martes deberia subir.
+
+Ojo: la barra de HOY siempre va a estar mas baja que las
+otras, porque el dia todavia no termino. Es normal.
+
+-----------------------------------------------------------
+LAS CUATRO LINEAS DE DETALLE
+-----------------------------------------------------------
+
+ENTRADAS NO APP (7 DIAS)
+  Cuantas veces alguien abrio la app en la semana.
+  Es distinto de "Pessoas": si la misma persona entro el
+  lunes, el miercoles y el sabado, son 3 entradas pero
+  1 sola persona.
+  Comparalo con "Pessoas (7 dias)":
+    - Si hay muchas mas entradas que personas, la gente
+      vuelve seguido. Muy buena señal.
+    - Si son casi iguales, cada uno entra una vez y no
+      vuelve. Hay que trabajar en dar razones para volver.
+
+TELAS POR ENTRADA
+  Cuantas pantallas mira una persona por vez que entra.
+    - 1 o 2  --> entra y se va enseguida. Puede ser que no
+                 encuentre lo que busca.
+    - 4 o mas --> esta navegando de verdad, mirando anuncios.
+                  Excelente.
+
+PESSOAS QUE VOLTARAM (7 DIAS)
+  De la gente que entro esta semana, cuantos ya habian
+  entrado antes.
+  Es la medida de FIDELIDAD. Que este numero crezca es la
+  mejor señal de que la app se volvio util para la isla y no
+  fue solo curiosidad del momento.
+
+VISITAS PELO APP INSTALADO
+  Que porcentaje de las visitas viene de gente que se instalo
+  la app en el celular (en vez de entrar por el navegador).
+  Cuanto mas alto, mejor: el que la tiene instalada la abre
+  mucho mas seguido, como WhatsApp o Instagram.
+
+-----------------------------------------------------------
+"TELAS MAIS VISITADAS (7 DIAS)"
+-----------------------------------------------------------
+
+Ranking de las pantallas mas usadas en la semana.
+Cada linea muestra dos numeros:
+  el celular  = cuantas veces se abrio esa pantalla
+  las siluetas = cuanta gente distinta la abrio
+
+Que vas a ver ahi:
+  Inicio               = la pagina principal
+  Lista de anuncios    = cuando ven todos los anuncios juntos
+  Detalhe do anuncio   = cuando abren un anuncio concreto
+  Categoria: (nombre)  = cada categoria aparece por separado
+  Lojas                = el directorio de tiendas
+  Publicar anuncio     = cuando alguien va a publicar
+  Instalar app         = la pantalla de instalacion
+  ...y las demas
+
+Para que sirve:
+  - Saber que categorias interesan de verdad (para poner
+    mas esfuerzo ahi o para ordenar el inicio).
+  - Ver si mucha gente llega a "Publicar anuncio" pero
+    despues no publica.
+  - Detectar pantallas que nadie usa.
+
+-----------------------------------------------------------
+UNA ACLARACION SOBRE PRIVACIDAD
+-----------------------------------------------------------
+
+No se guarda nada personal: ni nombre, ni telefono, ni
+ubicacion, ni desde que aparato entra. Solo un numero al azar
+que sirve para no contar dos veces a la misma persona.
+Tus propias visitas al panel de administracion NO se cuentan.
+
+
+===========================================================
+  PESTAÑA "METRICAS" - PARTE 2: ENGAJAMENTO
+===========================================================
+
+Esta parte ya existia de antes y responde otra pregunta:
+QUE HACE LA GENTE UNA VEZ QUE ESTA ADENTRO.
+
+CLICKS WHATSAPP (TOTAL)
+  Cuantas veces alguien apreto un boton de WhatsApp para
+  contactar a un vendedor, desde que se empezo a medir.
+  --> ESTE ES EL NUMERO QUE DEMUESTRA QUE LA APP SIRVE.
+      Cada click es una conversacion real que empezo gracias
+      a Mercado Ilha. Es el argumento mas fuerte que tenes,
+      tanto frente a un vendedor como frente a un anunciante.
+
+CLICKS WHATSAPP (7 DIAS)
+  Lo mismo, pero solo de la ultima semana.
+  Sirve para ver si va creciendo.
+
+VISUALIZAÇOES (TOTAL)
+  Cuantas veces se abrieron anuncios en total, historico.
+
+VISUALIZAÇOES (7 DIAS)
+  Cuantas veces se abrieron anuncios en la ultima semana.
+
+CLICKS EM BANNERS (TOTAL) y (7 DIAS)
+  Cuantas veces la gente toco un banner publicitario.
+  --> Es lo que le vas a mostrar a quien pague un banner
+      para justificar el precio.
+
+UNA CUENTA UTIL:
+  Dividi los clicks de WhatsApp por las visualizaciones.
+  Ejemplo: 40 clicks sobre 400 visualizaciones = 10%.
+  Eso quiere decir que 1 de cada 10 personas que abre un
+  anuncio termina escribiendo al vendedor. Cuanto mas alto,
+  mejor estan hechos los anuncios (fotos, precio, titulo).
+
+-----------------------------------------------------------
+"ANUNCIOS COM MAIS CONTATOS"
+-----------------------------------------------------------
+
+Los 10 anuncios que mas contactos por WhatsApp generaron.
+Cada linea muestra los contactos y las visualizaciones.
+
+Para que sirve:
+  - Saber que se busca de verdad en la isla.
+  - Mostrarle a ese vendedor cuanto le rindio, para que
+    siga publicando (o para venderle un destacado).
+  - Un anuncio con MUCHAS vistas y POCOS contactos suele
+    tener un problema: precio alto, fotos malas o descripcion
+    poco clara. Se le puede avisar al vendedor.
+
+
+===========================================================
+  PESTAÑA "DASHBOARD"
+===========================================================
+
+Son los numeros de la salud del sitio, no del trafico:
+
+ANUNCIOS ATIVOS   Anuncios publicados y vigentes ahora mismo.
+                  Es el "inventario" que ve el visitante. Si
+                  baja mucho, la app se ve vacia.
+TOTAL ANUNCIOS    Todos los que existen, incluyendo vencidos
+                  y pausados.
+DENUNCIAS NOVAS   Reportes de usuarios sin revisar. Si esta
+                  en rojo, conviene mirarlos.
+USUARIOS          Cuanta gente se registro con cuenta.
+                  Ojo: es MUCHO menor que "Pessoas", porque
+                  para mirar la app no hace falta registrarse.
+                  Solo se registra el que quiere publicar.
+BANNERS ATIVOS    Cuantos banners se estan mostrando.
+
+
+===========================================================
+  RESUMEN: LOS 4 NUMEROS QUE MIRAR SIEMPRE
+===========================================================
+
+1. PESSOAS (7 DIAS)          --> cuanta gente te usa
+2. CLICKS WHATSAPP (7 DIAS)  --> cuantos negocios generaste
+3. PESSOAS QUE VOLTARAM      --> si la app se volvio un habito
+4. ANUNCIOS ATIVOS           --> si hay suficiente para ver
+
+Si esos cuatro suben mes a mes, la app esta funcionando.
+
+===========================================================

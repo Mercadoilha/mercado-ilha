@@ -324,6 +324,10 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
   // Al llegar a la pantalla de resultados la barra trae el término ya escrito, pero NO debe
   // desplegar sugerencias sola: recién se abre cuando el usuario vuelve a tocarla o escribir.
   const interactedRef = useRef(false);
+  // Espejo de `open` accesible dentro del listener de outside-click (que se registra una
+  // sola vez al montar, así que no puede leer el estado directamente sin quedar desactualizado).
+  const openRef = useRef(false);
+  useEffect(() => { openRef.current = open; }, [open]);
 
   const runSearch = useCallback((q: string) => {
     if (abortRef.current) abortRef.current.abort();
@@ -368,10 +372,14 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
     try { el.setSelectionRange(end, end); } catch { /* selección no soportada */ }
   }, [query]);
 
-  // Close on outside click
+  // Cerrar tocando afuera. Si la lista estaba abierta, ese mismo toque también cae sobre lo
+  // que haya debajo (un banner, una tarjeta) — se descarta ese click con la misma técnica que
+  // evita que las sugerencias abran el banner de atrás: el toque de afuera solo cierra, no
+  // activa nada; hay que tocar una segunda vez para eso.
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        if (openRef.current) swallowGhostClick();
         setOpen(false);
       }
     }

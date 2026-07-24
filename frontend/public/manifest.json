@@ -1,7 +1,7 @@
 {
   "name": "Mercado Ilha",
   "short_name": "Mercado Ilha",
-  "description": "Marketplace de Tinharé — Morro de São Paulo",
+  "description": "Marketplace de Tinharé",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#185FA5",

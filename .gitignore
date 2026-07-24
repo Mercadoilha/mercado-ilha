@@ -15,3 +15,6 @@ node_modules/
 
 # artefactos de build
 tsconfig.tsbuildinfo
+
+# skill instalada aparte (tiene su propio repo)
+.claude/skills/cyber-neo/
