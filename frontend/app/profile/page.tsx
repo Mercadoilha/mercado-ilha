@@ -484,7 +484,7 @@ export default function ProfilePage() {
                   }}
                 >
                   <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "block" }}>
+                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "block", marginLeft: -4 }}>
                       <div
                         style={{
                           width: 108,
