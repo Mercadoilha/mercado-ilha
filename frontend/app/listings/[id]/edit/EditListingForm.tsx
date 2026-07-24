@@ -14,6 +14,7 @@ import { richHasContent, initialEditorHtml } from "../../../../lib/richText";
 import { safeBack } from "../../../../lib/safeBack";
 import { clearListingPreview } from "../../../../lib/listingPreview";
 import { clearListingDetailPrefetch } from "../../../../lib/listingDetailPrefetch";
+import { usePhotoDragReorder, arrayMove } from "../../../../lib/usePhotoDragReorder";
 
 // El modal de ajuste solo se descarga cuando el usuario toca una foto nueva.
 const PhotoAdjustModal = dynamic(() => import("../../../../components/PhotoAdjustModal"), { ssr: false });
@@ -203,6 +204,8 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
       return a;
     });
   };
+
+  const drag = usePhotoDragReorder((from, to) => setPhotoOrder((prev) => arrayMove(prev, from, to)));
 
   const applyAdjust = (res: PhotoAdjustResult | null) => {
     if (res && adjustKey !== null) {
@@ -477,9 +480,9 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
             Fotos <span className="text-muted">(até 4)</span>
           </p>
           <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: "0 0 10px" }}>
-            Fotos já salvas não podem ser editadas — para trocar o enquadramento, remova e envie de novo. Nas fotos novas, toque para girar ou ajustar.
+            Arraste as fotos para reordenar. Fotos já salvas não podem ser editadas — para trocar o enquadramento, remova e envie de novo. Nas fotos novas, toque para girar ou ajustar.
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div data-photo-row style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, alignItems: "start" }}>
             {photoOrder.map((ref, i) => {
               const isNew = ref.kind === "new";
               const newKey = ref.kind === "new" ? ref.key : null;
@@ -488,37 +491,51 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
                 ? newPhotos.find((n) => n.key === ref.key)?.preview
                 : existingPhotos.find((p) => p.id === ref.id)?.photo_url;
               if (!src) return null;
+              const isDragging = drag.dragIndex === i;
+              const isOver = drag.overIndex === i && drag.dragIndex !== null && drag.dragIndex !== i;
               return (
-                <div key={isNew ? `n-${newKey}` : `e-${existingId}`} style={{ width: 72 }}>
-                  <div style={{ position: "relative", width: 72, height: 72 }}>
+                <div
+                  key={isNew ? `n-${newKey}` : `e-${existingId}`}
+                  data-photo-tile
+                  data-photo-index={i}
+                  style={{
+                    position: "relative",
+                    transform: isDragging ? `translate(${drag.offset.x}px, ${drag.offset.y}px) scale(1.05)` : undefined,
+                    zIndex: isDragging ? 20 : undefined,
+                    transition: isDragging ? "none" : "transform 0.15s ease",
+                  }}
+                >
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={src}
                       alt=""
-                      onClick={newKey !== null ? () => setAdjustKey(newKey) : undefined}
-                      style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: isNew ? "2px solid #059669" : "1px solid var(--border)", cursor: isNew ? "pointer" : "default" }}
+                      draggable={false}
+                      onClick={newKey !== null ? () => { if (!drag.wasDrag()) setAdjustKey(newKey); } : undefined}
+                      {...drag.handlers(i)}
+                      style={{ width: "100%", height: "100%", borderRadius: 8, objectFit: "cover", border: isOver ? "2px solid var(--blue-main)" : isNew ? "2px solid #059669" : "1px solid var(--border)", boxShadow: isOver ? "0 0 0 3px rgba(24,95,165,0.25)" : isDragging ? "0 6px 16px rgba(0,0,0,0.28)" : undefined, cursor: "grab", touchAction: "none", userSelect: "none", opacity: isDragging ? 0.92 : 1 }}
                     />
                     {i === 0 && (
-                      <span style={{ position: "absolute", left: 0, bottom: 0, background: "var(--blue-main)", color: "#fff", fontSize: "0.55rem", fontWeight: 700, padding: "1px 6px", borderRadius: "0 6px 0 8px", pointerEvents: "none", letterSpacing: "0.03em" }}>
+                      <span style={{ position: "absolute", left: 0, bottom: 0, background: "var(--blue-main)", color: "#fff", fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: "0 6px 0 8px", pointerEvents: "none", letterSpacing: "0.03em" }}>
                         CAPA
                       </span>
                     )}
                     <button
                       type="button"
                       onClick={() => (newKey !== null ? removeNewPhoto(newKey) : removeExistingPhoto(existingId!))}
-                      style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      style={{ position: "absolute", top: -6, right: -6, background: "#dc2626", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", fontSize: "0.75rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
                     >
                       ✕
                     </button>
                   </div>
                   {photoOrder.length > 1 && (
-                    <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 4 }}>
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                       <button
                         type="button"
                         onClick={() => movePhoto(i, -1)}
                         disabled={i === 0}
                         aria-label="Mover para a esquerda"
-                        style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1 }}
+                        style={{ flex: 1, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "1rem", lineHeight: 1, padding: 0, cursor: i === 0 ? "default" : "pointer", opacity: i === 0 ? 0.35 : 1 }}
                       >
                         ‹
                       </button>
@@ -527,7 +544,7 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
                         onClick={() => movePhoto(i, 1)}
                         disabled={i === photoOrder.length - 1}
                         aria-label="Mover para a direita"
-                        style={{ width: 30, height: 20, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "0.8rem", lineHeight: 1, padding: 0, cursor: i === photoOrder.length - 1 ? "default" : "pointer", opacity: i === photoOrder.length - 1 ? 0.35 : 1 }}
+                        style={{ flex: 1, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "#fff", color: "var(--blue-main)", fontWeight: 700, fontSize: "1rem", lineHeight: 1, padding: 0, cursor: i === photoOrder.length - 1 ? "default" : "pointer", opacity: i === photoOrder.length - 1 ? 0.35 : 1 }}
                       >
                         ›
                       </button>
@@ -541,9 +558,9 @@ export default function EditListingForm({ listingId: listingIdParam, categories,
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                style={{ width: 72, height: 72, borderRadius: 8, border: "2px dashed var(--blue-light)", background: "var(--blue-xlight)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, color: "var(--blue-main)", fontSize: "0.65rem", fontWeight: 700 }}
+                style={{ width: "100%", aspectRatio: "1 / 1", alignSelf: "start", borderRadius: 8, border: "2px dashed var(--blue-light)", background: "var(--blue-xlight)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, color: "var(--blue-main)", fontSize: "0.68rem", fontWeight: 700 }}
               >
-                <span style={{ fontSize: "1.4rem" }}>📷</span>
+                <span style={{ fontSize: "1.6rem" }}>📷</span>
                 Adicionar
               </button>
             )}

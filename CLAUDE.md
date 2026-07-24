@@ -77,6 +77,28 @@ autocomplete, widgets marés/barcos, fix LGPD, tracking pre-monetización, multi
 destacar anúncio (bump), rediseño de cards. El trabajo actual es de features y optimización,
 no de construcción de fases. Backlog y pendientes: ver MEMORY.md §PENDIENTES.
 
+## 🔒 MÉTODO FIJO — PREVIEW ANTES DE PRODUCCIÓN
+Regla obligatoria para **todos** los cambios, sin excepción (la app ya está en manos de
+usuarios reales): **nunca se pushea directo a `main`**. En su lugar:
+1. Trabajar los cambios en una rama aparte (no `main`).
+2. Push de esa rama → Vercel genera automáticamente un **Preview Deployment** (copia de
+   prueba en su propia URL, sin tocar la app real). Este paso se hace **siempre y sin pedir
+   permiso** apenas hay algo para revisar.
+3. El usuario revisa y aprueba en esa URL de prueba (ya sabe entrar por su cuenta; no hace
+   falta enviarle el link).
+4. Recién con el **OK explícito** del usuario: (a) actualizar el MEMORY.md del proyecto con
+   lo hecho y (b) mergear/pushear a `main` → producción. Nunca subir a producción sin esa
+   aprobación.
+
+- El preview usa la **misma base de datos y R2 reales**: mirar es seguro, pero NO crear,
+  borrar ni editar de verdad ahí (afecta datos reales).
+- Fórmula del link de preview de una rama:
+  `https://mercado-ilha-git-<rama-con-guiones>-mercado-ilha-s-projects.vercel.app`
+  (usar ramas **cortas**: si el subdominio pasa de 63 chars, Vercel lo trunca con hash).
+  No hay `gh` ni `vercel` CLI en este entorno; el push a la rama alcanza para generar el preview.
+- Detalle completo, estado de ramas y credenciales del proyecto Vercel: memoria
+  `feedback_flujo_preview_antes_de_produccion`.
+
 ## Comportamiento esperado de Claude Code
 1. Al iniciar sesión: leer MEMORY.md y este archivo.
 2. Antes de un cambio no trivial: mostrar plan breve y esperar OK.
