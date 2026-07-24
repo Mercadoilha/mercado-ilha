@@ -911,6 +911,16 @@ function Banners() {
   const [bSaving, setBSaving] = useState(false);
   const [bMsg, setBMsg] = useState("");
 
+  // Edição inline de um banner já existente (nome + destino do clique). Guardamos os campos
+  // do formulário de edição separados do formulário de "novo banner".
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [eTitle, setETitle] = useState("");
+  const [eLinkType, setELinkType] = useState<"whatsapp" | "url">("whatsapp");
+  const [eWhatsapp, setEWhatsapp] = useState("");
+  const [eLink, setELink] = useState("");
+  const [eSaving, setESaving] = useState(false);
+  const [eMsg, setEMsg] = useState("");
+
   useEffect(() => {
     supabase.from("banners").select("*").order("sort_order").then(({ data }) => { setBanners(data ?? []); setLoading(false); });
     supabase.from("admin_settings").select("value").eq("key", "banner_interval").single().then(({ data }) => {
@@ -1030,6 +1040,54 @@ function Banners() {
     setBanners((prev) => prev.map((b) => b.id === id
       ? { ...b, valid_from: validFrom || null, valid_until: validUntil || null }
       : b));
+  };
+
+  // Abre o editor de um banner, pré-carregando os dados atuais. Deduz o tipo de destino a
+  // partir do link salvo: se é um wa.me/... trata como WhatsApp (extrai o número), senão URL.
+  const startEdit = (b: any) => {
+    const waMatch = b.link_url?.match(/wa\.me\/(\d+)/);
+    setEditingId(b.id);
+    setETitle(b.title ?? "");
+    setEMsg("");
+    if (waMatch) {
+      setELinkType("whatsapp");
+      // Mostramos o número sem o "55" do país para editar cômodo (ex.: 75 99999-9999).
+      const digits: string = waMatch[1];
+      setEWhatsapp(digits.startsWith("55") ? digits.slice(2) : digits);
+      setELink("");
+    } else {
+      setELinkType("url");
+      setELink((b.link_url ?? "").replace(/^https?:\/\//i, "").replace(/\/$/, ""));
+      setEWhatsapp("");
+    }
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEMsg(""); };
+
+  // Salva nome + destino do clique de um banner existente. Reconstrói o link_url igual ao
+  // formulário de criação (wa.me com mensagem padrão, ou URL completada com https://).
+  const saveEdit = async (id: number) => {
+    let linkUrl: string;
+    if (eLinkType === "whatsapp") {
+      if (!eWhatsapp.trim()) { setEMsg("WhatsApp do anunciante é obrigatório."); return; }
+      const raw = eWhatsapp.replace(/\D/g, "");
+      const number = raw.startsWith("55") ? raw : `55${raw}`;
+      linkUrl = `https://wa.me/${number}?text=${encodeURIComponent("Olá! Vi o anúncio no Mercado Ilha e gostaria de saber mais.")}`;
+    } else {
+      if (!eLink.trim()) { setEMsg("O link de destino é obrigatório."); return; }
+      linkUrl = /^https?:\/\//i.test(eLink.trim()) ? eLink.trim() : `https://${eLink.trim()}`;
+    }
+    setESaving(true);
+    setEMsg("");
+    const newTitle = eTitle.trim() || null;
+    const { error } = await supabase
+      .from("banners")
+      .update({ title: newTitle, link_url: linkUrl })
+      .eq("id", id);
+    if (error) { setEMsg("Erro: " + error.message); setESaving(false); return; }
+    setBanners((prev) => prev.map((b) => b.id === id ? { ...b, title: newTitle, link_url: linkUrl } : b));
+    setESaving(false);
+    setEditingId(null);
   };
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
@@ -1212,6 +1270,10 @@ function Banners() {
                             style={{ ...actionBtn, cursor: gIdx === group.length - 1 ? "default" : "pointer", color: gIdx === group.length - 1 ? "#cbd5e1" : "var(--blue-main)" }}>
                             ↓
                           </button>
+                          <button type="button" title="Editar" onClick={() => editingId === b.id ? cancelEdit() : startEdit(b)}
+                            style={{ ...actionBtn, ...(editingId === b.id ? { background: "var(--blue-main)", borderColor: "var(--blue-main)", color: "#fff" } : {}) }}>
+                            ✏️
+                          </button>
                           <button type="button" title={b.active ? "Pausar" : "Ativar"} onClick={() => toggleBanner(b.id, !b.active)} style={actionBtn}>
                             {b.active ? "⏸️" : "▶️"}
                           </button>
@@ -1221,6 +1283,42 @@ function Banners() {
                           </button>
                         </div>
                       </div>
+                      {/* Editor inline: nome + destino do clique (WhatsApp/link). Abre com o ✏️. */}
+                      {editingId === b.id && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", background: "var(--blue-xlight)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem" }}>
+                          <div className="form-group">
+                            <label className="form-label">Nome / anunciante (opcional)</label>
+                            <input className="form-input" type="text" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Ao clicar no banner, ir para</label>
+                            <select className="form-select" value={eLinkType} onChange={(e) => setELinkType(e.target.value as "whatsapp" | "url")}>
+                              <option value="whatsapp">WhatsApp (número)</option>
+                              <option value="url">Link (site, Instagram, etc.)</option>
+                            </select>
+                          </div>
+                          {eLinkType === "whatsapp" ? (
+                            <div className="form-group">
+                              <label className="form-label">WhatsApp do anunciante</label>
+                              <input className="form-input" type="tel" placeholder="75 99999-9999" value={eWhatsapp} onChange={(e) => setEWhatsapp(e.target.value)} maxLength={20} />
+                            </div>
+                          ) : (
+                            <div className="form-group">
+                              <label className="form-label">Link de destino</label>
+                              <input className="form-input" type="text" placeholder="instagram.com/seu_perfil" value={eLink} onChange={(e) => setELink(e.target.value)} />
+                            </div>
+                          )}
+                          {eMsg && <p className="text-error" style={{ margin: 0 }}>{eMsg}</p>}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button type="button" className="btn btn-primary" disabled={eSaving} onClick={() => saveEdit(b.id)} style={{ flex: 1 }}>
+                              {eSaving ? "Salvando..." : "Salvar alterações"}
+                            </button>
+                            <button type="button" className="btn btn-outline" disabled={eSaving} onClick={cancelEdit}>
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {/* Janela de exibição — editável direto no card. Vazio = aparece sempre; o ✕ limpa a data. */}
                       <div>
                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

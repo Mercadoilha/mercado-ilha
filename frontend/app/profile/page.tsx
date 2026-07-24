@@ -483,18 +483,19 @@ export default function ProfilePage() {
                     gap: 8,
                   }}
                 >
-                  <div style={{ display: "flex", gap: "0.625rem" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
                     <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
                       <div
                         style={{
-                          width: 62,
-                          height: 62,
-                          borderRadius: 8,
+                          width: 82,
+                          height: 82,
+                          borderRadius: 10,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
+                          border: "1px solid var(--border)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "1.7rem",
+                          fontSize: "2.2rem",
                           overflow: "hidden",
                           flexShrink: 0,
                           position: "relative",
@@ -505,7 +506,7 @@ export default function ProfilePage() {
                             src={firstPhoto}
                             alt={l.title}
                             fill
-                            sizes="62px"
+                            sizes="82px"
                             style={{ objectFit: "contain" }}
                           />
                         ) : "🛍️"}
@@ -513,15 +514,15 @@ export default function ProfilePage() {
                     </Link>
                     <Link
                       href={`/listings/${l.id}`}
-                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit" }}
+                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}
                     >
-                      <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.98rem", color: "#1e293b", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {l.title}
                       </div>
-                      <div style={{ fontSize: "0.8rem", color: "var(--blue-main)", fontWeight: 700, marginTop: 2 }}>
+                      <div style={{ fontSize: "1.05rem", color: "var(--blue-main)", fontWeight: 800, lineHeight: 1.1 }}>
                         {listingPrice(l)}
                       </div>
-                      <div style={{ display: "flex", gap: 10, marginTop: 4, fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
                         <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
                         <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
                       </div>
