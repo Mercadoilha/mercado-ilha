@@ -33,6 +33,28 @@ const outlineBlueBtn: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+// Base compartilhada de todos os botões de ação de um anúncio (compartilhar, excluir,
+// vendido, destacar, pausar). Mesma altura, raio, tipografia e padding → harmonia visual.
+// Cada botão só troca cor/preenchimento conforme sua função. Chips "soft" (fundo claro +
+// borda + texto na mesma cor) para as ações secundárias; sólido só para o CTA (Destacar).
+const actionChipBase: React.CSSProperties = {
+  boxSizing: "border-box",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 5,
+  height: 34,
+  padding: "0 0.7rem",
+  borderRadius: 8,
+  border: "1px solid transparent",
+  fontSize: "0.75rem",
+  fontWeight: 700,
+  lineHeight: 1,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  flexShrink: 0,
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { session, sessionLoading } = useSession();
@@ -505,7 +527,7 @@ export default function ProfilePage() {
                       </div>
                     </Link>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
                   {/* Linha de cima: compartilhar + excluir, alinhados à direita */}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                   <button
@@ -519,35 +541,26 @@ export default function ProfilePage() {
                     }
                     title="Compartilhar anúncio"
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      background: "#fff",
-                      border: "1px solid var(--blue-main)",
-                      borderRadius: 6,
-                      cursor: "pointer",
+                      ...actionChipBase,
+                      background: "#eff6ff",
+                      borderColor: "#bfdbfe",
                       color: "var(--blue-main)",
-                      fontSize: "0.7rem",
-                      fontWeight: 700,
-                      padding: "0.3rem 0.6rem",
-                      flexShrink: 0,
                     }}
                   >
-                    <ShareIcon size={13} /> Compartilhar
+                    <ShareIcon size={14} /> Compartilhar
                   </button>
                   <button
                     type="button"
                     onClick={() => deleteListing(l.id)}
-                    title="Deletar anúncio"
+                    title="Excluir anúncio"
+                    aria-label="Excluir anúncio"
                     style={{
-                      background: "none",
-                      border: "1px solid var(--border)",
-                      borderRadius: 6,
-                      cursor: "pointer",
+                      ...actionChipBase,
+                      padding: "0 0.6rem",
+                      background: "#fef2f2",
+                      borderColor: "#fecaca",
                       color: "#dc2626",
-                      fontSize: "0.9rem",
-                      padding: "0.3rem 0.5rem",
-                      flexShrink: 0,
+                      fontSize: "0.95rem",
                     }}
                   >
                     🗑
@@ -564,16 +577,10 @@ export default function ProfilePage() {
                       onClick={() => { setSoldModal({ id: l.id, title: l.title }); setSoldStep("confirm"); }}
                       title="Marcar como vendido e remover o anúncio"
                       style={{
-                        background: "#0F6E56",
-                        border: "none",
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        color: "#fff",
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        padding: "0.25rem 0.5rem",
-                        flexShrink: 0,
-                        whiteSpace: "nowrap",
+                        ...actionChipBase,
+                        background: "#ecfdf5",
+                        borderColor: "#a7f3d0",
+                        color: "#0F6E56",
                       }}
                     >
                       Vendido
@@ -592,17 +599,12 @@ export default function ProfilePage() {
                           : "Destacar: aparecer no topo da tela principal (1 vez a cada 15 min)"
                       }
                       style={{
-                        background: canBump ? "#EF9F27" : "#fdecc8",
-                        border: "none",
-                        borderRadius: 6,
+                        ...actionChipBase,
+                        background: canBump ? "#EF9F27" : "#fdf1da",
+                        borderColor: canBump ? "#EF9F27" : "#f3dcaf",
                         cursor: canBump ? "pointer" : "not-allowed",
                         color: canBump ? "#fff" : "#b98219",
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        padding: "0.25rem 0.5rem",
-                        flexShrink: 0,
                         opacity: bumping === l.id ? 0.6 : 1,
-                        whiteSpace: "nowrap",
                       }}
                     >
                       {cdMin > 0 ? `⭐ ${cdMin}min` : "⭐ Destacar"}
@@ -615,15 +617,11 @@ export default function ProfilePage() {
                       onClick={() => toggleStatus(l.id, l.status)}
                       title={l.status === "active" ? "Pausar anúncio" : "Reativar anúncio"}
                       style={{
-                        background: l.status === "active" ? "#f1f5f9" : "#dcfce7",
-                        border: "none",
-                        borderRadius: 6,
+                        ...actionChipBase,
+                        background: l.status === "active" ? "#f8fafc" : "#ecfdf5",
+                        borderColor: l.status === "active" ? "#e2e8f0" : "#a7f3d0",
                         cursor: toggling === l.id ? "not-allowed" : "pointer",
-                        color: l.status === "active" ? "#64748b" : "#059669",
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        padding: "0.25rem 0.5rem",
-                        flexShrink: 0,
+                        color: l.status === "active" ? "#475569" : "#059669",
                         opacity: toggling === l.id ? 0.5 : 1,
                       }}
                     >
