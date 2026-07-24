@@ -483,13 +483,12 @@ export default function ProfilePage() {
                     gap: 6,
                   }}
                 >
-                  <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "flex", alignSelf: "stretch" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "block" }}>
                       <div
                         style={{
                           width: 96,
-                          height: "100%",
-                          minHeight: 96,
+                          height: 96,
                           borderRadius: 10,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                           display: "flex",
@@ -512,12 +511,10 @@ export default function ProfilePage() {
                         ) : "🛍️"}
                       </div>
                     </Link>
-                    {/* Coluna direita: info em cima + ações logo abaixo, ao lado da foto
-                        (para as ações subirem em vez de ficar embaixo da linha toda) */}
-                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Info ao lado da foto (topo): título, preço e (contadores + status) na mesma linha */}
                     <Link
                       href={`/listings/${l.id}`}
-                      style={{ minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", gap: 4 }}
+                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", gap: 4 }}
                     >
                       <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {l.title}
@@ -525,14 +522,17 @@ export default function ProfilePage() {
                       <div style={{ fontSize: "1.1rem", color: "var(--blue-main)", fontWeight: 800, lineHeight: 1.1 }}>
                         {listingPrice(l)}
                       </div>
-                      <div style={{ display: "flex", gap: 12, fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
                         <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
                         <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
+                        <span style={{ fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8" }}>
+                          {statusLabel[l.status] ?? l.status}
+                        </span>
                       </div>
                     </Link>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* Linha de cima: compartilhar + excluir, alinhados à direita */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  </div>
+                  {/* Ações agrupadas logo abaixo da foto, próximas ao conteúdo */}
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, rowGap: 6 }}>
                   <button
                     type="button"
                     onClick={() =>
@@ -552,28 +552,6 @@ export default function ProfilePage() {
                   >
                     <ShareIcon size={14} /> Compartilhar
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteListing(l.id)}
-                    title="Excluir anúncio"
-                    aria-label="Excluir anúncio"
-                    style={{
-                      ...actionChipBase,
-                      padding: "0 0.6rem",
-                      background: "#fef2f2",
-                      borderColor: "#fecaca",
-                      color: "#dc2626",
-                      fontSize: "0.95rem",
-                    }}
-                  >
-                    🗑
-                  </button>
-                  </div>
-                  {/* Linha de baixo: status + ações do anúncio */}
-                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, rowGap: 6 }}>
-                  <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
-                    {statusLabel[l.status] ?? l.status}
-                  </span>
                   {l.categories?.is_product && l.subcategories?.is_product !== false && l.status !== "blocked" && l.status !== "sold" && (
                     <button
                       type="button"
@@ -631,9 +609,23 @@ export default function ProfilePage() {
                       {l.status === "active" ? "Pausar" : "Ativar"}
                     </button>
                   )}
-                  </div>
-                  </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteListing(l.id)}
+                    title="Excluir anúncio"
+                    aria-label="Excluir anúncio"
+                    style={{
+                      ...actionChipBase,
+                      marginLeft: "auto",
+                      padding: "0 0.6rem",
+                      background: "#fef2f2",
+                      borderColor: "#fecaca",
+                      color: "#dc2626",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    🗑
+                  </button>
                   </div>
                 </div>
                 {bumpMsg && bumpMsg.id === l.id && (
