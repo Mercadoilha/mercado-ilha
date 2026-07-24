@@ -4,8 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import { safeBack } from "../../lib/safeBack";
 
 type Tab = "dashboard" | "metricas" | "listings" | "reports" | "banners" | "users" | "settings" | "categorias";
+
+const TABS: Tab[] = ["dashboard", "metricas", "listings", "reports", "banners", "users", "settings", "categorias"];
+
+// A aba viaja no hash da URL (`/admin#users`). Assim cada troca de aba vira uma entrada
+// de histórico e o "voltar" (seta do header, botão do navegador ou gesto) devolve à aba
+// anterior em vez de sair do painel. Usamos hash — e não query — porque mudança de hash
+// não dispara navegação do App Router: nada é refeito, a aba já carregada continua viva.
+function tabFromHash(): Tab {
+  if (typeof window === "undefined") return "dashboard";
+  const h = window.location.hash.replace("#", "");
+  return (TABS as string[]).includes(h) ? (h as Tab) : "dashboard";
+}
 
 // ─────────────────────────────────────────────
 // Icon library
@@ -168,6 +181,20 @@ export default function AdminPage() {
     check();
   }, [router]);
 
+  // Abre na aba indicada pela URL (link direto/recarga) e acompanha o histórico.
+  useEffect(() => {
+    setTab(tabFromHash());
+    const onPop = () => setTab(tabFromHash());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const goTab = (t: Tab) => {
+    if (t === tab) return;
+    setTab(t);
+    window.history.pushState(null, "", `#${t}`);
+  };
+
   if (!ready) return (
     <div className="page-body" style={{ display: "flex", justifyContent: "center", paddingTop: "4rem" }}>
       <div className="spinner" />
@@ -177,7 +204,7 @@ export default function AdminPage() {
   const tabBtn = (t: Tab, label: string, icon: string) => (
     <button
       type="button"
-      onClick={() => setTab(t)}
+      onClick={() => goTab(t)}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -201,7 +228,14 @@ export default function AdminPage() {
   return (
     <div className="page-body">
       <header className="page-header">
-        <Link href="/" style={{ color: "#fff", textDecoration: "none", fontSize: "1.2rem" }}>←</Link>
+        <button
+          type="button"
+          onClick={() => safeBack(router, "/")}
+          aria-label="Voltar"
+          style={{ background: "none", border: "none", color: "#fff", fontSize: "1.2rem", cursor: "pointer", padding: 0, lineHeight: 1, flexShrink: 0 }}
+        >
+          ←
+        </button>
         <h1>Administração</h1>
         <span style={{ marginLeft: "auto", background: "rgba(255,255,255,0.2)", borderRadius: 999, padding: "2px 10px", fontSize: "0.7rem", fontWeight: 700 }}>
           Admin

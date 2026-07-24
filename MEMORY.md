@@ -339,6 +339,13 @@ Acceso desde perfil (botón "⚙️ Painel de administração", solo admins). **
 userId; tabs con `display:none` (montan 1 vez, cambio instantáneo sin re-fetch); guardar
 categoría/subcategoría con UI optimista (revierte si falla).
 
+**Tabs en el historial (2026-07-24):** la tab activa viaja en el **hash** de la URL
+(`/admin#users`) — cada cambio de tab hace `history.pushState`, un `popstate` la restaura y la
+flecha del header usa `safeBack(router, "/")`. Así "voltar" (flecha, botón del navegador o
+gesto) devuelve a la tab anterior en vez de salir del panel, y `/admin#users` abre directo en
+esa tab. **Hash y no query-string a propósito:** un cambio de hash no dispara navegación del App
+Router → no hay refetch RSC ni remount, las tabs ya montadas siguen vivas (respeta §13).
+
 ## 9. RUTAS
 
 | Ruta | Descripción |
@@ -763,6 +770,14 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
 
 ## 18. BUGS RESUELTOS — LECCIONES
 
+- **La flecha "voltar" del `/admin` salía al inicio desde cualquier tab (2026-07-24):** las 8
+  tabs eran **solo estado de React** (`useState<Tab>`) y la flecha del header un `<Link href="/">`
+  fijo, así que ni la flecha ni el back del navegador conocían la tab anterior: desde Usuários,
+  volver = irse a la home. Fix: la tab pasa a vivir en el hash (`/admin#users`) con
+  `pushState`/`popstate` + `safeBack` en la flecha (ver §8). **Lección: una pantalla con
+  navegación interna por estado necesita reflejar ese estado en la URL, o el "atrás" del sistema
+  se salta todos los pasos internos de una** — el patrón vale para cualquier pantalla futura con
+  tabs o pasos.
 - **Limpieza de repo rompió 2 banners activos en producción por asumir sin verificar
   (2026-07-22, commits `e994fc0` → fix `1223534`):** al ordenar el repo se movieron 4 PNGs de
   `public/banners/` a `historico/` asumiendo (mensaje del commit) que "hoy los banners viven en
@@ -1004,6 +1019,15 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, push a `main`).
+  **`/admin`: la flecha "voltar" vuelve a la tab anterior.** Detalle en **§8** y lección en
+  **§18**. Resumen: el dueño estaba en la tab Usuários, tocó la flecha y lo sacó al inicio.
+  Causa: las tabs eran solo estado de React y la flecha un `<Link href="/">` fijo. Fix en
+  `app/admin/page.tsx`: la tab activa viaja en el hash (`/admin#users`) con `pushState` al
+  cambiar y `popstate` para restaurarla, y la flecha usa `safeBack(router, "/")`. Vale para las
+  8 tabs. Se usó hash (no query) para no disparar navegación del App Router: cero refetch, las
+  tabs montadas siguen vivas. Build verificado: `/admin` sigue `○ Static`.
 
 - **2026-07-24** — **Desplegado** (commit `89bb8da`, push a `main`).
   **Métricas reales: reset a cero + anti-duplicados + admin excluido.** Detalle estructural en
