@@ -1020,7 +1020,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, push a `main`).
+- **2026-07-24** — **Desplegado** (commit `7b76e33`, push a `main`).
   **`/admin`: la flecha "voltar" vuelve a la tab anterior.** Detalle en **§8** y lección en
   **§18**. Resumen: el dueño estaba en la tab Usuários, tocó la flecha y lo sacó al inicio.
   Causa: las tabs eran solo estado de React y la flecha un `<Link href="/">` fijo. Fix en
