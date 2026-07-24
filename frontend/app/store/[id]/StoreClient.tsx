@@ -8,6 +8,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { buildWaUrl } from "../../../lib/whatsappUrl";
 import { trackWhatsappClick } from "../../../lib/tracking";
 import { compartilhar } from "../../../lib/share";
+import { safeBack } from "../../../lib/safeBack";
 import { useSession } from "../../../contexts/SessionContext";
 import ShareIcon from "../../../components/ShareIcon";
 import ListingCard from "../../../components/ListingCard";
@@ -199,7 +200,7 @@ export default function StorePage() {
       <header className="page-header">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => safeBack(router, "/")}
           style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
         >←</button>
         <h1 style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

@@ -71,6 +71,25 @@ export default function ListingDetailPage() {
     () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "publish"
   );
 
+  // Anúncio aberto direto por um link compartilhado (sem histórico prévio na aba): a seta
+  // de voltar leva à loja do vendedor; de lá, voltar leva ao início. É o circuito esperado
+  // quando alguém abre um anúncio que recebeu. Se veio navegando dentro do app
+  // (history.length > 1), voltar segue sendo o back normal (preserva filtros/scroll).
+  const [isDeepLink] = useState(
+    () => typeof window !== "undefined" && window.history.length <= 1
+  );
+
+  const handleBack = () => {
+    if (fromPublish) { router.replace("/"); return; }
+    if (isDeepLink) {
+      // replace (não push) para que o próximo "voltar" na loja vá ao início.
+      if (listing?.user_id) router.replace(`/store/${listing.user_id}`);
+      else router.replace("/");
+      return;
+    }
+    router.back();
+  };
+
   // Limpa o "?from=publish" da barra de endereço (não polui um link compartilhado a partir
   // daqui) sem empilhar uma entrada nova no histórico — replace troca só a entrada atual.
   useEffect(() => {
@@ -383,7 +402,7 @@ export default function ListingDetailPage() {
       <header className="page-header">
         <button
           type="button"
-          onClick={() => (fromPublish ? router.replace("/") : router.back())}
+          onClick={handleBack}
           style={{ color: "#fff", background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", padding: 0 }}
         >←</button>
         <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>

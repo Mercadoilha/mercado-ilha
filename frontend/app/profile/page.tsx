@@ -505,7 +505,7 @@ export default function ProfilePage() {
                       </div>
                     </Link>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, rowGap: 6 }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, color: l.status === "active" ? "#059669" : "#94a3b8", flexShrink: 0, marginRight: "auto" }}>
                     {statusLabel[l.status] ?? l.status}
                   </span>
@@ -581,6 +581,33 @@ export default function ProfilePage() {
                       {l.status === "active" ? "Pausar" : "Ativar"}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      compartilhar({
+                        title: l.title,
+                        text: "Veja este anúncio no Mercado Ilha 🏝️",
+                        url: window.location.origin + "/listings/" + l.id,
+                      })
+                    }
+                    title="Compartilhar anúncio"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      background: "#fff",
+                      border: "1px solid var(--blue-main)",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      color: "var(--blue-main)",
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      padding: "0.25rem 0.5rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ShareIcon size={13} /> Compartilhar
+                  </button>
                   <button
                     type="button"
                     onClick={() => deleteListing(l.id)}
