@@ -484,11 +484,12 @@ export default function ProfilePage() {
                   }}
                 >
                   <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
+                    <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "flex", alignSelf: "stretch" }}>
                       <div
                         style={{
-                          width: 94,
-                          height: 94,
+                          width: 96,
+                          height: "100%",
+                          minHeight: 96,
                           borderRadius: 10,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                           display: "flex",
@@ -505,15 +506,18 @@ export default function ProfilePage() {
                             src={firstPhoto}
                             alt={l.title}
                             fill
-                            sizes="94px"
+                            sizes="96px"
                             style={{ objectFit: "contain" }}
                           />
                         ) : "🛍️"}
                       </div>
                     </Link>
+                    {/* Coluna direita: info em cima + ações logo abaixo, ao lado da foto
+                        (para as ações subirem em vez de ficar embaixo da linha toda) */}
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
                     <Link
                       href={`/listings/${l.id}`}
-                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 1 }}
+                      style={{ minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", gap: 4 }}
                     >
                       <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {l.title}
@@ -526,7 +530,6 @@ export default function ProfilePage() {
                         <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
                       </div>
                     </Link>
-                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {/* Linha de cima: compartilhar + excluir, alinhados à direita */}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -628,6 +631,8 @@ export default function ProfilePage() {
                       {l.status === "active" ? "Pausar" : "Ativar"}
                     </button>
                   )}
+                  </div>
+                  </div>
                   </div>
                   </div>
                 </div>
