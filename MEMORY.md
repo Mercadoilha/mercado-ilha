@@ -1005,7 +1005,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, push a `main`).
+- **2026-07-24** — **Desplegado** (commit `89bb8da`, push a `main`).
   **Métricas reales: reset a cero + anti-duplicados + admin excluido.** Detalle estructural en
   **§14.2**. Resumen: el dueño reportó números imposibles (91 clicks WA, 58 en un anuncio) el día
   que recién compartía la app. Diagnóstico con `diagnostico-clicks-whatsapp.sql`: pocos aparatos
