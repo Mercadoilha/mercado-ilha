@@ -9,6 +9,11 @@ export const revalidate = 60;
 export default async function Home() {
   const admin = getSupabaseAdmin({ revalidate: 60 });
 
+  // Data de hoje no fuso da ilha (Bahia, UTC-3). Um banner só aparece se hoje estiver
+  // dentro da sua janela (valid_from/valid_until). Com o ISR de 60s, isto se reavalia
+  // sozinho a cada minuto → o banner começa/pausa na data certa sem intervenção.
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bahia" });
+
   const [
     { data: listData },
     { data: settingsData },
@@ -35,6 +40,8 @@ export default async function Home() {
       .select("id,title,image_url,link_url")
       .eq("position", "home")
       .eq("active", true)
+      .or(`valid_from.is.null,valid_from.lte.${today}`)
+      .or(`valid_until.is.null,valid_until.gte.${today}`)
       .order("sort_order"),
   ]);
 

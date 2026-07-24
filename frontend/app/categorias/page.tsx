@@ -8,6 +8,10 @@ export const revalidate = 60;
 export default async function CategoriasPage() {
   const admin = getSupabaseAdmin({ revalidate: 60 });
 
+  // Data de hoje no fuso da ilha (Bahia, UTC-3). Um banner só aparece se hoje estiver
+  // dentro da sua janela (valid_from/valid_until). Com o ISR de 60s isto se reavalia sozinho.
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bahia" });
+
   const [
     { data: catData },
     { data: settingsData },
@@ -27,6 +31,8 @@ export default async function CategoriasPage() {
       .select("id,title,image_url,link_url")
       .eq("position", "categorias")
       .eq("active", true)
+      .or(`valid_from.is.null,valid_from.lte.${today}`)
+      .or(`valid_until.is.null,valid_until.gte.${today}`)
       .order("sort_order"),
   ]);
 

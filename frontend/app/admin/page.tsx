@@ -904,6 +904,10 @@ function Banners() {
   const [bWhatsapp, setBWhatsapp] = useState("");
   const [bLink, setBLink] = useState("");
   const [bPosition, setBPosition] = useState<"home" | "categorias">("home");
+  // Janela de exibição (opcional). valid_from vazio → começa já. valid_until vazio → fica
+  // para sempre. valid_until é inclusivo: o banner aparece o dia todo e pausa no dia seguinte.
+  const [bValidFrom, setBValidFrom] = useState("");
+  const [bValidUntil, setBValidUntil] = useState("");
   const [bSaving, setBSaving] = useState(false);
   const [bMsg, setBMsg] = useState("");
 
@@ -990,6 +994,10 @@ function Banners() {
       // Aceita colar "instagram.com/..." sem http — completa com https:// automaticamente.
       linkUrl = /^https?:\/\//i.test(bLink.trim()) ? bLink.trim() : `https://${bLink.trim()}`;
     }
+    if (bValidFrom && bValidUntil && bValidUntil < bValidFrom) {
+      setBMsg("A data de fim não pode ser antes da data de início.");
+      return;
+    }
     setBSaving(true);
     setBMsg("");
     const { data, error } = await supabase.from("banners").insert({
@@ -1000,10 +1008,28 @@ function Banners() {
       // novo banner vai ao fim da lista da sua própria posição
       sort_order: banners.filter((b) => b.position === bPosition).length,
       active: true,
+      valid_from: bValidFrom || null,
+      valid_until: bValidUntil || null,
     }).select().single();
     if (error) { setBMsg("Erro: " + error.message); }
-    else { setBanners((prev) => [...prev, data]); setShowForm(false); setBTitle(""); setBImageUrl(""); setBWhatsapp(""); setBLink(""); setBLinkType("whatsapp"); }
+    else { setBanners((prev) => [...prev, data]); setShowForm(false); setBTitle(""); setBImageUrl(""); setBWhatsapp(""); setBLink(""); setBLinkType("whatsapp"); setBValidFrom(""); setBValidUntil(""); }
     setBSaving(false);
+  };
+
+  // Salva as datas de um banner já existente (edição inline no card). Vazio → null.
+  const saveDates = async (id: number, validFrom: string, validUntil: string) => {
+    if (validFrom && validUntil && validUntil < validFrom) {
+      alert("A data de fim não pode ser antes da data de início.");
+      return;
+    }
+    const { error } = await supabase
+      .from("banners")
+      .update({ valid_from: validFrom || null, valid_until: validUntil || null })
+      .eq("id", id);
+    if (error) { alert("Erro ao salvar datas: " + error.message); return; }
+    setBanners((prev) => prev.map((b) => b.id === id
+      ? { ...b, valid_from: validFrom || null, valid_until: validUntil || null }
+      : b));
   };
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
@@ -1098,6 +1124,18 @@ function Banners() {
               <option value="categorias">Tela de Categorias</option>
             </select>
           </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label className="form-label">Primeiro dia que aparece</label>
+              <input className="form-input" type="date" value={bValidFrom} onChange={(e) => setBValidFrom(e.target.value)} />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>Vazio = começa já.</p>
+            </div>
+            <div className="form-group" style={{ flex: 1, minWidth: 0 }}>
+              <label className="form-label">Último dia que aparece</label>
+              <input className="form-input" type="date" value={bValidUntil} onChange={(e) => setBValidUntil(e.target.value)} />
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 3 }}>Vazio = fica para sempre.</p>
+            </div>
+          </div>
           {bMsg && <p className="text-error">{bMsg}</p>}
           <button type="button" className="btn btn-primary" disabled={bSaving} onClick={saveBanner}>
             {bSaving ? "Salvando..." : "Salvar banner"}
@@ -1141,6 +1179,27 @@ function Banners() {
                           🔗 {otherLink}
                         </div>
                       )}
+                      {/* Janela de exibição — editável direto no card. Vazio = sem limite. */}
+                      <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                        <label style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 2 }}>
+                          De
+                          <input
+                            type="date"
+                            value={b.valid_from ?? ""}
+                            onChange={(e) => saveDates(b.id, e.target.value, b.valid_until ?? "")}
+                            style={{ fontSize: "0.68rem", padding: "2px 4px", border: "1px solid var(--border)", borderRadius: 5, color: "#1e293b" }}
+                          />
+                        </label>
+                        <label style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 2 }}>
+                          Até
+                          <input
+                            type="date"
+                            value={b.valid_until ?? ""}
+                            onChange={(e) => saveDates(b.id, b.valid_from ?? "", e.target.value)}
+                            style={{ fontSize: "0.68rem", padding: "2px 4px", border: "1px solid var(--border)", borderRadius: 5, color: "#1e293b" }}
+                          />
+                        </label>
+                      </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
                       <button type="button" title="Mover para cima" disabled={gIdx === 0}

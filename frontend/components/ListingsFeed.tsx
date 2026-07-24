@@ -14,7 +14,6 @@ import {
   getScroll,
   saveFilterUi,
   getFilterUi,
-  LISTINGS_SOFT_TTL,
   LISTINGS_HARD_TTL,
   type ListingsCacheEntry,
 } from "../lib/listingsCache";
@@ -140,7 +139,6 @@ export default function ListingsFeed({
   const [relaxedSearch, setRelaxedSearch] = useState(!!initRef.current.entry?.relaxed);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(!initRef.current.entry);
-  const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState<boolean>(!!initRef.current.entry?.hasMore);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -242,13 +240,10 @@ export default function ListingsFeed({
       setRelaxedSearch(!!showable.relaxed);
       setHasMore(!!showable.hasMore);
       setLoading(false);
-      setRefreshing(age >= LISTINGS_SOFT_TTL);
     } else if (listingsRef.current.length > 0) {
-      setRefreshing(true);
       setLoading(false);
     } else {
       setLoading(true);
-      setRefreshing(false);
     }
     setError(null);
 
@@ -283,7 +278,7 @@ export default function ListingsFeed({
       if (categorySlug) {
         const cat = (catsData ?? []).find((c) => c.slug === categorySlug);
         if (!cat) {
-          if (mounted) { setListings([]); setRelaxedSearch(false); setHasMore(false); setListingsCache(cacheKey, []); setLoading(false); setRefreshing(false); }
+          if (mounted) { setListings([]); setRelaxedSearch(false); setHasMore(false); setListingsCache(cacheKey, []); setLoading(false); }
           return;
         }
         catId = cat.id;
@@ -390,11 +385,10 @@ export default function ListingsFeed({
       }
 
       setLoading(false);
-      setRefreshing(false);
     }
 
     if (!skipLoad) load();
-    else { setLoading(false); setRefreshing(false); }
+    else { setLoading(false); }
 
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -568,14 +562,6 @@ export default function ListingsFeed({
           izquierda y reparte con space-between; en las demás vistas queda a la derecha.
           Reserva su altura (minHeight) → sin salto de layout. */}
       <div style={{ position: "relative", borderBottom: "1px solid var(--border)", background: "#fff", padding: "0.6rem 1rem", display: "flex", justifyContent: homeExtras ? "space-between" : "flex-end", alignItems: "center", gap: 8, minHeight: 52 }}>
-        {/* "Atualizando…" vive en el centro libre de esta fila (posición absoluta) → aparece
-            y desaparece SIN mover un pixel del grid. La fila ya reserva su altura (minHeight),
-            así que no hay salto de layout. pointer-events:none → nunca bloquea los botones. */}
-        {refreshing && listings.length > 0 && (
-          <span aria-hidden style={{ position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "0.72rem", color: "var(--text-muted)", pointerEvents: "none" }}>
-            Atualizando…
-          </span>
-        )}
         {homeExtras && (
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Link href="/lojas" prefetch style={storePillLink}>Lojas</Link>

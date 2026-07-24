@@ -280,6 +280,16 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   (si el usuario pega sin `http`, se completa `https://` automáticamente). En la lista del admin,
   los de WhatsApp muestran `📱 +55…` y los de link muestran `🔗 dominio.com/...` (todo en
   `Banners()` de `frontend/app/admin/page.tsx`). Antes solo se podía WhatsApp.
+- **Ventana de fechas (2026-07-24):** cada banner tiene ahora una ventana de exhibición opcional
+  `valid_from` / `valid_until` (columnas `date` que **ya existían en `fase-1.sql`** pero nunca se
+  usaban; `fase-banner-datas.sql` idempotente las reasegura — corrida por el usuario 2026-07-24).
+  En `/admin` → Banners: campos "Primeiro dia que aparece" / "Último dia que aparece" en el alta y
+  edición inline (De/Até) en cada banner existente (`saveDates`, valida fin≥inicio). El filtrado se
+  hace en las queries de `page.tsx` (home) y `categorias/page.tsx` con dos `.or(...)`:
+  `valid_from.is.null,valid_from.lte.HOY` y `valid_until.is.null,valid_until.gte.HOY`, con
+  `HOY` = fecha en fuso `America/Bahia` (`toLocaleDateString("en-CA")`). **`valid_until` es
+  INCLUSIVO** (aparece todo ese día, pausa al día siguiente); vacío = sin límite (inicio vacío →
+  arranca ya). Se reevalúa solo con el ISR de 60s → arranca/pausa en la fecha sin intervención.
 - Varios activos en misma posición → rotan cada 4s con dots. Sin banners → placeholder "Seu
   negócio aqui! + Fale conosco".
 - **Orden de aparición (2026-07-20):** el primer banner que se ve al entrar a la página es el de
