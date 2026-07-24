@@ -1011,7 +1011,7 @@ feature va en su sección numerada correspondiente; acá solo un resumen con fec
   que recién compartía la app. Diagnóstico con `diagnostico-clicks-whatsapp.sql`: pocos aparatos
   y muchos clicks → pruebas de desarrollo acumuladas desde el 2026-06-18, sin ninguna
   deduplicación y mezclando contactos a vendedores con los "Fale conosco" que escriben al admin.
-  `fase-30-metricas-reais.sql` (⚠️ **el usuario debe correrlo en Supabase**; borra tracking a
+  `fase-30-metricas-reais.sql` (✅ **corrido en Supabase el 2026-07-24**; borra tracking a
   propósito) resetea los contadores, excluye al admin de las 4 RPCs, deduplica 30 min por
   `visitor_id`, agrega `visitor_id` a `listing_views`, cierra la policy de insert público de
   fase-2 y separa `wa_sellers_*` de `wa_admin_*`. Frontend: `lib/tracking.ts` manda el
