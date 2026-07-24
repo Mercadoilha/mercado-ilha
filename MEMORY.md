@@ -963,7 +963,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-23** — **Desplegado** (commits `75eb698` + `PENDIENTE`, push a `main`).
+- **2026-07-23** — **Desplegado** (commits `75eb698` + `d8f4352`, push a `main`).
   **Estadísticas de visitas del app (audiencia) + doc de métricas para el dueño.** Detalle
   estructural en **§14.1**. Resumen: hasta ahora solo se medía engagement (vistas de anuncios,
   clicks WA, banners, búsquedas); no había forma de saber cuánta gente entra a la app. Se agregó
