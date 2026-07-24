@@ -480,22 +480,21 @@ export default function ProfilePage() {
                     border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "0.75rem",
-                    gap: 8,
+                    gap: 6,
                   }}
                 >
                   <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
                     <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none" }}>
                       <div
                         style={{
-                          width: 82,
-                          height: 82,
+                          width: 94,
+                          height: 94,
                           borderRadius: 10,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
-                          border: "1px solid var(--border)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "2.2rem",
+                          fontSize: "2.4rem",
                           overflow: "hidden",
                           flexShrink: 0,
                           position: "relative",
@@ -506,7 +505,7 @@ export default function ProfilePage() {
                             src={firstPhoto}
                             alt={l.title}
                             fill
-                            sizes="82px"
+                            sizes="94px"
                             style={{ objectFit: "contain" }}
                           />
                         ) : "🛍️"}
@@ -514,21 +513,21 @@ export default function ProfilePage() {
                     </Link>
                     <Link
                       href={`/listings/${l.id}`}
-                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3 }}
+                      style={{ flex: 1, minWidth: 0, textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", justifyContent: "space-between", paddingTop: 1 }}
                     >
-                      <div style={{ fontWeight: 700, fontSize: "0.98rem", color: "#1e293b", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {l.title}
                       </div>
-                      <div style={{ fontSize: "1.05rem", color: "var(--blue-main)", fontWeight: 800, lineHeight: 1.1 }}>
+                      <div style={{ fontSize: "1.1rem", color: "var(--blue-main)", fontWeight: 800, lineHeight: 1.1 }}>
                         {listingPrice(l)}
                       </div>
-                      <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      <div style={{ display: "flex", gap: 12, fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: 600 }}>
                         <span title="Visualizações">👁️ {statsMap[l.id]?.views ?? 0}</span>
                         <span title="Contatos via WhatsApp">💬 {statsMap[l.id]?.wa_clicks ?? 0}</span>
                       </div>
                     </Link>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {/* Linha de cima: compartilhar + excluir, alinhados à direita */}
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                   <button
