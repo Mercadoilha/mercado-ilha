@@ -266,6 +266,53 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   de anúncios tem um pequeno respiro acima (`padding: "0.25rem 0 1rem"` em `StoreClient.tsx`
   — metade do espaço original de 0.5rem, ajustado a pedido do usuário após ficarem colados
   demais ao banner numa primeira versão sem espaço nenhum).
+- **Card "Meus anúncios" no perfil — rediseño completo (2026-07-24, commits `d23e354` →
+  `b436790`, `app/profile/page.tsx`):** foto à esquerda 108px (`Image fill sizes="108px"`,
+  `objectFit: contain`, `marginLeft: -4` para alinhar visualmente com o botão Destacar de baixo),
+  ao lado título (2 linhas clamp) → preço → uma linha com contadores 👁️ visualizações /
+  💬 contatos WhatsApp + status (Ativo/Pausado etc.), tudo dentro do mesmo `<Link>` para o
+  detalhe. Abaixo, uma fila de ações em **segmentos iguais** (`flexGrow:1 / flexBasis:0` via
+  `actionChipBase`): **Destacar → Compartilhar → Pausar/Reativar → Excluir** (chips soft,
+  Destacar em `--sand` sólido quando disponível). "Vendido" saiu dessa fila: agora é um
+  **botão de largura total** abaixo, com legenda "🏷️ Vendeu este produto? Marque como
+  vendido", visível **somente** para produtos vendáveis (categoria/subcategoria `is_product`,
+  ver §15.1) — se não aplica, a card termina na fila de ações. Cada anúncio tem seu próprio
+  botão **Compartilhar** (Web Share API, `url: origin + "/listings/" + id"`) além do
+  compartilhar geral da loja.
+- **Fotos em `/publish` e `/listings/[id]/edit` — miniaturas maiores + arrastar para
+  reordenar (2026-07-24):** as até 4 fotos passaram de quadrados fixos 72px em `flex-wrap`
+  para uma **grid de 4 colunas (`1fr` cada)** que ocupa toda a largura disponível (miniaturas
+  quase o dobro do tamanho anterior). Reordenar agora tem duas formas: **arrastar com o dedo**
+  (Pointer Events puros, hook novo `frontend/lib/usePhotoDragReorder.ts` — sem libs externas;
+  distingue toque de arrastre por um threshold de 8px de movimento, e evita que o "tap" de
+  ajustar foto dispare logo depois de soltar um arrastre) e as **setas ‹ › de respaldo**
+  (mesma lógica de antes, agora maiores/mais fáceis de tocar). Só existe nessas duas telas de
+  formulário — zero impacto na velocidade de navegação (pilar transversal). Build verificado:
+  `/publish` continua `○ Static`.
+
+## 6.1 VISTAS PRÉVIAS AO COMPARTILHAR (Open Graph) — 2026-07-24
+
+Antes, qualquer link compartilhado (WhatsApp, redes) mostrava só o logo do site. Agora:
+
+- **Anúncio (`/listings/[id]`):** `generateMetadata` em `page.tsx` usa
+  `lib/ogData.ts::getListingOg(id)` (fetch direto a PostgREST com a anon key, RLS já filtra
+  só anúncios ativos) para título + preço + **a 1ª foto do anúncio como imagem do preview**
+  (sem gerar imagem nova — usa a foto real). Cache via `next: { revalidate: OG_REVALIDATE }`
+  (**300s = 5min**), então a rota shell segue estática/ISR (T11: `dynamicParams=true` +
+  `generateStaticParams` vazio, sem lista de ids pré-gerada — ver §13).
+- **Loja (`/store/[id]`):** `opengraph-image.tsx` gera um **collage com `next/og`**
+  (`ImageResponse`, `runtime="nodejs"`) a partir de até 4 fotos de produtos da loja
+  (`getStoreOg`): 1 foto → tela cheia; 2 → lado a lado; 3 → uma grande + duas empilhadas;
+  4+ → **mosaico 2×2**. Sem fotos → fundo degradê azul liso. Só aceita **JPEG/PNG**
+  (`SAFE_TYPES`) — cada foto é buscada, verificada por `content-type` e descartada se não
+  servir, para o collage nunca quebrar (satori exige `width`/`height` numéricos por imagem,
+  por isso cada foto vira `data:` URI). Mesmo `OG_REVALIDATE` de 5 min.
+- **`og:site_name` "Mercado Ilha"** adicionado (antes não aparecia nome do site no preview).
+- **Circuito de volta em deep link:** de `/store/[id]`, a flecha ← usa `safeBack(router, "/")`
+  em vez de fixo — então quem chega por um link compartilhado de loja (sem histórico próprio)
+  volta ao início, e não a uma tela intermediária inexistente.
+- **Limitação conhecida:** um link/botão de compartilhar **não abre o app instalado** (PWA)
+  no iPhone — é impossível (restrição do iOS Safari), só abre no navegador.
 
 ## 7. PUBLICIDAD (BANNERS)
 
@@ -321,6 +368,12 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
 - **Skill `/banner-institucional`** (`.claude/skills/SKILL_BANNER_INSTITUCIONAL.md`): genera con
   Higgsfield, descarga, sube a `public/banners/`, push, retorna URL. ⚠️ correr
   `git config http.postBuffer 524288000` antes del push de imágenes.
+- **Rediseño de tarjetas en `/admin` (2026-07-24, `Banners()` en `app/admin/page.tsx`):** cada
+  banner ahora se ve como una tarjeta con **el banner completo (imagen) arriba, a todo el
+  ancho**, y una barra de acciones debajo alineada y del mismo tamaño (pausar/activar, editar,
+  eliminar, ↑↓ orden). Edición **inline** con ✏️: permite cambiar nombre y destino del clic
+  (WhatsApp/link) de un banner existente sin recrearlo. Las fechas De/Até (ver arriba) tienen
+  un ✕ para vaciarlas individualmente.
 - ⚠️ **Desde 2026-07-08** (`minimumCacheTTL` 31 días, ver §13): al reemplazar un banner existente
   **versionar el nombre del archivo** (`banner-institucional-v2.png`), nunca sobrescribir el mismo
   nombre — si no, `/_next/image` puede seguir sirviendo la versión vieja hasta un mes.
@@ -366,7 +419,7 @@ Router → no hay refetch RSC ni remount, las tabs ya montadas siguen vivas (res
 | `/listings/[id]` | Detalle: galería, precio, vendedor, WhatsApp (RPC lazy), denuncia. Botón editar para dueño. |
 | `/listings/[id]/edit` | Editar anuncio (solo dueño). |
 | `/publish` | Formulario: fotos, categoría→subcategoría, ubicación según tipo. Llama `/api/revalidate` al publicar. |
-| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 62×62 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats, botón ⭐ Destacar. 2 botones (Minha loja / Compartilhar) en fila arriba de la lista — Favoritos se mudó al home (ver §20). |
+| `/profile` | Perfil editable (nombre+WhatsApp), mis anuncios con miniatura 108×108 (`next/image`, primeira foto por `sort_order`), 👁️/💬 stats. Ações em segmentos iguais: Destacar → Compartilhar → Pausar → Excluir; "Vendido" é botão de largura total (só quando aplica) — ver §6. 2 botones (Minha loja / Compartilhar geral) en fila arriba de la lista — Favoritos se mudó al home (ver §20). |
 | `/store/[id]` | Tienda pública del vendedor (banner azul + sus anuncios). Botón ← usa `router.back()` (no vuelve fijo a `/listings`). |
 | `/lojas` | Directorio público de tiendas (buscar, filtrar por lugar, ordenar). Ver §20. `○ Static`. |
 | `/signin` | Tabs login + registro. Tras 3 logins fallidos → card "Criar nova senha". |
@@ -1029,6 +1082,16 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, merge `preview/link-previews` → `main`).
+  **Cierre de una tanda grande: vistas previas al compartir + banners (fechas/link/rediseño
+  admin) + rediseño de "Meus anúncios" + fotos más grandes con arrastrar en publicar/editar.**
+  Todo probado y aprobado por el usuario en preview antes de este merge (método fijo, ver
+  arriba). Detalle estructural: vistas previas OG en **§6.1**, banners en **§7**, card de
+  perfil y fotos de publish/edit en **§6**. Se restauró además en `CLAUDE.md` la sección
+  "MÉTODO FIJO — preview antes de producción" (regla de nunca pushear directo a `main`), que
+  se había perdido de una edición anterior del archivo. Build verificado sin errores;
+  `/publish`, `/profile`, `/store/[id]` conservan su tipo de ruta (Static/SSG).
 
 - **2026-07-24** — **Desplegado** (commit `7b76e33`, push a `main`).
   **`/admin`: la flecha "voltar" vuelve a la tab anterior.** Detalle en **§8** y lección en
