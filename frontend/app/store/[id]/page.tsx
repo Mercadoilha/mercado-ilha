@@ -29,7 +29,7 @@ export async function generateMetadata({
   return {
     title: name,
     description,
-    openGraph: { title: name, description, type: "website", locale: "pt_BR" },
+    openGraph: { title: name, description, siteName: "Mercado Ilha", type: "website", locale: "pt_BR" },
     twitter: { card: "summary_large_image", title: name, description },
   };
 }

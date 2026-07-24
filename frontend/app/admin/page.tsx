@@ -1161,7 +1161,7 @@ function Banners() {
                   ? b.link_url.replace(/^https?:\/\//i, "").replace(/\/$/, "")
                   : null;
                 return (
-                  <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "center" }}>
+                  <div key={b.id} className="card" style={{ padding: "0.75rem", display: "flex", gap: 10, alignItems: "flex-start" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={b.image_url} alt={b.title ?? ""} style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6, flexShrink: 0, background: "var(--blue-xlight)" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1180,23 +1180,23 @@ function Banners() {
                         </div>
                       )}
                       {/* Janela de exibição — editável direto no card. Vazio = sem limite. */}
-                      <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                        <label style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <label style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 3, flex: "1 1 120px", minWidth: 120 }}>
                           De
                           <input
                             type="date"
                             value={b.valid_from ?? ""}
                             onChange={(e) => saveDates(b.id, e.target.value, b.valid_until ?? "")}
-                            style={{ fontSize: "0.68rem", padding: "2px 4px", border: "1px solid var(--border)", borderRadius: 5, color: "#1e293b" }}
+                            style={{ width: "100%", fontSize: "0.72rem", padding: "5px 7px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
                           />
                         </label>
-                        <label style={{ fontSize: "0.62rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 2 }}>
+                        <label style={{ fontSize: "0.64rem", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: 3, flex: "1 1 120px", minWidth: 120 }}>
                           Até
                           <input
                             type="date"
                             value={b.valid_until ?? ""}
                             onChange={(e) => saveDates(b.id, b.valid_from ?? "", e.target.value)}
-                            style={{ fontSize: "0.68rem", padding: "2px 4px", border: "1px solid var(--border)", borderRadius: 5, color: "#1e293b" }}
+                            style={{ width: "100%", fontSize: "0.72rem", padding: "5px 7px", border: "1px solid var(--border)", borderRadius: 6, color: "#1e293b" }}
                           />
                         </label>
                       </div>

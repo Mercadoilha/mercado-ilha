@@ -42,6 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Mercado Ilha",
     description: "Marketplace de Tinharé",
+    siteName: "Mercado Ilha",
     type: "website",
     locale: "pt_BR",
     images: [{ url: "/icon-192.png", width: 192, height: 192, type: "image/png" }],

@@ -37,6 +37,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
+      siteName: "Mercado Ilha",
       type: "website",
       locale: "pt_BR",
       ...(og.photo ? { images: [{ url: og.photo }] } : {}),
