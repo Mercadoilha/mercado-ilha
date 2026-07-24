@@ -1083,7 +1083,7 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
-- **2026-07-24** — **Desplegado** (commit `PENDIENTE`, merge `preview/link-previews` → `main`).
+- **2026-07-24** — **Desplegado** (commit `06d3425`, merge `preview/link-previews` → `main`).
   **Cierre de una tanda grande: vistas previas al compartir + banners (fechas/link/rediseño
   admin) + rediseño de "Meus anúncios" + fotos más grandes con arrastrar en publicar/editar.**
   Todo probado y aprobado por el usuario en preview antes de este merge (método fijo, ver
