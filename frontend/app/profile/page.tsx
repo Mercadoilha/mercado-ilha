@@ -547,6 +547,9 @@ export default function ProfilePage() {
                       }
                       style={{
                         ...actionChipBase,
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 0,
                         background: canBump ? "#EF9F27" : "#fdf1da",
                         borderColor: canBump ? "#EF9F27" : "#f3dcaf",
                         cursor: canBump ? "pointer" : "not-allowed",
@@ -569,6 +572,9 @@ export default function ProfilePage() {
                     title="Compartilhar anúncio"
                     style={{
                       ...actionChipBase,
+                      flexGrow: 1,
+                      flexShrink: 1,
+                      flexBasis: 0,
                       background: "#eff6ff",
                       borderColor: "#bfdbfe",
                       color: "var(--blue-main)",
@@ -584,6 +590,9 @@ export default function ProfilePage() {
                       title={l.status === "active" ? "Pausar anúncio" : "Reativar anúncio"}
                       style={{
                         ...actionChipBase,
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 0,
                         background: l.status === "active" ? "#f8fafc" : "#ecfdf5",
                         borderColor: l.status === "active" ? "#e2e8f0" : "#a7f3d0",
                         cursor: toggling === l.id ? "not-allowed" : "pointer",
@@ -601,7 +610,9 @@ export default function ProfilePage() {
                     aria-label="Excluir anúncio"
                     style={{
                       ...actionChipBase,
-                      marginLeft: "auto",
+                      flexGrow: 1,
+                      flexShrink: 1,
+                      flexBasis: 0,
                       padding: "0 0.6rem",
                       background: "#fef2f2",
                       borderColor: "#fecaca",
