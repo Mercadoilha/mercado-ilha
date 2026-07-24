@@ -7,7 +7,7 @@
  * el banner o la vista del anuncio suceden igual.
  */
 import { supabase } from "./supabaseClient";
-import { getVisitorId } from "./visitorId";
+import { getSessionId, getVisitorId } from "./visitorId";
 
 export type WaContext = "listing" | "store" | "banner_cta" | "suggestion";
 
@@ -52,6 +52,27 @@ export function trackSearch(term: string, resultsCount: number): void {
       _term: t,
       _results_count: resultsCount,
       _visitor_id: getVisitorId(),
+    })
+    .then(() => {}, () => {});
+}
+
+/**
+ * Registra la apertura de una pantalla (métrica de audiencia del app).
+ * La ruta llega ya normalizada por VisitTracker: los ids numéricos se
+ * colapsan a ':id' para que el ranking de pantallas sea legible.
+ */
+export function trackAppVisit(path: string): void {
+  const isPwa =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true);
+
+  supabase
+    .rpc("track_app_visit", {
+      _path: path,
+      _visitor_id: getVisitorId(),
+      _session_id: getSessionId(),
+      _is_pwa: !!isPwa,
     })
     .then(() => {}, () => {});
 }

@@ -222,7 +222,7 @@ export default function AdminPage() {
 
       <div style={{ padding: "1rem" }}>
         <div style={{ display: tab === "dashboard" ? undefined : "none" }}><Dashboard /></div>
-        <div style={{ display: tab === "metricas" ? undefined : "none" }}><Metrics /></div>
+        <div style={{ display: tab === "metricas" ? undefined : "none" }}><Visits /><Metrics /></div>
         <div style={{ display: tab === "listings" ? undefined : "none" }}><Listings /></div>
         <div style={{ display: tab === "reports" ? undefined : "none" }}><Reports /></div>
         <div style={{ display: tab === "banners" ? undefined : "none" }}><Banners /></div>
@@ -284,6 +284,187 @@ function Dashboard() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Visitas del app (audiencia) — fase-29
+// ─────────────────────────────────────────────
+
+/** Nombre legible de cada pantalla para el ranking. */
+const PAGE_LABELS: Record<string, string> = {
+  "/": "Início",
+  "/listings": "Lista de anúncios",
+  "/listings/:id": "Detalhe do anúncio",
+  "/listings/:id/edit": "Editar anúncio",
+  "/categorias": "Categorias",
+  "/lojas": "Lojas",
+  "/store/:id": "Loja do vendedor",
+  "/favorites": "Favoritos",
+  "/profile": "Meu perfil",
+  "/publish": "Publicar anúncio",
+  "/signin": "Entrar",
+  "/forgot-password": "Recuperar senha",
+  "/informacao": "Informação útil",
+  "/instalar": "Instalar app",
+  "/termos": "Termos",
+};
+
+function pageLabel(path: string): string {
+  if (PAGE_LABELS[path]) return PAGE_LABELS[path];
+  if (path.startsWith("/category/")) return `Categoria: ${path.slice(10)}`;
+  return path;
+}
+
+function Visits() {
+  const [summary, setSummary] = useState<any>(null);
+  const [daily, setDaily] = useState<any[]>([]);
+  const [pages, setPages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [sumRes, dayRes, pageRes] = await Promise.all([
+        supabase.rpc("get_visits_summary"),
+        supabase.rpc("get_visits_daily", { _days: 14 }),
+        supabase.rpc("get_top_pages", { _days: 7, _limit: 8 }),
+      ]);
+      setSummary(sumRes.data ?? null);
+      setDaily(dayRes.data ?? []);
+      setPages(pageRes.data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) return <div style={{ textAlign: "center", paddingTop: "2rem" }}><div className="spinner" /></div>;
+
+  if (!summary) {
+    return (
+      <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+        Ainda não há dados de visitas. Verifique se a migração de visitas foi executada no Supabase.
+      </div>
+    );
+  }
+
+  const cards = [
+    { label: "Visitas hoje", value: summary.visits_today ?? 0, icon: "📱", color: "var(--blue-main)" },
+    { label: "Pessoas hoje", value: summary.visitors_today ?? 0, icon: "🧍", color: "var(--blue-main)" },
+    { label: "Visitas (7 dias)", value: summary.visits_7d ?? 0, icon: "📈", color: "#0F6E56" },
+    { label: "Pessoas (7 dias)", value: summary.visitors_7d ?? 0, icon: "👥", color: "#0F6E56" },
+    { label: "Visitas (30 dias)", value: summary.visits_30d ?? 0, icon: "🗓️", color: "var(--text-muted)" },
+    { label: "Pessoas (30 dias)", value: summary.visitors_30d ?? 0, icon: "🌎", color: "var(--text-muted)" },
+  ];
+
+  const maxVisits = Math.max(1, ...daily.map((d: any) => Number(d.visits) || 0));
+  const sessions7d = Number(summary.sessions_7d) || 0;
+  const visits7d = Number(summary.visits_7d) || 0;
+  const pwa7d = Number(summary.pwa_visits_7d) || 0;
+  const pagesPerSession = sessions7d > 0 ? (visits7d / sessions7d).toFixed(1) : "—";
+  const pwaShare = visits7d > 0 ? Math.round((pwa7d / visits7d) * 100) : 0;
+
+  const detail = [
+    { label: "Entradas no app (7 dias)", value: sessions7d },
+    { label: "Telas por entrada", value: pagesPerSession },
+    { label: "Pessoas que voltaram (7 dias)", value: summary.returning_7d ?? 0 },
+    { label: "Visitas pelo app instalado", value: `${pwaShare}%` },
+  ];
+
+  return (
+    <div style={{ marginBottom: "1.5rem" }}>
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.875rem" }}>Visitas do app</h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem" }}>
+        {cards.map((c) => (
+          <div key={c.label} className="card" style={{ padding: "1rem", textAlign: "center" }}>
+            <div style={{ fontSize: "1.75rem", marginBottom: 4 }}>{c.icon}</div>
+            <div style={{ fontSize: "1.6rem", fontWeight: 900, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Gráfico de los últimos 14 días */}
+      <div className="card" style={{ padding: "0.875rem", marginTop: "0.75rem" }}>
+        <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.75rem" }}>
+          Últimos 14 dias
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 88 }}>
+          {daily.map((d: any) => {
+            const v = Number(d.visits) || 0;
+            const day = new Date(`${d.day}T12:00:00`);
+            return (
+              <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "var(--text-muted)" }}>{v || ""}</span>
+                <div
+                  title={`${day.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}: ${v} visitas`}
+                  style={{
+                    width: "100%",
+                    height: `${Math.max(2, (v / maxVisits) * 56)}px`,
+                    background: v > 0 ? "var(--blue-main)" : "var(--border)",
+                    borderRadius: "3px 3px 0 0",
+                  }}
+                />
+                <span style={{ fontSize: "0.52rem", color: "var(--text-muted)" }}>
+                  {day.toLocaleDateString("pt-BR", { day: "2-digit" })}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detalle de comportamiento */}
+      <div className="card" style={{ padding: "0.5rem 0.875rem", marginTop: "0.75rem" }}>
+        {detail.map((d, i) => (
+          <div
+            key={d.label}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "0.5rem 0",
+              borderBottom: i < detail.length - 1 ? "1px solid var(--border)" : "none",
+            }}
+          >
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>{d.label}</span>
+            <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#1e293b" }}>{d.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Pantallas más visitadas */}
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "1.25rem 0 0.75rem" }}>
+        Telas mais visitadas (7 dias)
+      </h2>
+      {pages.length === 0 ? (
+        <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+          Ainda não há visitas registradas.
+        </div>
+      ) : (
+        <div className="card" style={{ padding: "0.5rem 0.875rem" }}>
+          {pages.map((row: any, i: number) => (
+            <div
+              key={row.path}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.625rem",
+                padding: "0.55rem 0",
+                borderBottom: i < pages.length - 1 ? "1px solid var(--border)" : "none",
+              }}
+            >
+              <span style={{ fontWeight: 900, color: "var(--text-muted)", minWidth: 20, fontSize: "0.85rem" }}>{i + 1}</span>
+              <span style={{ flex: 1, fontSize: "0.85rem", color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {pageLabel(row.path)}
+              </span>
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--blue-main)", whiteSpace: "nowrap" }}>📱 {row.visits}</span>
+              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0F6E56", whiteSpace: "nowrap" }}>👥 {row.visitors}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

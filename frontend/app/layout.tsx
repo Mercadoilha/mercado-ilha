@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import BottomNav from "../components/BottomNav";
 import RegisterSW from "../components/RegisterSW";
 import InstallProgressBar from "../components/InstallProgressBar";
+import VisitTracker from "../components/VisitTracker";
 import { SessionProvider } from "../contexts/SessionContext";
 
 export const viewport: Viewport = {
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
       : "http://localhost:3000")
   ),
   title: "Mercado Ilha",
-  description: "Marketplace de Tinharé — Morro de São Paulo. Compre, venda e encontre serviços na ilha.",
+  description: "Marketplace de Tinharé. Compre, venda e encontre serviços na ilha.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Mercado Ilha",
-    description: "Marketplace de Tinharé — Morro de São Paulo",
+    description: "Marketplace de Tinharé",
     type: "website",
     locale: "pt_BR",
     images: [{ url: "/icon-192.png", width: 192, height: 192, type: "image/png" }],
@@ -137,6 +138,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BottomNav />
           <RegisterSW />
           <InstallProgressBar />
+          <VisitTracker />
         </SessionProvider>
         <SpeedInsights />
       </body>
