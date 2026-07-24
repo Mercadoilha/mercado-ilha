@@ -487,8 +487,8 @@ export default function ProfilePage() {
                     <Link href={`/listings/${l.id}`} style={{ flexShrink: 0, textDecoration: "none", display: "block" }}>
                       <div
                         style={{
-                          width: 96,
-                          height: 96,
+                          width: 108,
+                          height: 108,
                           borderRadius: 10,
                           background: firstPhoto ? "#fff" : "var(--blue-xlight)",
                           display: "flex",
@@ -505,7 +505,7 @@ export default function ProfilePage() {
                             src={firstPhoto}
                             alt={l.title}
                             fill
-                            sizes="96px"
+                            sizes="108px"
                             style={{ objectFit: "contain" }}
                           />
                         ) : "🛍️"}
@@ -531,42 +531,8 @@ export default function ProfilePage() {
                       </div>
                     </Link>
                   </div>
-                  {/* Ações agrupadas logo abaixo da foto, próximas ao conteúdo */}
+                  {/* Ações agrupadas logo abaixo da foto: Destacar, Compartilhar, Pausar e Excluir */}
                   <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, rowGap: 6 }}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      compartilhar({
-                        title: l.title,
-                        text: "Veja este anúncio no Mercado Ilha 🏝️",
-                        url: window.location.origin + "/listings/" + l.id,
-                      })
-                    }
-                    title="Compartilhar anúncio"
-                    style={{
-                      ...actionChipBase,
-                      background: "#eff6ff",
-                      borderColor: "#bfdbfe",
-                      color: "var(--blue-main)",
-                    }}
-                  >
-                    <ShareIcon size={14} /> Compartilhar
-                  </button>
-                  {l.categories?.is_product && l.subcategories?.is_product !== false && l.status !== "blocked" && l.status !== "sold" && (
-                    <button
-                      type="button"
-                      onClick={() => { setSoldModal({ id: l.id, title: l.title }); setSoldStep("confirm"); }}
-                      title="Marcar como vendido e remover o anúncio"
-                      style={{
-                        ...actionChipBase,
-                        background: "#ecfdf5",
-                        borderColor: "#a7f3d0",
-                        color: "#0F6E56",
-                      }}
-                    >
-                      Vendido
-                    </button>
-                  )}
                   {l.status === "active" && (
                     <button
                       type="button"
@@ -591,6 +557,25 @@ export default function ProfilePage() {
                       {cdMin > 0 ? `⭐ ${cdMin}min` : "⭐ Destacar"}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      compartilhar({
+                        title: l.title,
+                        text: "Veja este anúncio no Mercado Ilha 🏝️",
+                        url: window.location.origin + "/listings/" + l.id,
+                      })
+                    }
+                    title="Compartilhar anúncio"
+                    style={{
+                      ...actionChipBase,
+                      background: "#eff6ff",
+                      borderColor: "#bfdbfe",
+                      color: "var(--blue-main)",
+                    }}
+                  >
+                    <ShareIcon size={14} /> Compartilhar
+                  </button>
                   {l.status !== "blocked" && l.status !== "sold" && (
                     <button
                       type="button"
@@ -627,6 +612,31 @@ export default function ProfilePage() {
                     🗑
                   </button>
                   </div>
+                  {/* Vendido: só para produtos vendíveis. Botão largura total, embaixo das ações,
+                      com instrução clara. Se não corresponder, a card fecha aqui. */}
+                  {l.categories?.is_product && l.subcategories?.is_product !== false && l.status !== "blocked" && l.status !== "sold" && (
+                    <button
+                      type="button"
+                      onClick={() => { setSoldModal({ id: l.id, title: l.title }); setSoldStep("confirm"); }}
+                      title="Marcar como vendido e remover o anúncio"
+                      style={{
+                        ...actionChipBase,
+                        width: "100%",
+                        height: "auto",
+                        minHeight: 40,
+                        padding: "0.5rem 0.7rem",
+                        whiteSpace: "normal",
+                        lineHeight: 1.25,
+                        textAlign: "center",
+                        background: "#ecfdf5",
+                        borderColor: "#a7f3d0",
+                        color: "#0F6E56",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      🏷️ Vendeu este produto? Marque como vendido
+                    </button>
+                  )}
                 </div>
                 {bumpMsg && bumpMsg.id === l.id && (
                   <div style={{ fontSize: "0.72rem", fontWeight: 600, color: bumpMsg.ok ? "#0f6e56" : "#b45309", padding: "0 0.25rem" }}>
