@@ -9,8 +9,8 @@ import { loadCategorySlugsWithSubs } from "../lib/catalogCache";
 // Tres tipos de sugerencia, en este orden de prioridad:
 //  - "term": la búsqueda particular (texto). Primera y más específica.
 //            Ej.: "iph" → "iphone" → muestra solo iphones.
-//            Al elegirla NO navega: completa la barra para que el usuario
-//            pueda agregar más texto y recién ahí tocar Buscar.
+//            Tocarla BUSCA directo (igual que Mercado Livre). Para seguir escribiendo
+//            está la flechita ↖ al costado, que solo completa la barra.
 //  - "nav" (categoría/subcategoría): relacionadas, navegan directo.
 type Suggestion = {
   label: string;
@@ -402,28 +402,18 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
     router.push(`/listings?q=${encodeURIComponent(q)}`);
   }
 
-  // Término ya elegido: la barra quedó completada con él y con el espacio final,
-  // así que en la lista se ve entero en negrita. Volver a tocarlo busca.
-  const isChosenTerm = useCallback(
-    (item: Suggestion) =>
-      item.kind === "term" && query.endsWith(" ") && fold(norm(query)) === fold(norm(item.label)),
-    [query],
-  );
-
-  // Tocar una sugerencia: categoría/subcategoría navega directo; un término
-  // completa la barra y deja el cursor después de un espacio, para poder seguir
-  // escribiendo la palabra siguiente. El espacio no entra en la búsqueda
-  // (goFreeText recorta). Tocar de nuevo el término ya elegido → buscar.
+  // Tocar una sugerencia SIEMPRE dispara la búsqueda: una categoría/subcategoría
+  // abre su listado, un término busca ese texto. No hace falta tocar "Buscar".
   function selectSuggestion(item: Suggestion) {
-    if (item.kind === "nav") {
-      goHref(item.href);
-      return;
-    }
-    if (isChosenTerm(item)) {
-      goFreeText(item.label);
-      return;
-    }
-    setQuery(item.label + " ");
+    if (item.kind === "nav") goHref(item.href);
+    else goFreeText(item.label);
+  }
+
+  // Flechita ↖ al costado del término: completa la barra en vez de buscar, y deja el
+  // cursor después de un espacio para seguir escribiendo la palabra siguiente. El
+  // espacio no entra en la búsqueda (goFreeText recorta).
+  function fillWithTerm(label: string) {
+    setQuery(label + " ");
     setActiveIdx(-1);
     caretToEndRef.current = true;
     inputRef.current?.focus();
@@ -598,12 +588,28 @@ export default function BuscaAutocomplete({ defaultValue = "", flush = false }: 
                 }}>
                   em {item.hint}
                 </span>
-              ) : isChosenTerm(item) ? null : (
-                // Señal de que el término completa la barra (estilo Mercado Livre).
-                // El término ya elegido no la lleva: tocarlo busca, no completa.
-                <span aria-hidden="true" style={{ fontSize: "0.85rem", color: "#94a3b8", flexShrink: 0 }}>
+              ) : (
+                // Estilo Mercado Livre: tocar la fila busca; esta flecha solo completa la
+                // barra para seguir escribiendo. stopPropagation para no disparar la búsqueda.
+                <button
+                  type="button"
+                  aria-label={`Completar a busca com ${item.label}`}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => { e.stopPropagation(); fillWithTerm(item.label); }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "0.25rem 0.35rem",
+                    margin: "-0.25rem -0.35rem",
+                    fontSize: "0.95rem",
+                    lineHeight: 1,
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
                   ↖
-                </span>
+                </button>
               )}
             </SuggestionItem>
           ))}

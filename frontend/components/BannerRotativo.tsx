@@ -24,15 +24,22 @@ const SLIDE_MS = 500;
 export default function BannerRotativo({ position, banners, adminWa, bannerInterval }: Props) {
   const total = banners.length;
   const loop = total > 1;
-  // Clone do primeiro banner no fim do trilho: assim o carrossel sempre corre para a
-  // esquerda. Ao chegar no clone volta ao início sem animação (o olho não percebe).
-  const slides = loop ? [...banners, banners[0]] : banners;
+  // Clone do último banner no início e do primeiro no fim: o trilho pode correr para os
+  // dois lados sem "bater na parede". Ao cair num clone volta ao original sem animação
+  // (o olho não percebe). Por isso o banner real nº 0 fica na posição 1 do trilho.
+  const slides = loop ? [banners[total - 1], ...banners, banners[0]] : banners;
+  const first = loop ? 1 : 0;
+  const last = loop ? total : 0;
 
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(first);
   const [animate, setAnimate] = useState(true);
   const [resetKey, setResetKey] = useState(0);
   const [entered, setEntered] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  // Estado do arrasto com o dedo. Fica em ref (não em state) para mover o trilho
+  // direto no DOM durante o gesto: sem re-render por quadro, o deslize fica suave.
+  const drag = useRef({ on: false, x0: 0, y0: 0, dx: 0, axis: "" as "" | "h" | "v", moved: false });
 
   // Fade-in de entrada: ao abrir a tela (Início ou Categorias) o carrossel sempre começa
   // no primeiro banner. Sem isto ele aparecia de forma seca. Só um fade de CSS no
@@ -61,16 +68,17 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
     };
   }, [loop, bannerInterval, resetKey]);
 
-  // Chegou no clone → salta de volta ao primeiro com a animação desligada.
+  // Caiu num clone (uma ponta ou a outra) → salta para o original com a animação desligada.
   useEffect(() => {
-    if (!loop || idx !== total) return;
+    if (!loop) return;
+    const jumpTo = idx === total + 1 ? first : idx === 0 ? last : null;
+    if (jumpTo === null) return;
     const t = setTimeout(() => {
       setAnimate(false);
-      setIdx(0);
-      setResetKey((k) => k + 1);
+      setIdx(jumpTo);
     }, SLIDE_MS + 20);
     return () => clearTimeout(t);
-  }, [idx, total, loop]);
+  }, [idx, total, loop, first, last]);
 
   // Religa a animação só depois que o salto já foi pintado.
   useEffect(() => {
@@ -85,12 +93,68 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
     };
   }, [animate]);
 
-  const active = idx % total || 0;
+  // Qual banner REAL está à vista (o trilho tem os clones das pontas).
+  const active = loop ? (idx - 1 + total) % total : 0;
 
   const goTo = (i: number) => {
     setAnimate(true);
-    setIdx(i);
+    setIdx(loop ? i + 1 : i);
     setResetKey((k) => k + 1);
+  };
+
+  // ── Arrastar com o dedo (os dois sentidos) ────────────────────────────────
+  // Enquanto o dedo está na tela o trilho acompanha em tempo real; ao soltar,
+  // passa de banner se o arrasto foi decidido, senão volta ao lugar.
+  const slideStep = 100 / slides.length; // largura de um slide em % do trilho
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!loop) return;
+    if (timer.current) clearInterval(timer.current); // pausa o automático durante o gesto
+    drag.current = { on: true, x0: e.clientX, y0: e.clientY, dx: 0, axis: "", moved: false };
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d.on) return;
+    const dx = e.clientX - d.x0;
+    const dy = e.clientY - d.y0;
+    if (!d.axis) {
+      // Decide uma única vez se o gesto é horizontal (banner) ou vertical (rolar a página).
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      d.axis = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      if (d.axis === "h") e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+    if (d.axis !== "h") return;
+    d.dx = dx;
+    d.moved = true;
+    const el = trackRef.current;
+    if (el) {
+      el.style.transition = "none";
+      el.style.transform = `translateX(calc(${-idx * slideStep}% + ${dx}px))`;
+    }
+  };
+
+  const endDrag = () => {
+    const d = drag.current;
+    if (!d.on) return;
+    const width = trackRef.current?.parentElement?.offsetWidth ?? 320;
+    let next = idx;
+    if (d.axis === "h") {
+      const threshold = Math.max(40, width * 0.18); // arrasto curto demais → volta ao lugar
+      if (d.dx <= -threshold) next = idx + 1;
+      else if (d.dx >= threshold) next = idx - 1;
+    }
+    drag.current = { ...d, on: false, axis: "", dx: 0 };
+    // Escreve já o destino no DOM (mesmos valores que o React vai renderizar): sem isto o
+    // trilho ficaria preso no "transition: none" que o arrasto deixou.
+    const el = trackRef.current;
+    if (el) {
+      el.style.transition = `transform ${SLIDE_MS}ms ease`;
+      el.style.transform = `translateX(-${next * slideStep}%)`;
+    }
+    setAnimate(true);
+    if (next !== idx) setIdx(next);
+    setResetKey((k) => k + 1); // religa o automático a partir de agora
   };
 
   // ── No banners ──
@@ -137,6 +201,10 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
   // primeiro carrega com priority; os demais sob demanda (não pesam no carregamento inicial).
   const content = (
     <div
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
       style={{
         position: "relative",
         borderRadius: 0,
@@ -145,14 +213,17 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
         background: "var(--blue-xlight)",
         opacity: entered ? 1 : 0,
         transition: "opacity 0.6s ease",
+        // pan-y: o dedo para cima/baixo continua rolando a página; para os lados é o banner.
+        touchAction: "pan-y",
       }}
     >
       <div
+        ref={trackRef}
         style={{
           display: "flex",
           height: "100%",
           width: `${slides.length * 100}%`,
-          transform: `translateX(-${idx * (100 / slides.length)}%)`,
+          transform: `translateX(-${idx * slideStep}%)`,
           transition: animate ? `transform ${SLIDE_MS}ms ease` : "none",
         }}
       >
@@ -164,7 +235,8 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
                 alt={b.title ?? "Banner"}
                 fill
                 sizes="100vw"
-                priority={i === 0}
+                priority={i === first}
+                draggable={false}
                 style={{ objectFit: "cover", display: "block" }}
               />
             </div>
@@ -179,7 +251,16 @@ export default function BannerRotativo({ position, banners, adminWa, bannerInter
                   href={b.link_url}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={() => trackBannerClick(b.id, position ?? null)}
+                  // Arrastar para trocar de banner não deve abrir o anunciante.
+                  onClick={(e) => {
+                    if (drag.current.moved) {
+                      e.preventDefault();
+                      drag.current.moved = false;
+                      return;
+                    }
+                    trackBannerClick(b.id, position ?? null);
+                  }}
+                  draggable={false}
                   style={{ textDecoration: "none", display: "block", width: "100%", height: "100%" }}
                 >
                   {slide}
