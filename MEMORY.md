@@ -178,10 +178,13 @@ Cada categoría muestra badge `#N` y selector de sección en su form. Fuente de 
   `title_norm`/`description_norm`/`name_norm` (minúsculas + `unaccent`, `fase-19-busca-sem-acentos.sql`,
   corrida por el usuario) en `listings`/`categories`/`subcategories`, con índices GIN trigram; "pao"
   ahora encuentra "Pão". Búsqueda multi-palabra por AND sobre esas columnas (`lib/searchNorm.ts` en
-  frontend, `fold()`/`foldWords()`), tanto en el autocomplete como en `/listings`. Tocar una
-  sugerencia de **término** ya no navega: completa la barra (con espacio final, ícono ↖) para
-  que el usuario agregue más texto antes de tocar Buscar; sugerencias de **categoría/subcategoría**
-  siguen navegando directo. Enter con una sugerencia resaltada por teclado sí busca/navega directo.
+  frontend, `fold()`/`foldWords()`), tanto en el autocomplete como en `/listings`. Tocar cualquier
+  sugerencia **ya busca directo** (término → navega a `/listings?q=...`; categoría/subcategoría →
+  navega a su página) — botón ↖ aparte (`fillWithTerm`, para de propagarse con `stopPropagation`)
+  solo completa la barra con el término + espacio para seguir escribiendo, sin disparar la búsqueda
+  (2026-07-25, revertido del comportamiento anterior donde tocar un término solo completaba: el
+  usuario prefirió que el toque busque, y dejar el ↖ como acción aparte para "completar y seguir
+  escribiendo"). Enter con una sugerencia resaltada por teclado también busca/navega directo.
   **Ajustes (2026-07-08, commit `80181f1`):** el filtro pasó de substring (`%pa%`, coincidía en
   cualquier parte del texto — "pa" traía casi todos los anuncios por el "para" de una descripción)
   a **inicio de palabra** (`prefixFilter()` en `searchNorm.ts`: `col.ilike.w*` OR `col.ilike.* w*`).
@@ -352,6 +355,13 @@ Antes, qualquer link compartilhado (WhatsApp, redes) mostrava só o logo do site
   agregar el fetch + `<BannerRotativo position="listado">` ahí.
 - **Layout:** ancho completo, sin border-radius ni etiqueta "PUBLICIDADE", pegado al header.
   Componente `BannerRotativo.tsx`.
+- **Arrastrable con el dedo, en los dos sentidos (2026-07-25, commit `272619f`):** además de la
+  rotación automática, el carrusel ahora se puede arrastrar/deslizar manualmente para adelante y
+  para atrás (Pointer Events, `touchAction: "pan-y"` para no interferir con el scroll vertical de
+  la página). Trilho con clones en ambas puntas (antes solo al final) para que el loop infinito
+  funcione arrastrando en cualquier dirección. Arrastrar y soltar sin pasar el umbral (~18% del
+  ancho) vuelve al banner actual; si se suelta en medio de un arrastre no se cuenta como clic al
+  anunciante.
 - **Imágenes — DOS orígenes posibles, no asumir uno solo (⚠️ 2026-07-22):** la mayoría vive como
   archivo estático en `frontend/public/banners/` (URL `https://mercadoilha.vercel.app/banners/<x>.png`,
   va directo en `image_url`) pero alguno puede haberse subido directo a Cloudflare R2 (URL
@@ -1082,6 +1092,12 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-07-25** — **Desplegado** (commit `272619f`, merge `preview/banner-busca` → `main`).
+  **Banner arrastrable en los dos sentidos + toque en sugerencia de búsqueda ya busca directo.**
+  Probado y aprobado por el usuario en preview antes de este merge. Detalle estructural: banner
+  en **§7**, buscador en la entrada de Búsqueda autocomplete (arriba en esta sección). Build
+  verificado (`tsc --noEmit` sin errores, `npm run build` completo, rutas intactas).
 
 - **2026-07-24** — **Desplegado** (commit `06d3425`, merge `preview/link-previews` → `main`).
   **Cierre de una tanda grande: vistas previas al compartir + banners (fechas/link/rediseño
