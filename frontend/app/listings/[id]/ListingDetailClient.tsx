@@ -408,12 +408,19 @@ export default function ListingDetailPage() {
         <h1 style={{ fontSize: "1rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
           {listing.title}
         </h1>
-        {!isOwner && (
+        {/* Ações rápidas do cabeçalho: compartilhar + favoritar, mesmo estilo redondo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <button
             type="button"
-            onClick={toggleFavorite}
-            disabled={favBusy}
-            title={session ? (isFavorite ? "Remover dos favoritos" : "Salvar nos favoritos") : "Entre para favoritar"}
+            onClick={() =>
+              compartilhar({
+                title: listing.title,
+                text: "Vi este anúncio no Mercado Ilha: " + listing.title,
+                url: window.location.href,
+              })
+            }
+            title="Compartilhar anúncio"
+            aria-label="Compartilhar anúncio"
             style={{
               background: "rgba(255,255,255,0.15)",
               border: "none",
@@ -423,15 +430,40 @@ export default function ListingDetailPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              cursor: favBusy ? "wait" : "pointer",
-              fontSize: "1.15rem",
+              cursor: "pointer",
+              color: "#fff",
+              padding: 0,
               flexShrink: 0,
               transition: "background 0.15s, transform 0.1s",
             }}
           >
-            {favBusy ? "⏳" : isFavorite ? "❤️" : "🤍"}
+            <ShareIcon size={17} />
           </button>
-        )}
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={toggleFavorite}
+              disabled={favBusy}
+              title={session ? (isFavorite ? "Remover dos favoritos" : "Salvar nos favoritos") : "Entre para favoritar"}
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                border: "none",
+                borderRadius: "50%",
+                width: 36,
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: favBusy ? "wait" : "pointer",
+                fontSize: "1.15rem",
+                flexShrink: 0,
+                transition: "background 0.15s, transform 0.1s",
+              }}
+            >
+              {favBusy ? "⏳" : isFavorite ? "❤️" : "🤍"}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* ── Galería de fotos ── */}
