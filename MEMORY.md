@@ -1093,6 +1093,14 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
 
+- **2026-07-26** — **Desplegado** (commit `b4c5dc7`, merge `preview/compartir-header` → `main`).
+  **Botón de compartir en el cabeçalho del anúncio, al lado del corazón.** En
+  `app/listings/[id]/ListingDetailClient.tsx`: se agregó un botón redondo (mismo estilo
+  translúcido y tamaño que el de favoritar, ícono `ShareIcon`) junto al corazón en el header del
+  detalle. Usa la misma función `compartilhar()` que ya usaba el botón grande "Compartilhar
+  anúncio" más abajo (queda igual, no se tocó). Visible también para el dueño del anúncio (el
+  corazón sigue sin mostrarse ahí). Build verificado: `/listings/[id]` sigue con su tipo de ruta.
+
 - **2026-07-25** — **Desplegado** (commit `272619f`, merge `preview/banner-busca` → `main`).
   **Banner arrastrable en los dos sentidos + toque en sugerencia de búsqueda ya busca directo.**
   Probado y aprobado por el usuario en preview antes de este merge. Detalle estructural: banner
