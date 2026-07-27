@@ -351,22 +351,36 @@ function pageLabel(path: string): string {
   return path;
 }
 
+/** De dónde vino la entrada — marcador `?de=` del link (fase-31). */
+const SOURCE_LABELS: Record<string, string> = {
+  grupo: "Grupos de WhatsApp",
+  instagram: "Instagram",
+};
+
+function sourceLabel(source: string | null): string {
+  if (!source) return "Direto (sem link marcado)";
+  return SOURCE_LABELS[source] ?? source;
+}
+
 function Visits() {
   const [summary, setSummary] = useState<any>(null);
   const [daily, setDaily] = useState<any[]>([]);
   const [pages, setPages] = useState<any[]>([]);
+  const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [sumRes, dayRes, pageRes] = await Promise.all([
+      const [sumRes, dayRes, pageRes, srcRes] = await Promise.all([
         supabase.rpc("get_visits_summary"),
         supabase.rpc("get_visits_daily", { _days: 14 }),
         supabase.rpc("get_top_pages", { _days: 7, _limit: 8 }),
+        supabase.rpc("get_visit_sources", { _days: 30 }),
       ]);
       setSummary(sumRes.data ?? null);
       setDaily(dayRes.data ?? []);
       setPages(pageRes.data ?? []);
+      setSources(srcRes.data ?? []);
       setLoading(false);
     }
     load();
@@ -467,6 +481,48 @@ function Visits() {
           </div>
         ))}
       </div>
+
+      {/* De dónde vienen las entradas — marcador ?de= (fase-31) */}
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "1.25rem 0 0.75rem" }}>
+        De onde vêm (30 dias)
+      </h2>
+      {sources.length === 0 ? (
+        <div className="card" style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+          Ainda não há entradas registradas.
+        </div>
+      ) : (
+        <div className="card" style={{ padding: "0.5rem 0.875rem" }}>
+          {sources.map((row: any, i: number) => {
+            const total = sources.reduce((n: number, r: any) => n + (Number(r.sessions) || 0), 0);
+            const share = total > 0 ? Math.round((Number(row.sessions) / total) * 100) : 0;
+            const marcado = !!row.source;
+            return (
+              <div
+                key={row.source ?? "direto"}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.625rem",
+                  padding: "0.55rem 0",
+                  borderBottom: i < sources.length - 1 ? "1px solid var(--border)" : "none",
+                }}
+              >
+                <span style={{ fontSize: "1rem" }}>{marcado ? "🔗" : "🌐"}</span>
+                <span style={{ flex: 1, fontSize: "0.85rem", color: "#1e293b", fontWeight: marcado ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {sourceLabel(row.source)}
+                </span>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap" }}>{share}%</span>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--blue-main)", whiteSpace: "nowrap" }}>📲 {row.sessions}</span>
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0F6E56", whiteSpace: "nowrap" }}>👥 {row.visitors}</span>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", padding: "0.5rem 0 0.25rem", lineHeight: 1.4 }}>
+            📲 entradas no app · 👥 pessoas diferentes. Cada entrada conta uma vez, mesmo que a
+            pessoa abra várias telas.
+          </div>
+        </div>
+      )}
 
       {/* Pantallas más visitadas */}
       <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", margin: "1.25rem 0 0.75rem" }}>

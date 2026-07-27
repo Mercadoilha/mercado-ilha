@@ -60,21 +60,31 @@ export function trackSearch(term: string, resultsCount: number): void {
  * Registra la apertura de una pantalla (métrica de audiencia del app).
  * La ruta llega ya normalizada por VisitTracker: los ids numéricos se
  * colapsan a ':id' para que el ranking de pantallas sea legible.
+ *
+ * `source` (fase-31) es el marcador `?de=` del link por el que entró la
+ * persona ('grupo' para los links que salen del Estúdio a los grupos de
+ * WhatsApp). Solo lo trae la PRIMERA pantalla de la visita, así una
+ * entrada no se cuenta dos veces.
+ *
+ * Sin source se llama a la RPC de 4 parámetros de fase-29 — la de 5 es
+ * una sobrecarga. Así el tracking normal sigue funcionando aunque la
+ * migración de fase-31 todavía no se haya corrido en la base.
  */
-export function trackAppVisit(path: string): void {
+export function trackAppVisit(path: string, source?: string | null): void {
   const isPwa =
     typeof window !== "undefined" &&
     (window.matchMedia?.("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true);
 
-  supabase
-    .rpc("track_app_visit", {
-      _path: path,
-      _visitor_id: getVisitorId(),
-      _session_id: getSessionId(),
-      _is_pwa: !!isPwa,
-    })
-    .then(() => {}, () => {});
+  const args: Record<string, unknown> = {
+    _path: path,
+    _visitor_id: getVisitorId(),
+    _session_id: getSessionId(),
+    _is_pwa: !!isPwa,
+  };
+  if (source) args._source = source;
+
+  supabase.rpc("track_app_visit", args).then(() => {}, () => {});
 }
 
 /** Registra una vista de anuncio. */
