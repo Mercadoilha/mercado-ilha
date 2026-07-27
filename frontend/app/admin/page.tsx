@@ -354,6 +354,7 @@ function pageLabel(path: string): string {
 /** De dónde vino la entrada — marcador `?de=` del link (fase-31). */
 const SOURCE_LABELS: Record<string, string> = {
   grupo: "Grupos de WhatsApp",
+  compartilhado: "Compartilhado por usuários",
   instagram: "Instagram",
 };
 
