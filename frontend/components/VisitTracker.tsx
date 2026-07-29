@@ -11,6 +11,8 @@ import { trackAppVisit } from "../lib/tracking";
  * Reglas de rendimiento (pilar de velocidad):
  *   - Usa SOLO usePathname. useSearchParams obligaría a envolver esto en
  *     <Suspense> y sacaría del render estático a las rutas que hoy son ISR.
+ *     Por eso el marcador `?de=` se lee con window.location.search DENTRO
+ *     del efecto (ya en el cliente), nunca con useSearchParams.
  *   - El envío se difiere a requestIdleCallback: nunca compite con la
  *     pintura de la pantalla ni con la transición entre rutas.
  *   - Es fire-and-forget (la RPC ignora errores): si el tracking falla,
@@ -30,6 +32,18 @@ function normalizePath(path: string): string {
     .join("/");
 }
 
+/**
+ * Marcador de origen del link (`?de=grupo`). Solo la primera pantalla de
+ * la visita lo lleva: después el parámetro ya no está en la URL y una
+ * misma entrada no se cuenta dos veces.
+ */
+function readSource(): string | null {
+  const raw = new URLSearchParams(window.location.search).get("de");
+  if (!raw) return null;
+  const s = raw.trim().toLowerCase();
+  return /^[a-z0-9_-]{1,24}$/.test(s) ? s : null;
+}
+
 export default function VisitTracker() {
   const pathname = usePathname();
   // Evita el doble registro del StrictMode en desarrollo y cualquier
@@ -43,9 +57,13 @@ export default function VisitTracker() {
 
     const path = normalizePath(pathname);
     if (lastSent.current === path) return;
+    const first = lastSent.current === null;
     lastSent.current = path;
 
-    const send = () => trackAppVisit(path);
+    // El origen solo tiene sentido en la pantalla de entrada.
+    const source = first ? readSource() : null;
+
+    const send = () => trackAppVisit(path, source);
     const idle = (window as any).requestIdleCallback;
     if (typeof idle === "function") {
       const handle = idle(send, { timeout: 2000 });
