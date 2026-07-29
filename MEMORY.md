@@ -1038,6 +1038,43 @@ Cron diario `app/api/cron/expire-listings/route.ts` (Vercel Cron, 10:00 UTC):
   armar el argumento de venta de banners.
 - **Si se agregan métricas nuevas al panel, actualizar `METRICAS_EXPLICACION.txt`** (raíz del
   repo) — es la guía no técnica del dueño y queda desactualizada en silencio.
+- (Resuelta ✅ medir de dónde vienen las visitas — grupos de WhatsApp vs. compartilhado por
+  usuarios vs. directo: `fase-31-origem-visitas.sql`, en producción 2026-07-29, ver §14.3.
+  Pendiente chico que sí sigue: sumar esta sección a `METRICAS_EXPLICACION.txt`.)
+
+## 14.3 ORIGEM DAS VISITAS — MARCADOR `?de=` (2026-07-29, `fase-31-origem-visitas.sql`)
+
+§14.1 medía audiencia pero no de dónde venía. El Estúdio de Conteúdo (fuera de este repo, ver
+`estudio/`) manda a los grupos de WhatsApp links con `?de=grupo`; hasta ahora el app no lo
+registraba.
+
+- **DB `supabase/fase-31-origem-visitas.sql`** (idempotente, ✅ ejecutada por el usuario
+  2026-07-29): columna `source` en `app_visits` + índice parcial (`where source is not null`).
+  `track_app_visit` gana una **sobrecarga de 5 parámetros** (`_source`) — la de 4 de fase-29
+  **sigue viva a propósito**: producción y previews comparten la misma base, y no se puede
+  romper la que ya está desplegada. RPC nueva `get_visit_sources(_days)`: cuenta **entradas
+  (sessões)**, no pantallas — el origen de la entrada es el marcador de su primera tela.
+- **Frontend:** `VisitTracker.tsx` lee el marcador con `new URLSearchParams(window.location.search)`
+  **dentro del efecto** (nunca `useSearchParams`, misma razón que en §14.1: rompería el ISR).
+  Solo la primera pantalla de la visita (`lastSent.current === null`) lee y manda el `source`;
+  las navegaciones internas van sin marcador. `lib/tracking.ts`: `trackAppVisit(path, source?)`
+  solo agrega `_source` al llamado si viene informado, para no romper la RPC vieja si la
+  migración no estuviera corrida.
+- **`?de=compartilhado` (mismo commit):** el botón "Compartilhar" (`lib/share.ts`, usado en
+  anuncio/loja/perfil) mandaba `window.location.href` tal cual. Si alguien entraba por un link
+  de grupo y compartía ese anuncio, el `?de=grupo` viajaba pegado y el panel le atribuía a los
+  grupos un tráfico que era boca a boca. Fix: `compartilhar()` borra el `de` que traía la
+  pantalla y pone siempre `?de=compartilhado` antes de armar el link — un solo lugar, vale para
+  los tres puntos de entrada.
+- **Panel (`/admin` › Visitas do app › "De onde vêm (30 dias)")**: filas por origen (Grupos de
+  WhatsApp / Compartilhado por usuários / Direto), con % del total, entradas y pessoas
+  distintas. `SOURCE_LABELS` en `admin/page.tsx` traduce el valor crudo de `source`.
+  ⚠️ Pendiente menor: agregar esta sección a `METRICAS_EXPLICACION.txt` (no se tocó en esta
+  sesión).
+- Rama `medir-origem`, commits `37eca9c` (medición de origen) y `c295c69` (fix del arrastre en
+  compartilhar) → mergeados a `main` el 2026-07-29.
+- ⚠️ **El origen arranca de cero el 2026-07-29**: no hay forma de recuperar el tráfico de los
+  envíos a grupos hechos antes de esa fecha.
 
 ## 20. DIRETÓRIO DE LOJAS (`/lojas`) + FAVORITOS NO HOME (2026-07-15)
 
@@ -1092,6 +1129,11 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-07-29** — **Desplegado** (commits `37eca9c` + `c295c69`, merge `medir-origem` → `main`).
+  **Origen de las visitas: grupos de WhatsApp vs. compartilhado vs. directo.** Migración
+  `fase-31-origem-visitas.sql` corrida por el usuario. Detalle estructural en §14.3. Build
+  verificado, rutas intactas (`/admin` sigue `○ Static`, `/listings/[id]` y `/store/[id]` `● SSG`).
 
 - **2026-07-26** — **Desplegado** (commit `b4c5dc7`, merge `preview/compartir-header` → `main`).
   **Botón de compartir en el cabeçalho del anúncio, al lado del corazón.** En
