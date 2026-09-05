@@ -72,6 +72,10 @@ type ListingsFeedProps = {
   // "Favoritos" (→/favorites). Las demás vistas (/listings, categorías)
   // lo dejan en false → no aparecen ahí.
   homeExtras?: boolean;
+  // Bloque que va entre la fila de pills y el grid de anuncios (el acceso al Mercado
+  // Agroecológico en el inicio). Llega ya renderizado desde arriba: el feed solo le
+  // reserva el lugar, no sabe qué es ni carga nada por él.
+  beforeGrid?: React.ReactNode;
 };
 
 // Comparador por la columna de orden (created_at o bumped_at) con id desc de desempate
@@ -93,6 +97,7 @@ export default function ListingsFeed({
   subcategoryId = "",
   featuredIds,
   homeExtras = false,
+  beforeGrid,
 }: ListingsFeedProps) {
   const { session } = useSession();
 
@@ -588,6 +593,8 @@ export default function ListingsFeed({
           </button>
         </div>
       </div>
+
+      {beforeGrid}
 
       <div style={{ padding: "0.35rem 0 0.75rem" }}>
         {error && <p className="text-error" style={{ margin: "0 1rem 8px" }}>{error}</p>}

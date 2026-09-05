@@ -318,6 +318,93 @@ function Dashboard() {
           </div>
         ))}
       </div>
+
+      <DbUsage />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Espaço da base de dados (fase-38) — manutenção, só para o dono
+// ─────────────────────────────────────────────
+// Se carrega DEPOIS dos cartões e por fora deles: se a função ainda não
+// existir na base, ou demorar, a visão geral não espera por isto.
+
+type DbUsageData = {
+  total_bytes: number;
+  limit_bytes: number;
+  tables: { nome: string; bytes: number; linhas: number }[];
+};
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function DbUsage() {
+  const [data, setData] = useState<DbUsageData | null>(null);
+  const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    supabase.rpc("get_db_usage").then(
+      ({ data: d, error }) => { if (error || !d) setFailed(true); else setData(d as DbUsageData); },
+      () => setFailed(true),
+    );
+  }, []);
+
+  if (failed || !data) return null;
+
+  const pct = Math.min(100, (Number(data.total_bytes) / Number(data.limit_bytes)) * 100);
+  // Verde tranquilo até 60%, âmbar a partir daí, vermelho perto do teto.
+  const color = pct >= 85 ? "#dc2626" : pct >= 60 ? "#d97706" : "#059669";
+
+  return (
+    <div className="card" style={{ padding: "0.9rem", marginTop: "0.75rem" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#334155" }}>💾 Espaço da base</span>
+        <span style={{ fontSize: "0.78rem", fontWeight: 800, color }}>
+          {formatBytes(Number(data.total_bytes))}
+          <span style={{ fontWeight: 600, color: "var(--text-muted)" }}> de {formatBytes(Number(data.limit_bytes))}</span>
+        </span>
+      </div>
+
+      <div style={{ height: 8, background: "#e2e8f0", borderRadius: 999, overflow: "hidden", marginTop: 8 }}>
+        <div style={{ width: `${Math.max(1.5, pct)}%`, height: "100%", background: color, borderRadius: 999 }} />
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+          {pct < 1 ? "Menos de 1% usado" : `${pct.toFixed(1)}% usado`}
+          {pct < 60 ? " — tudo tranquilo" : pct < 85 ? " — de olho" : " — precisa de atenção"}
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          style={{ border: "none", background: "transparent", color: "var(--blue-main)", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          {open ? "ocultar" : "ver detalhe"}
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+          {data.tables.map((t) => (
+            <div key={t.nome} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: "0.74rem", color: "#475569", padding: "0.15rem 0" }}>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{t.nome}</span>
+              <span style={{ flexShrink: 0, color: "var(--text-muted)" }}>
+                {Number(t.linhas).toLocaleString("pt-BR")} linhas · <strong style={{ color: "#334155" }}>{formatBytes(Number(t.bytes))}</strong>
+              </span>
+            </div>
+          ))}
+          <p style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 8, lineHeight: 1.45 }}>
+            As tabelas de medição (visitas, buscas) se limpam sozinhas todo dia: guardam de 90 a 180 dias.
+            As fotos dos anúncios não ocupam espaço aqui — vivem no Cloudflare.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
