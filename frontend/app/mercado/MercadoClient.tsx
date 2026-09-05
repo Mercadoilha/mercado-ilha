@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "../../components/BackButton";
 import QtyStepper from "./QtyStepper";
@@ -154,6 +155,20 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
           )}
         </div>
       </div>
+
+      {/* Histórico do próprio cliente: o que ele já pediu e quanto gastou por mês. */}
+      <Link
+        href="/mercado/meus-pedidos"
+        prefetch={false}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: "#fff", borderBottom: "1px solid var(--border)", padding: "0.7rem 1rem",
+          fontSize: "0.85rem", fontWeight: 700, color: "var(--green-dark)", textDecoration: "none",
+        }}
+      >
+        <span>🧾 Meus pedidos</span>
+        <span aria-hidden="true">→</span>
+      </Link>
 
       {/* Atalhos para as seções: a lista é longa, e daqui se pula direto. */}
       <div
