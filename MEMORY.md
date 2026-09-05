@@ -1113,6 +1113,80 @@ volver a preguntarlas si se retoma esta feature).
   el camino feliz, y `LojasClient.tsx` muestra cartel + botón "Tentar novamente" si aun así falla.
   No reintentar cuando `signal?.aborted` (el abort también da `status: 0`). Ver la lección en §18.
 
+## 23. MERCADO AGROECOLÓGICO — MÓDULO E-COMMERCE (2026-09-05)
+
+Módulo aparte del marketplace: la **Feira Agroecológica da Gamboa** vende por catálogo, con
+carrito y pedido por WhatsApp. Datos cargados de 3 fotos de su lista de precios (28/08):
+**65 produtos / 84 opções de compra / 10 seções**.
+
+### Modelo de datos — la idea central
+`market_vendors` (feiras) → `market_categories` (seções, globales) → `market_products` →
+**`market_product_variants`**. La VARIANTE es el corazón: tiene el precio Y la forma de venta.
+- `sale_mode`: `peso` (R$/kg, `step` 0.5 → admite medio kilo) · `unidade` (de a uno) ·
+  `pacote` (dúzia, placa de 30 ovos, maço, 3 unid., 500g, 5ml… se compra entero).
+- `unit_label` es lo que se lee junto al precio; `label` distingue opciones del mismo producto
+  (mel 100/200/500ml/1L; polpas 120g/500g; tintura por planta).
+- El selector de cantidad del carrito OBEDECE `step`/`min_qty`: nada de fracciones donde no
+  corresponde. **No hardcodear reglas de venta en el frontend.**
+
+Pedidos: `market_orders` + `market_order_items`. Los items guardan **foto fija** de nombre,
+`unit_price` y `unit_cost`: cambiar el catálogo mañana no reescribe un pedido de ayer.
+
+Gestión: `market_sales` (ventas del balcón, con `cost_amount` opcional), `market_costs` +
+`market_cost_categories` (categorías **opcionales**, creadas por la propia feira),
+`market_vendor_admins` (equipo).
+
+### SQL (fases 32→38, TODAS corridas por el usuario ✅)
+- `fase-32` estructura + carga del catálogo + `get_market_catalog` (todo anidado en 1 consulta,
+  sin N+1) + `create_market_order` (**precios calculados en el servidor**, nunca del navegador).
+- `fase-33` el comprador suma lo que llevó de más en la retirada (`added_at_pickup`,
+  `add_pickup_items`, `remove_pickup_item` — solo el dueño, y solo lo que él agregó).
+- `fase-34` panel de la feira: `is_market_admin()` (security definer, evita recursión de RLS),
+  `is_sold_out`, `get_market_catalog_admin`, `update_market_vendor`, `create_market_product`
+  (genera el slug en el servidor), equipo por e-mail. **Ninguna policy da DELETE en el catálogo:
+  sacar del app es ocultar.**
+- `fase-35` caixa: ventas del balcón, costos y `get_market_dashboard` (totales, movimiento por
+  día, por hora, por día de semana, top productos — 1 sola consulta, fechas en `America/Bahia`).
+- `fase-36` **costo por producto** (`cost_price` opcional en la variante, `unit_cost` congelado
+  en el item, `cost_amount` en la venta) + margen por sección.
+- `fase-37` `fill_missing_costs`: rellena SOLO los huecos históricos con el costo actual; nunca
+  toca un item que ya tiene costo. Resuelve el callejón que crea (a propósito) el congelado.
+- `fase-38` `get_db_usage()`: indicador de espacio de la base en `/admin`, solo admin global.
+
+### Regla de producto: el lucro es "todo o nada"
+`resultado_caixa` (entradas − custos operacionais) SIEMPRE se muestra. `lucro_liquido` y
+`margem_pct` solo salen si **no falta ningún costo del período**; si falta, el panel dice
+exactamente qué falta (cuántos items, de qué productos, cuántas ventas del balcón) en vez de
+mostrar un número a medias. **Una sección completa sí entrega su margen bruta** aunque otra esté
+incompleta (los custos operacionais no se reparten por sección: se dice en la propia pantalla).
+
+### Rutas y frontend
+- `/mercado` — Server Component + ISR 60s (catálogo pre-renderizado, `○ Static`).
+  `MercadoClient.tsx` + `QtyStepper.tsx` + `PedidoSheet.tsx` (`next/dynamic`).
+- `/mercado/meus-pedidos` — historial del comprador por mes, con total del mes.
+- `/mercado/gerenciar` — panel de la feira (Catálogo / Pedidos / Caixa / Ajustes / Equipe).
+  El gate es la propia base: quien no es del equipo recibe vacío de `get_market_catalog_admin`.
+- Acceso desde el Início: `MercadoBanner.tsx`, entre la fila de pills y el grid, vía la prop
+  nueva `beforeGrid` de `ListingsFeed.tsx`. Config en `admin_settings.mercado_agro_button`;
+  si la feira se pausa (`market_vendors.is_active = false`) el banner desaparece solo.
+- Carrito en `localStorage` (`lib/mercadoCart.ts`): recargar, salir o pasar por el login no lo
+  borra. **Por eso el login se pide solo al ENVIAR** — nunca al agregar el primer ítem
+  (decisión explícita del usuario). `/signin` acepta `?msg=pedido` y `?next=` (solo rutas
+  internas).
+- El envío es un `<a>` nativo a `wa.me` con el mensaje ya armado (window.open se bloquea en
+  móvil, ver §18); el registro del pedido corre en segundo plano y, si falla, el cliente manda
+  igual. Tras enviar, el carrito NO se borra solo: queda con "Pedido enviado" y opción de
+  reenviar o limpiar.
+
+### Rendimiento (medido contra el estado anterior al módulo)
+Início 2,41 → 3,02 kB de página, 183 → 184 kB de JS inicial, bundle compartido 87,5 → 87,7 kB;
+el resto de las rutas, idéntico. `/mercado` pesa 12,3 kB comprimidos con el catálogo entero
+(el Início son 9,9 kB). Todo lo pesado (carrito, panel, cada pestaña) entra por `next/dynamic`.
+
+### ⚠️ PENDIENTE AL SUBIR
+`market_vendors.whatsapp` = **56945619025 (número de PRUEBAS)**. Cambiarlo por el de la feira
+desde el panel → Ajustes, sin tocar código. Mientras tanto, los pedidos reales llegan ahí.
+
 ## 21. CORRER LOCALMENTE
 
 ```bash
@@ -1129,6 +1203,15 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-09-05** — **Desplegado** (merge `mercado-agro` → `main`). **Módulo Mercado
+  Agroecológico completo**: catálogo con carrito y pedido por WhatsApp, historial del comprador,
+  panel de la feira (catálogo, pedidos, caixa, ajustes, equipe), costo por producto y lucro con
+  regla de "todo o nada", margen por sección, e indicador de espacio de la base en `/admin`.
+  Migraciones `fase-32` a `fase-38`, todas corridas por el usuario. Detalle en **§23**.
+  Verificado contra la base con usuarios de prueba (creados y borrados: base limpia) y
+  rendimiento medido contra el estado anterior. **Ojo: el WhatsApp de destino sigue siendo el
+  de pruebas — se cambia desde el panel.**
 
 - **2026-07-29** — **Desplegado** (commits `37eca9c` + `c295c69`, merge `medir-origem` → `main`).
   **Origen de las visitas: grupos de WhatsApp vs. compartilhado vs. directo.** Migración
