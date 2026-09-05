@@ -20,6 +20,8 @@ export type Variant = {
   min_qty: number;
   max_qty: number | null;
   note: string | null;
+  // true = acabou por hoje: aparece marcado e não entra no carrinho
+  is_sold_out?: boolean;
 };
 
 export type Product = {

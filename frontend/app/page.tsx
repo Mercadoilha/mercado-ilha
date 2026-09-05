@@ -18,6 +18,7 @@ export default async function Home() {
     { data: listData },
     { data: settingsData },
     { data: bannersData },
+    { data: mercadoVendor },
   ] = await Promise.all([
     // Feed del inicio: primera página (PAGE_SIZE anuncios activos), 1 foto por anuncio,
     // orden bumped_at desc (fecha de publicação/destaque, lo más nuevo arriba). Mismo
@@ -43,6 +44,12 @@ export default async function Home() {
       .or(`valid_from.is.null,valid_from.lte.${today}`)
       .or(`valid_until.is.null,valid_until.gte.${today}`)
       .order("sort_order"),
+    // Estado do Mercado Agroecológico: se a feira pausar, o acesso some do Início.
+    admin
+      .from("market_vendors")
+      .select("is_active")
+      .eq("slug", "feira-agroecologica-gamboa")
+      .maybeSingle(),
   ]);
 
   const rows: Record<string, any> = {};
@@ -65,7 +72,7 @@ export default async function Home() {
   // configurable desde /admin: si está apagado o no existe la config, no se pinta nada.
   const mercadoRaw = rows["mercado_agro_button"];
   const mercadoButton =
-    mercadoRaw && mercadoRaw.enabled !== false
+    mercadoRaw && mercadoRaw.enabled !== false && mercadoVendor?.is_active !== false
       ? {
           title: String(mercadoRaw.title ?? "Mercado Agroecológico"),
           subtitle: mercadoRaw.subtitle ? String(mercadoRaw.subtitle) : null,

@@ -212,6 +212,16 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
         </section>
       ))}
 
+      {/* Acesso da equipe da feira. Quem não é da equipe vê um aviso ao entrar —
+          não há consulta nenhuma aqui, então isto não custa nada à tela. */}
+      {session && (
+        <div style={{ padding: "0.9rem 1rem 0", textAlign: "center" }}>
+          <Link href="/mercado/gerenciar" prefetch={false} style={{ fontSize: "0.74rem", color: "var(--text-muted)", textDecoration: "none" }}>
+            🔒 Área da feira
+          </Link>
+        </div>
+      )}
+
       {vendor.footer_note && (
         <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.45, padding: "1rem 1rem 1.5rem", background: "#F7FBF9" }}>
           {vendor.footer_note}
@@ -300,7 +310,9 @@ function ProductRow({
           {single && <VariantPrice variant={variants[0]} />}
         </div>
         {single && (
-          <QtyStepper variant={variants[0]} qty={cart[variants[0].id] ?? 0} onChange={onChange} />
+          variants[0].is_sold_out
+            ? <SoldOut />
+            : <QtyStepper variant={variants[0]} qty={cart[variants[0].id] ?? 0} onChange={onChange} />
         )}
       </div>
 
@@ -318,12 +330,27 @@ function ProductRow({
                 <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>{v.label}</div>
                 <VariantPrice variant={v} compact />
               </div>
-              <QtyStepper variant={v} qty={cart[v.id] ?? 0} onChange={onChange} />
+              {v.is_sold_out ? <SoldOut /> : <QtyStepper variant={v} qty={cart[v.id] ?? 0} onChange={onChange} />}
             </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// O que acabou continua na lista, marcado — o cliente vê que existe e volta na
+// semana seguinte, em vez de achar que a feira não vende aquilo.
+function SoldOut() {
+  return (
+    <span
+      style={{
+        flexShrink: 0, fontSize: "0.7rem", fontWeight: 800, color: "#b91c1c",
+        background: "#fee2e2", borderRadius: 8, padding: "0.3rem 0.5rem",
+      }}
+    >
+      Esgotado
+    </span>
   );
 }
 
