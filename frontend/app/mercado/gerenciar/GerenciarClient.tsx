@@ -106,7 +106,7 @@ export default function GerenciarClient() {
 
           {tab === "catalogo" && <CatalogoTab catalog={catalog} onReload={load} />}
           {tab === "pedidos" && <PedidosTab vendorId={catalog.vendor.id} />}
-          {tab === "caixa" && <CaixaTab vendorId={catalog.vendor.id} />}
+          {tab === "caixa" && <CaixaTab vendorId={catalog.vendor.id} onGoToCatalogo={() => setTab("catalogo")} />}
           {tab === "ajustes" && <AjustesTab vendor={catalog.vendor} onReload={load} />}
           {tab === "equipe" && <EquipeTab vendorId={catalog.vendor.id} />}
         </>

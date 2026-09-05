@@ -13,6 +13,8 @@ const ProdutoSheet = dynamic(() => import("./ProdutoSheet"), { ssr: false });
 export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatalog; onReload: () => Promise<void> }) {
   const [sections, setSections] = useState<AdminSection[]>(catalog.sections);
   const [prices, setPrices] = useState<Record<number, string>>({});
+  const [costs, setCosts] = useState<Record<number, string>>({});
+  const [onlyMissingCost, setOnlyMissingCost] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
@@ -28,10 +30,34 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
   const visibleSections = useMemo(
     () =>
       sections
-        .map((s) => ({ ...s, products: s.products.filter((p) => showHidden || p.is_active) }))
-        .filter((s) => s.products.length > 0 || s.is_active),
-    [sections, showHidden],
+        .map((s) => ({
+          ...s,
+          products: s.products.filter(
+            (p) =>
+              (showHidden || p.is_active) &&
+              (!onlyMissingCost || p.variants.some((v) => v.is_active && v.cost_price == null)),
+          ),
+        }))
+        .filter((s) => s.products.length > 0),
+    [sections, showHidden, onlyMissingCost],
   );
+
+  // Quantas opções ativas ainda estão sem custo. É o que separa a feira de
+  // poder ver o lucro no Caixa.
+  const missingCost = useMemo(() => {
+    let missing = 0, total = 0;
+    for (const s of sections) {
+      for (const p of s.products) {
+        if (!p.is_active) continue;
+        for (const v of p.variants) {
+          if (!v.is_active) continue;
+          total++;
+          if (v.cost_price == null) missing++;
+        }
+      }
+    }
+    return { missing, total };
+  }, [sections]);
 
   // Toda alteração vai direto à base e se reflete na tela na hora; se a base
   // recusar, a tela volta ao que era e avisa.
@@ -64,6 +90,16 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
     );
   };
 
+  const saveCost = async (variant: AdminVariant) => {
+    const raw = costs[variant.id];
+    const trimmed = String(raw).trim();
+    // Campo vazio = "não sei ainda": volta a ficar sem custo, sem inventar zero.
+    const value = trimmed === "" ? null : Number(trimmed.replace(",", "."));
+    if (value !== null && (!Number.isFinite(value) || value < 0)) { setError("Custo inválido."); return; }
+    const ok = await patchVariant(variant, { cost_price: value === null ? null : Math.round(value * 100) / 100 });
+    if (ok) setCosts((prev) => { const next = { ...prev }; delete next[variant.id]; return next; });
+  };
+
   const savePrice = async (variant: AdminVariant) => {
     const raw = prices[variant.id];
     const value = Number(String(raw).replace(",", "."));
@@ -83,6 +119,33 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
           Ver ocultos
         </label>
       </div>
+
+      {/* O custo é opcional, mas sem ele não há lucro possível. Em vez de um
+          número aproximado, o painel mostra exatamente o que falta. */}
+      {missingCost.missing > 0 && (
+        <div style={{ background: "#FFFBEB", borderBottom: "1px solid #FCD34D", padding: "0.7rem 1rem" }}>
+          <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#92400E" }}>
+            {missingCost.missing} de {missingCost.total} opções ainda sem custo
+          </div>
+          <p style={{ fontSize: "0.74rem", color: "#92400E", lineHeight: 1.45, marginTop: 2 }}>
+            O custo fica ao lado do preço e é opcional — mas o lucro no Caixa só é calculado quando
+            todas as opções vendidas têm custo informado. Um lucro pela metade seria um número errado.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOnlyMissingCost((v) => !v)}
+            style={{ marginTop: 8, border: "1.5px solid #92400E", background: onlyMissingCost ? "#92400E" : "transparent", color: onlyMissingCost ? "#fff" : "#92400E", borderRadius: 8, padding: "0.3rem 0.6rem", fontSize: "0.74rem", fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
+          >
+            {onlyMissingCost ? "Ver todos os produtos" : "Ver só o que falta"}
+          </button>
+        </div>
+      )}
+
+      {missingCost.missing === 0 && missingCost.total > 0 && (
+        <div style={{ background: "#ECFDF5", borderBottom: "1px solid #A7F3D0", padding: "0.55rem 1rem", fontSize: "0.76rem", color: "#065F46", fontWeight: 700 }}>
+          ✓ Todos os custos preenchidos — o lucro aparece no Caixa.
+        </div>
+      )}
 
       {error && <p className="text-error" style={{ margin: "10px 1rem", fontSize: "0.82rem" }}>{error}</p>}
 
@@ -132,6 +195,12 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
               <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                 {product.variants.map((variant) => {
                   const edited = prices[variant.id] !== undefined;
+                  const costEdited = costs[variant.id] !== undefined;
+                  // Margem da opção: quanto do preço sobra depois do custo.
+                  const margem =
+                    variant.cost_price != null && Number(variant.price) > 0
+                      ? Math.round(((Number(variant.price) - Number(variant.cost_price)) / Number(variant.price)) * 100)
+                      : null;
                   return (
                     <div
                       key={variant.id}
@@ -152,26 +221,28 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>R$</span>
-                        <input
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <MoneyField
+                          caption="preço"
                           value={edited ? prices[variant.id] : String(variant.price).replace(".", ",")}
-                          onChange={(e) => setPrices((prev) => ({ ...prev, [variant.id]: e.target.value }))}
-                          inputMode="decimal"
-                          style={{
-                            width: 72, padding: "0.3rem 0.4rem", border: `1.5px solid ${edited ? "var(--green-dark)" : "var(--border)"}`,
-                            borderRadius: 8, fontSize: "0.82rem", fontWeight: 700, fontFamily: "inherit", textAlign: "right",
-                          }}
+                          edited={edited}
+                          onChange={(v) => setPrices((prev) => ({ ...prev, [variant.id]: v }))}
+                          onSave={() => savePrice(variant)}
+                          busy={busy === variant.id}
                         />
-                        {edited && (
-                          <button
-                            type="button"
-                            onClick={() => savePrice(variant)}
-                            disabled={busy === variant.id}
-                            style={{ border: "none", background: "var(--green-dark)", color: "#fff", borderRadius: 8, padding: "0.3rem 0.5rem", fontSize: "0.75rem", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
-                          >
-                            {busy === variant.id ? "…" : "salvar"}
-                          </button>
+                        <MoneyField
+                          caption="custo"
+                          value={costEdited ? costs[variant.id] : variant.cost_price == null ? "" : String(variant.cost_price).replace(".", ",")}
+                          edited={costEdited}
+                          missing={variant.cost_price == null && !costEdited}
+                          onChange={(v) => setCosts((prev) => ({ ...prev, [variant.id]: v }))}
+                          onSave={() => saveCost(variant)}
+                          busy={busy === variant.id}
+                        />
+                        {margem !== null && (
+                          <span style={{ fontSize: "0.68rem", fontWeight: 800, color: margem >= 0 ? "var(--green-dark)" : "#b91c1c", flexShrink: 0 }}>
+                            {margem}%
+                          </span>
                         )}
                       </div>
 
@@ -208,6 +279,56 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
           onClose={() => setSheet(null)}
           onDone={async () => { setSheet(null); await onReload(); }}
         />
+      )}
+    </div>
+  );
+}
+
+// Preço e custo compartilham o mesmo campo: número à direita, legenda embaixo e
+// o botão de salvar só aparece quando algo mudou. O custo em falta fica âmbar,
+// para que se veja de longe o que ainda precisa ser preenchido.
+function MoneyField({
+  caption, value, edited, missing, busy, onChange, onSave,
+}: {
+  caption: string;
+  value: string;
+  edited: boolean;
+  missing?: boolean;
+  busy?: boolean;
+  onChange: (v: string) => void;
+  onSave: () => void;
+}) {
+  const border = edited ? "var(--green-dark)" : missing ? "#FCD34D" : "var(--border)";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>R$</span>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            inputMode="decimal"
+            placeholder={missing ? "—" : ""}
+            style={{
+              width: 62, padding: "0.28rem 0.35rem", border: `1.5px solid ${border}`,
+              borderRadius: 8, fontSize: "0.8rem", fontWeight: 700, fontFamily: "inherit",
+              textAlign: "right", background: missing ? "#FFFBEB" : "#fff",
+            }}
+          />
+        </div>
+        <div style={{ fontSize: "0.6rem", color: missing ? "#B45309" : "var(--text-muted)", textAlign: "center", marginTop: 1 }}>
+          {caption}
+        </div>
+      </div>
+      {edited && (
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={busy}
+          style={{ border: "none", background: "var(--green-dark)", color: "#fff", borderRadius: 8, padding: "0.28rem 0.45rem", fontSize: "0.72rem", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          {busy ? "…" : "ok"}
+        </button>
       )}
     </div>
   );

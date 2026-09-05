@@ -13,7 +13,20 @@ type Dashboard = {
   pedidos_total: number; pedidos_count: number; ticket_medio: number;
   vendas_total: number; vendas_count: number;
   custos_total: number; custos_count: number;
-  lucro: number;
+  receita_total: number;
+  // Entradas menos custos operacionais: não depende do custo de nenhum produto.
+  resultado_caixa: number;
+  // Só vêm preenchidos quando não falta nenhum custo do período.
+  lucro_liquido: number | null;
+  margem_pct: number | null;
+  margem_ok: boolean;
+  cmv_total: number;
+  itens_sem_custo: number;
+  itens_fora_catalogo: number;
+  vendas_sem_custo: number;
+  catalogo_sem_custo: number;
+  catalogo_total: number;
+  produtos_sem_custo: string[];
   custos_por_categoria: { nome: string; total: number }[];
   por_dia: { dia: string; pedidos: number; pedidos_total: number; vendas_total: number }[];
   por_hora: { hora: number; pedidos: number }[];
@@ -26,7 +39,7 @@ type Cost = { id: number; spent_on: string; amount: number; description: string;
 
 // O caixa da feira: o que entrou pelo app, o que se vendeu no balcão, o que se
 // gastou e o que sobrou. Tudo do período escolhido, numa consulta só.
-export default function CaixaTab({ vendorId }: { vendorId: number }) {
+export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: number; onGoToCatalogo: () => void }) {
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const range = useMemo(() => periodRange(period), [period]);
 
@@ -106,7 +119,7 @@ export default function CaixaTab({ vendorId }: { vendorId: number }) {
           <Stat label="Pedidos do app" value={formatBRL(Number(data.pedidos_total))} sub={`${data.pedidos_count} ${data.pedidos_count === 1 ? "pedido" : "pedidos"}`} />
           <Stat label="Vendas na feira" value={formatBRL(Number(data.vendas_total))} sub={`${data.vendas_count} ${data.vendas_count === 1 ? "lançamento" : "lançamentos"}`} />
           <Stat label="Custos" value={formatBRL(Number(data.custos_total))} sub={`${data.custos_count} ${data.custos_count === 1 ? "lançamento" : "lançamentos"}`} negative />
-          <Stat label="Lucro" value={formatBRL(Number(data.lucro))} sub={`ticket médio ${formatBRL(Number(data.ticket_medio))}`} highlight />
+          <Stat label="Resultado de caixa" value={formatBRL(Number(data.resultado_caixa ?? 0))} sub={`ticket médio ${formatBRL(Number(data.ticket_medio))}`} highlight />
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -118,6 +131,75 @@ export default function CaixaTab({ vendorId }: { vendorId: number }) {
           </button>
         </div>
       </div>
+
+      {/* Lucro: só sai quando a informação está completa. */}
+      {data.margem_ok ? (
+        <Block title="Lucro do período">
+          <Line label="Receita (app + feira)" value={formatBRL(Number(data.receita_total))} />
+          <Line label="Custo dos produtos vendidos" value={`− ${formatBRL(Number(data.cmv_total))}`} negative />
+          <Line label="Custos operacionais" value={`− ${formatBRL(Number(data.custos_total))}`} negative />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1.5px solid var(--border)" }}>
+            <span style={{ fontSize: "0.86rem", fontWeight: 800, color: "#334155" }}>Lucro líquido</span>
+            <span style={{ fontSize: "1.15rem", fontWeight: 800, color: Number(data.lucro_liquido) >= 0 ? "var(--green-dark)" : "#b91c1c" }}>
+              {formatBRL(Number(data.lucro_liquido))}
+              {data.margem_pct !== null && (
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}> · {Number(data.margem_pct)}%</span>
+              )}
+            </span>
+          </div>
+          {Number(data.itens_fora_catalogo ?? 0) > 0 && (
+            <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 8, lineHeight: 1.4 }}>
+              {data.itens_fora_catalogo} {data.itens_fora_catalogo === 1 ? "item foi acrescentado" : "itens foram acrescentados"} fora do
+              catálogo na retirada: entram na receita, mas sem custo próprio.
+            </p>
+          )}
+        </Block>
+      ) : (
+        <div style={{ background: "#FFFBEB", borderBottom: "1px solid #FCD34D", padding: "0.9rem 1rem" }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#92400E" }}>🔒 Lucro ainda não disponível</div>
+          <p style={{ fontSize: "0.76rem", color: "#92400E", lineHeight: 1.5, marginTop: 4 }}>
+            Para calcular o lucro é preciso saber quanto custou o que foi vendido. Enquanto faltar
+            algum custo, o painel prefere não mostrar um número pela metade — ele pareceria certo e
+            levaria a decisões erradas.
+          </p>
+
+          <div style={{ marginTop: 10, background: "#fff", border: "1px solid #FCD34D", borderRadius: 10, padding: "0.6rem 0.7rem" }}>
+            <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#92400E", marginBottom: 4 }}>O que falta</div>
+            {Number(data.itens_sem_custo ?? 0) > 0 && (
+              <div style={{ fontSize: "0.76rem", color: "#78350F" }}>
+                • {data.itens_sem_custo} {data.itens_sem_custo === 1 ? "item vendido" : "itens vendidos"} sem custo informado
+                {(data.produtos_sem_custo ?? []).length > 0 && (
+                  <span style={{ color: "var(--text-muted)" }}> ({(data.produtos_sem_custo ?? []).slice(0, 4).join(", ")}{(data.produtos_sem_custo ?? []).length > 4 ? "…" : ""})</span>
+                )}
+              </div>
+            )}
+            {Number(data.vendas_sem_custo ?? 0) > 0 && (
+              <div style={{ fontSize: "0.76rem", color: "#78350F" }}>
+                • {data.vendas_sem_custo} {data.vendas_sem_custo === 1 ? "venda na feira" : "vendas na feira"} sem o custo dos produtos
+              </div>
+            )}
+            {Number(data.itens_sem_custo ?? 0) === 0 && Number(data.vendas_sem_custo ?? 0) === 0 && (
+              <div style={{ fontSize: "0.76rem", color: "#78350F" }}>• Nenhuma venda registrada neste período</div>
+            )}
+          </div>
+
+          {Number(data.catalogo_sem_custo ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={onGoToCatalogo}
+              className="btn btn-block"
+              style={{ marginTop: 10, background: "#92400E", color: "#fff", fontSize: "0.82rem", fontWeight: 800 }}
+            >
+              Completar custos ({data.catalogo_sem_custo} de {data.catalogo_total})
+            </button>
+          )}
+
+          <p style={{ fontSize: "0.72rem", color: "#92400E", marginTop: 8, lineHeight: 1.4 }}>
+            Enquanto isso, o <strong>resultado de caixa</strong> acima segue funcionando: é o que entrou
+            menos os custos operacionais, e não depende do custo dos produtos.
+          </p>
+        </div>
+      )}
 
       {/* Movimento dia a dia */}
       {data.por_dia.length > 0 && (
@@ -243,6 +325,15 @@ export default function CaixaTab({ vendorId }: { vendorId: number }) {
           onDone={async () => { setSheet(null); await load(); }}
         />
       )}
+    </div>
+  );
+}
+
+function Line({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", padding: "0.2rem 0", color: "#475569" }}>
+      <span>{label}</span>
+      <strong style={{ color: negative ? "#b91c1c" : "#334155" }}>{value}</strong>
     </div>
   );
 }

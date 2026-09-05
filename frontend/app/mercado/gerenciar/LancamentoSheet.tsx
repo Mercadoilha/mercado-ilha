@@ -22,6 +22,7 @@ export default function LancamentoSheet({
   const [date, setDate] = useState(defaultDate);
   const [amount, setAmount] = useState("");
   const [text, setText] = useState("");
+  const [saleCost, setSaleCost] = useState("");
   const [categoryId, setCategoryId] = useState<number | "" | "nova">("");
   const [newCategory, setNewCategory] = useState("");
   const [saving, setSaving] = useState(false);
@@ -36,10 +37,17 @@ export default function LancamentoSheet({
     setSaving(true);
 
     if (kind === "venda") {
+      // Custo desta venda: opcional, mas é o que permite calcular o lucro do
+      // que se vendeu no balcão. Em branco = fica pendente.
+      const costRaw = saleCost.trim();
+      const cost = costRaw === "" ? null : Number(costRaw.replace(",", "."));
+      if (cost !== null && (!Number.isFinite(cost) || cost < 0)) { setSaving(false); setError("Custo inválido."); return; }
+
       const { error: err } = await supabase.from("market_sales").insert({
         vendor_id: vendorId,
         sold_on: date,
         amount: Math.round(value * 100) / 100,
+        cost_amount: cost === null ? null : Math.round(cost * 100) / 100,
         note: text.trim() || null,
       });
       setSaving(false);
@@ -97,6 +105,23 @@ export default function LancamentoSheet({
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0,00" style={input} />
           </div>
         </div>
+
+        {kind === "venda" && (
+          <div>
+            <label style={label}>Custo dos produtos vendidos (opcional)</label>
+            <input
+              value={saleCost}
+              onChange={(e) => setSaleCost(e.target.value)}
+              inputMode="decimal"
+              placeholder="0,00"
+              style={{ ...input, borderColor: saleCost.trim() === "" ? "#FCD34D" : "var(--border)", background: saleCost.trim() === "" ? "#FFFBEB" : "#fff" }}
+            />
+            <p style={{ fontSize: "0.7rem", color: "#92400E", marginTop: 6, lineHeight: 1.4 }}>
+              Quanto custou para a feira o que foi vendido nesta venda. Sem esta informação, o lucro
+              do período não pode ser calculado — o resultado de caixa continua funcionando.
+            </p>
+          </div>
+        )}
 
         <div>
           <label style={label}>{kind === "venda" ? "Observação (opcional)" : "O que foi"}</label>

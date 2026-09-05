@@ -60,6 +60,7 @@ export default function ProdutoSheet({
   const [unit, setUnit] = useState("");
   const [label, setLabel] = useState("");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,12 +116,20 @@ export default function ProdutoSheet({
       productId = config.product.id;
     }
 
+    // Custo em branco é aceito: fica pendente e o painel avisa depois.
+    const costRaw = cost.trim();
+    const costValue = costRaw === "" ? null : Number(costRaw.replace(",", "."));
+    if (costValue !== null && (!Number.isFinite(costValue) || costValue < 0)) {
+      setSaving(false); setError("Custo inválido."); return;
+    }
+
     const { error: vErr } = await supabase.from("market_product_variants").insert({
       product_id: productId,
       label: finalLabel,
       sale_mode: mode,
       unit_label: unitLabel,
       price: Math.round(value * 100) / 100,
+      cost_price: costValue === null ? null : Math.round(costValue * 100) / 100,
       step: chosen.step,
       min_qty: chosen.min,
       sort_order: 99,
@@ -213,6 +222,24 @@ export default function ProdutoSheet({
               <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" placeholder="0,00" style={input} />
             </div>
             <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Custo (R$)</label>
+              <input
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                inputMode="decimal"
+                placeholder="opcional"
+                style={{ ...input, borderColor: cost.trim() === "" ? "#FCD34D" : "var(--border)", background: cost.trim() === "" ? "#FFFBEB" : "#fff" }}
+              />
+            </div>
+          </div>
+
+          <p style={{ fontSize: "0.7rem", color: "#92400E", marginTop: 6, lineHeight: 1.4 }}>
+            O custo é opcional, mas o lucro no Caixa só é calculado quando todos os produtos vendidos
+            têm custo informado.
+          </p>
+
+          <div style={{ marginTop: 12 }}>
+            <div>
               <label style={labelStyle}>Nome da opção</label>
               <input
                 value={label}

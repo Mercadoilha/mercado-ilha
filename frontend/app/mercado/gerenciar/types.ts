@@ -7,6 +7,8 @@ export type AdminVariant = {
   sale_mode: "peso" | "unidade" | "pacote";
   unit_label: string;
   price: number;
+  // Quanto custa para a feira. null = ainda não informado (segura a margem).
+  cost_price: number | null;
   step: number;
   min_qty: number;
   max_qty: number | null;
