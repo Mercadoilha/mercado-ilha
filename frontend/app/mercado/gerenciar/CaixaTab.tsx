@@ -54,6 +54,8 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
   const [categories, setCategories] = useState<CostCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"venda" | "custo" | null>(null);
+  const [filling, setFilling] = useState(false);
+  const [fillMsg, setFillMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [dash, salesRes, costsRes, catsRes] = await Promise.all([
@@ -76,6 +78,25 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
   }, [vendorId, range.from, range.to]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Vendas feitas antes de a feira preencher os custos ficam sem custo para
+  // sempre — o custo é congelado no pedido de propósito. Isto preenche só esses
+  // buracos, com o custo que está hoje no catálogo, sem tocar no que já tem.
+  const fillCosts = async () => {
+    setFilling(true); setFillMsg(null);
+    const { data, error: err } = await supabase.rpc("fill_missing_costs", {
+      p_vendor_id: vendorId, p_from: range.from, p_to: range.to,
+    });
+    setFilling(false);
+    if (err) { setFillMsg("Não foi possível aplicar agora."); return; }
+    const res = data as { preenchidos: number; ainda_sem_custo: number };
+    setFillMsg(
+      res.ainda_sem_custo > 0
+        ? `${res.preenchidos} itens completados. Faltam ${res.ainda_sem_custo}: são opções que ainda não têm custo no catálogo.`
+        : `${res.preenchidos} itens completados.`,
+    );
+    await load();
+  };
 
   const removeSale = async (id: number) => {
     await supabase.from("market_sales").delete().eq("id", id);
@@ -195,8 +216,31 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
               className="btn btn-block"
               style={{ marginTop: 10, background: "#92400E", color: "#fff", fontSize: "0.82rem", fontWeight: 800 }}
             >
-              Completar custos ({data.catalogo_sem_custo} de {data.catalogo_total})
+              Preencher custos no catálogo ({data.catalogo_sem_custo} de {data.catalogo_total})
             </button>
+          )}
+
+          {/* Depois de preencher o catálogo, as vendas antigas seguem sem custo:
+              elas guardaram o custo do momento, e naquele momento não havia. */}
+          {Number(data.itens_sem_custo ?? 0) > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={fillCosts}
+                disabled={filling}
+                className="btn btn-outline btn-block"
+                style={{ marginTop: 8, fontSize: "0.8rem", fontWeight: 800, borderColor: "#92400E", color: "#92400E" }}
+              >
+                {filling ? "Aplicando…" : "Aplicar os custos de hoje às vendas deste período"}
+              </button>
+              <p style={{ fontSize: "0.7rem", color: "#92400E", marginTop: 6, lineHeight: 1.4 }}>
+                Use isto para vendas feitas antes de você preencher os custos. Preenche só o que está
+                vazio, com o custo que está hoje no catálogo — nenhuma venda que já tem custo é alterada.
+              </p>
+              {fillMsg && (
+                <p style={{ fontSize: "0.74rem", color: "#78350F", fontWeight: 700, marginTop: 6 }}>{fillMsg}</p>
+              )}
+            </>
           )}
 
           <p style={{ fontSize: "0.72rem", color: "#92400E", marginTop: 8, lineHeight: 1.4 }}>
