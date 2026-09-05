@@ -338,6 +338,24 @@ begin
       count(*) filter (where i.variant_id is null)                                          as fora_catalogo
     from itens i
   ),
+  -- Margem por seção: uma seção com todos os custos preenchidos já dá o seu
+  -- resultado, mesmo que outra ainda esteja incompleta. É margem BRUTA — os
+  -- custos operacionais (transporte, embalagens) são da feira inteira e não se
+  -- repartem por seção sem inventar critério.
+  secoes as (
+    select
+      c.id                                   as id,
+      c.name                                 as nome,
+      c.emoji                                as emoji,
+      sum(i.line_total)                      as receita,
+      coalesce(sum(case when i.unit_cost is not null then i.unit_cost * i.quantity end), 0) as cmv,
+      count(*) filter (where i.unit_cost is null) as sem_custo
+    from itens i
+    join public.market_product_variants pv on pv.id = i.variant_id
+    join public.market_products pr on pr.id = pv.product_id
+    join public.market_categories c on c.id = pr.category_id
+    group by c.id, c.name, c.emoji
+  ),
   produtos_faltando as (
     select distinct i.product_name as nome
     from itens i
@@ -445,6 +463,21 @@ begin
         (b.pedidos_total + b.vendas_total - (b.cmv_itens + b.vendas_custo) - b.custos_total)
         * 100 / (b.pedidos_total + b.vendas_total), 1)
     end,
+    'por_secao', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', id,
+        'nome', nome,
+        'emoji', emoji,
+        'receita', receita,
+        'cmv', cmv,
+        'sem_custo', sem_custo,
+        'margem_ok', sem_custo = 0,
+        'lucro_bruto', case when sem_custo = 0 then receita - cmv end,
+        'margem_pct', case
+          when sem_custo = 0 and receita > 0 then round((receita - cmv) * 100 / receita, 1)
+        end
+      ) order by receita desc)
+      from secoes), '[]'::jsonb),
     'custos_por_categoria', coalesce((
       select jsonb_agg(jsonb_build_object('nome', nome, 'total', total) order by total desc)
       from custos_cat), '[]'::jsonb),

@@ -27,6 +27,11 @@ type Dashboard = {
   catalogo_sem_custo: number;
   catalogo_total: number;
   produtos_sem_custo: string[];
+  por_secao: {
+    id: number; nome: string; emoji: string | null;
+    receita: number; cmv: number; sem_custo: number;
+    margem_ok: boolean; lucro_bruto: number | null; margem_pct: number | null;
+  }[];
   custos_por_categoria: { nome: string; total: number }[];
   por_dia: { dia: string; pedidos: number; pedidos_total: number; vendas_total: number }[];
   por_hora: { hora: number; pedidos: number }[];
@@ -195,10 +200,53 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
           )}
 
           <p style={{ fontSize: "0.72rem", color: "#92400E", marginTop: 8, lineHeight: 1.4 }}>
-            Enquanto isso, o <strong>resultado de caixa</strong> acima segue funcionando: é o que entrou
-            menos os custos operacionais, e não depende do custo dos produtos.
+            Enquanto isso, o <strong>resultado de caixa</strong> acima segue funcionando (é o que entrou
+            menos os custos operacionais), e cada <strong>seção que já estiver completa</strong> mostra a
+            margem dela logo abaixo — não é preciso terminar tudo para começar a enxergar.
           </p>
         </div>
+      )}
+
+      {/* Margem por seção: cada seção completa já entrega o seu resultado, mesmo
+          que outra ainda esteja pendente. */}
+      {(data.por_secao ?? []).length > 0 && (
+        <Block title="Margem por seção" hint="Receita menos o custo dos produtos, antes dos custos operacionais">
+          {(data.por_secao ?? []).map((sec) => (
+            <div
+              key={sec.id}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                padding: "0.4rem 0", borderBottom: "1px solid #f1f5f9",
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#334155" }}>
+                  {sec.emoji ? `${sec.emoji} ` : ""}{sec.nome}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                  receita {formatBRL(Number(sec.receita))}
+                </div>
+              </div>
+              {sec.margem_ok ? (
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 800, color: Number(sec.lucro_bruto) >= 0 ? "var(--green-dark)" : "#b91c1c" }}>
+                    {formatBRL(Number(sec.lucro_bruto))}
+                  </div>
+                  {sec.margem_pct !== null && (
+                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>margem {Number(sec.margem_pct)}%</div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 800, color: "#B45309" }}>🔒 faltam custos</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    {sec.sem_custo} {sec.sem_custo === 1 ? "item" : "itens"}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </Block>
       )}
 
       {/* Movimento dia a dia */}

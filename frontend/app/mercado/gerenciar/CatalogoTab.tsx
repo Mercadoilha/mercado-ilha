@@ -158,7 +158,26 @@ export default function CatalogoTab({ catalog, onReload }: { catalog: AdminCatal
               fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.03em",
             }}
           >
-            <span>{section.emoji ? `${section.emoji} ` : ""}{section.name}{!section.is_active && " (oculta)"}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                {section.emoji ? `${section.emoji} ` : ""}{section.name}{!section.is_active && " (oculta)"}
+              </span>
+              {/* Quanto falta nesta seção: completando uma seção inteira já se
+                  vê a margem dela no Caixa, sem esperar o catálogo todo. */}
+              {(() => {
+                const faltam = section.products.reduce(
+                  (acc, p) => acc + (p.is_active ? p.variants.filter((v) => v.is_active && v.cost_price == null).length : 0),
+                  0,
+                );
+                return faltam > 0 ? (
+                  <span style={{ background: "#FCD34D", color: "#78350F", borderRadius: 999, padding: "1px 6px", fontSize: "0.62rem", fontWeight: 800, flexShrink: 0, textTransform: "none" }}>
+                    {faltam} sem custo
+                  </span>
+                ) : (
+                  <span style={{ color: "var(--green-sea)", fontSize: "0.7rem", flexShrink: 0 }}>✓</span>
+                );
+              })()}
+            </span>
             <button
               type="button"
               onClick={() => setSheet({ mode: "novo-produto", sectionId: section.id })}
