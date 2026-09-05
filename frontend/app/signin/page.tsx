@@ -34,6 +34,11 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contactMsg = searchParams.get("msg") === "contact";
+  const pedidoMsg = searchParams.get("msg") === "pedido";
+  // Para onde voltar depois de entrar (ex.: o pedido do Mercado Agroecológico).
+  // Só aceitamos caminhos internos ("/algo") — nunca um endereço de fora.
+  const nextRaw = searchParams.get("next");
+  const nextPath = nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : null;
   const [tab, setTab] = useState<Tab>("login");
 
   // Login
@@ -90,7 +95,7 @@ function SignInContent() {
       }
       return;
     }
-    router.push("/");
+    router.push(nextPath ?? "/");
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -136,7 +141,11 @@ function SignInContent() {
     // - Ya instalada → home.
     // - Android → home con invitación directa (el popup instala en el acto; nunca /instalar).
     // - iPhone/desktop → pantalla guiada /instalar.
-    if (isStandalone()) {
+    if (nextPath) {
+      // Veio no meio de algo (ex.: enviar um pedido): volta para lá, o convite
+      // para instalar aparece depois.
+      router.push(nextPath);
+    } else if (isStandalone()) {
       router.push("/");
     } else if (detectPlatform() === "android") {
       try { sessionStorage.setItem("force_install_invite", "1"); } catch { /* no disponible */ }
@@ -178,6 +187,12 @@ function SignInContent() {
       {contactMsg && (
         <div style={{ margin: "1rem 1rem 0", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#92400e", fontWeight: 600 }}>
           Para entrar em contato com o vendedor, você precisa estar cadastrado. É gratuito e rápido! 🎉
+        </div>
+      )}
+
+      {pedidoMsg && (
+        <div style={{ margin: "1rem 1rem 0", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 10, padding: "0.75rem 1rem", fontSize: "0.875rem", color: "#065F46", fontWeight: 600 }}>
+          Para enviar seu pedido, você precisa estar cadastrado. É gratuito e rápido! 🌿 Seu pedido está guardado.
         </div>
       )}
 
