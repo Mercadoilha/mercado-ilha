@@ -12,9 +12,10 @@ import CatalogoTab from "./CatalogoTab";
 // As abas que não são o catálogo só se montam quando alguém entra nelas.
 const PedidosTab = dynamic(() => import("./PedidosTab"), { ssr: false });
 const AjustesTab = dynamic(() => import("./AjustesTab"), { ssr: false });
+const CaixaTab = dynamic(() => import("./CaixaTab"), { ssr: false });
 const EquipeTab = dynamic(() => import("./EquipeTab"), { ssr: false });
 
-type Tab = "catalogo" | "pedidos" | "ajustes" | "equipe";
+type Tab = "catalogo" | "pedidos" | "caixa" | "ajustes" | "equipe";
 
 export default function GerenciarClient() {
   const { session, sessionLoading } = useSession();
@@ -98,12 +99,14 @@ export default function GerenciarClient() {
           <div style={{ display: "flex", background: "#fff", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 10 }}>
             {tabBtn("catalogo", "Catálogo", "🧺")}
             {tabBtn("pedidos", "Pedidos", "🧾")}
+            {tabBtn("caixa", "Caixa", "💰")}
             {tabBtn("ajustes", "Ajustes", "⚙️")}
             {tabBtn("equipe", "Equipe", "👥")}
           </div>
 
           {tab === "catalogo" && <CatalogoTab catalog={catalog} onReload={load} />}
           {tab === "pedidos" && <PedidosTab vendorId={catalog.vendor.id} />}
+          {tab === "caixa" && <CaixaTab vendorId={catalog.vendor.id} />}
           {tab === "ajustes" && <AjustesTab vendor={catalog.vendor} onReload={load} />}
           {tab === "equipe" && <EquipeTab vendorId={catalog.vendor.id} />}
         </>
