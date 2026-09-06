@@ -1167,6 +1167,9 @@ incompleta (los custos operacionais no se reparten por sección: se dice en la p
 ### Rutas y frontend
 - `/mercado` — Server Component + ISR 60s (catálogo pre-renderizado, `○ Static`).
   `MercadoClient.tsx` + `QtyStepper.tsx` + `PedidoSheet.tsx` (`next/dynamic`).
+  **2026-09-06**: "Limpar" salió del pie de la hoja (debajo del botón de WhatsApp, invisible)
+  a una pastilla en el encabezado de la lista, junto al conteo de ítems, con confirmación
+  inline antes de vaciar el carrito.
 - `/mercado/meus-pedidos` — historial del comprador por mes, con total del mes.
 - `/mercado/gerenciar` — panel de la feira (Catálogo / Pedidos / Caixa / Ajustes / Equipe).
   El gate es la propia base: quien no es del equipo recibe vacío de `get_market_catalog_admin`.
@@ -1249,6 +1252,10 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-09-06** — **Desplegado** (merge `limpar-pedido` → `main`). "Limpar pedido" pasa del
+  pie de la hoja del carrito al encabezado de la lista de ítems (pastilla roja junto al conteo)
+  y ahora pide confirmación, porque quedó a la vista. Detalle en **§23**.
 
 - **2026-09-06** — **Desplegado** (merge `botoes-mercado` → `main`). Retoques de rótulo y
   legibilidad en los dos accesos al mercado: el botón del equipo pasa de "Área da feira" a
