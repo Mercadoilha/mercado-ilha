@@ -44,7 +44,7 @@ set search_path = public
 as $$
   select case when count(*) = 0 then null else
     md5(string_agg(
-      (i->>'variant_id') || 'x' || trim_scale(round((i->>'quantity')::numeric, 3))::text,
+      (i->>'variant_id') || 'x' || round((i->>'quantity')::numeric, 3)::text,
       ',' order by (i->>'variant_id')::bigint))
   end
   from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) i
@@ -62,7 +62,7 @@ set items_hash = h.hash
 from (
   select oi.order_id,
          md5(string_agg(
-           oi.variant_id::text || 'x' || trim_scale(round(oi.quantity, 3))::text,
+           oi.variant_id::text || 'x' || round(oi.quantity, 3)::text,
            ',' order by oi.variant_id)) as hash
   from public.market_order_items oi
   where oi.variant_id is not null
