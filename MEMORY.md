@@ -1136,7 +1136,7 @@ Gestión: `market_sales` (ventas del balcón, con `cost_amount` opcional), `mark
 `market_cost_categories` (categorías **opcionales**, creadas por la propia feira),
 `market_vendor_admins` (equipo).
 
-### SQL (fases 32→39, TODAS corridas por el usuario ✅)
+### SQL (fases 32→40, TODAS corridas por el usuario ✅)
 - `fase-32` estructura + carga del catálogo + `get_market_catalog` (todo anidado en 1 consulta,
   sin N+1) + `create_market_order` (**precios calculados en el servidor**, nunca del navegador).
 - `fase-33` el comprador suma lo que llevó de más en la retirada (`added_at_pickup`,
@@ -1156,6 +1156,9 @@ Gestión: `market_sales` (ventas del balcón, con `cost_amount` opcional), `mark
   `market_items_hash()`, `create_market_order` con trava de reenvío, `set_market_order_delivered`,
   `delete_market_order`, `get_market_dashboard` reescrito (solo lo entregado es caixa) y una
   limpieza única de los duplicados que ya habían entrado.
+- `fase-40` **corregir costos ya grabados** (2026-09-06): `apply_costs_from(vendor, changes,
+  from, dry_run)`. Contracara de fase-37: aquella **rellena** vacíos, esta **sustituye**.
+  Detalle abajo.
 
 ### Regla de producto: el lucro es "todo o nada"
 `resultado_caixa` (entradas − custos operacionais) SIEMPRE se muestra. `lucro_liquido` y
@@ -1215,6 +1218,34 @@ Los tres agujeros que aparecieron en el primer uso real, con la regla de cada un
 - **Borrar pedido** (`delete_market_order`, solo equipo de la feira, con confirmación en dos
   toques). Es la **única** eliminación real del módulo: en el catálogo sigue valiendo ocultar.
 
+### Corregir costos ya grabados, con fecha de vigencia (fase-40, 2026-09-06)
+El congelado del costo (fase-36) es correcto pero deja un agujero que fase-37 no cubre: hay
+costos que la feira **solo conoce después de la compra** (el productor cobró otro valor, el
+precio cambió a mitad de mes, alguien tipeó mal). `fill_missing_costs` solo rellena vacíos, así
+que un costo equivocado quedaba equivocado para siempre y el lucro de ese período con él.
+
+`apply_costs_from(p_vendor_id, p_changes, p_from, p_dry_run)`:
+- `p_changes` = `[{variant_id, cost_price}]` (`cost_price` null = volver a "no sé"). Graba el
+  costo en el catálogo **y** lo reescribe en `market_order_items.unit_cost` de los pedidos con
+  `created_at::date >= p_from` (fuso `America/Bahia`). **Lo anterior a `p_from` no se toca** —
+  esa es toda la idea: un costo que cambió el día 10 parte el mes por donde corresponde.
+- **`p_dry_run` primero, siempre.** Devuelve `{variantes, itens, itens_vazios, pedidos}` sin
+  alterar nada, y la UI lo muestra como confirmación ("12 itens em 5 pedidos desde 10/09"). Es
+  la única RPC del módulo que pisa historial: por eso el paso extra, y por eso el mismo código
+  calcula la vista previa y el efecto (no puede mentir).
+- Guardas: `is_market_admin`, solo variantes de la propia feira (join por `vendor_id`), `distinct
+  on (variant_id)` contra duplicados en el payload, `status <> 'cancelado'` fuera de la cuenta y
+  del update, fecha no futura y no anterior a 2020, máx. 500 cambios, `is distinct from` para no
+  escribir filas que ya tienen el valor.
+
+Frontend: `CustosSheet.tsx` (`next/dynamic`), se abre desde el **Caixa** con "✏️ Corrigir custos
+de um período". Lista las variantes **activas** agrupadas por sección con **preço, custo editable
+y margem %** (buscador arriba: son 84 opciones), chips de fecha *Só de hoje / Este mês / Mês
+passado* + calendario, y el botón queda deshabilitado hasta que haya un cambio real. Las
+`market_sales` (balcón) quedan fuera —guardan un costo total, no por producto— y se dice en la
+pantalla. Reparto de responsabilidades que conviene no mezclar: **Catálogo = de ahora en
+adelante · Caixa › Corrigir custos = hacia atrás, con fecha**.
+
 **`/mercado` se regenera al guardar.** La pantalla es ISR de 60s, y eso hacía que un cambio
 recién guardado (el WhatsApp de destino, un precio) siguiera saliendo viejo hasta un minuto —
 el usuario lo reportó como "cambié el número y no se actualiza". `GerenciarClient.saveAndReload`
@@ -1252,6 +1283,19 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-09-06** — **Desplegado** (merge `custos-periodo` → `main`). **Corregir costos ya
+  grabados, a partir de una fecha.** El dueño lo pidió al entender la regla del congelado: "hay
+  algunos costos que pueden cambiar luego de la compra". Hasta acá solo se podían *rellenar*
+  vacíos (fase-37); un costo mal cargado quedaba mal para siempre. Ahora el **Caixa** tiene
+  "✏️ Corrigir custos de um período": lista de productos con **precio y costo lado a lado** (más
+  el margen), se editan los que cambiaron y se elige **a partir de qué fecha** vale el costo
+  nuevo — el catálogo se actualiza y las ventas desde esa fecha se reescriben; lo anterior queda
+  intacto. Pasa siempre por una confirmación que dice cuántos itens y pedidos se van a alterar
+  (la RPC en modo `dry_run`, mismo código que el efecto real). `fase-40-corrigir-custos.sql`
+  **la corre el usuario**. Detalle en **§23**. Build verificado: `/mercado/gerenciar` 7,46 →
+  7,47 kB, shared JS 87,7 kB igual, ninguna ruta cambió de tipo (la hoja entra por
+  `next/dynamic`).
 
 - **2026-09-06** — **Desplegado** (merge `limpar-pedido` → `main`). "Limpar pedido" pasa del
   pie de la hoja del carrito al encabezado de la lista de ítems (pastilla roja junto al conteo)
