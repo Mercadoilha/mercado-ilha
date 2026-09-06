@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import BackButton from "../../../components/BackButton";
 import { useSession } from "../../../contexts/SessionContext";
 import { supabase } from "../../../lib/supabaseClient";
+import { refreshMercadoPage } from "../../../lib/mercadoApi";
 import { VENDOR_SLUG, type AdminCatalog } from "./types";
 import CatalogoTab from "./CatalogoTab";
 
@@ -33,6 +34,14 @@ export default function GerenciarClient() {
     setDenied(false);
     setCatalog(data as AdminCatalog);
   }, []);
+
+  // Depois de SALVAR (preço, WhatsApp, dados da feira), além de recarregar o painel
+  // avisa o servidor para regenerar a tela do mercado. Sem isso, a mudança só
+  // aparecia no próximo refresco automático, até um minuto depois.
+  const saveAndReload = useCallback(async () => {
+    await load();
+    void refreshMercadoPage();
+  }, [load]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -104,10 +113,10 @@ export default function GerenciarClient() {
             {tabBtn("equipe", "Equipe", "👥")}
           </div>
 
-          {tab === "catalogo" && <CatalogoTab catalog={catalog} onReload={load} />}
+          {tab === "catalogo" && <CatalogoTab catalog={catalog} onReload={saveAndReload} />}
           {tab === "pedidos" && <PedidosTab vendorId={catalog.vendor.id} />}
           {tab === "caixa" && <CaixaTab vendorId={catalog.vendor.id} onGoToCatalogo={() => setTab("catalogo")} />}
-          {tab === "ajustes" && <AjustesTab vendor={catalog.vendor} onReload={load} />}
+          {tab === "ajustes" && <AjustesTab vendor={catalog.vendor} onReload={saveAndReload} />}
           {tab === "equipe" && <EquipeTab vendorId={catalog.vendor.id} />}
         </>
       )}

@@ -185,3 +185,27 @@ export function registerOrder(params: {
     })
     .then(() => {}, () => {});
 }
+
+/**
+ * Pede ao servidor para regenerar a página do mercado agora.
+ *
+ * A tela do mercado é pré-renderizada e se refresca sozinha a cada 60s — ótimo para
+ * a velocidade, ruim na hora de conferir uma mudança recém-salva. Depois de salvar
+ * no painel, isto avisa o servidor e o próximo carregamento já vem com o dado novo,
+ * sem esperar o minuto. É "melhor esforço": se falhar, o refresco automático dos
+ * 60s resolve do mesmo jeito.
+ */
+export async function refreshMercadoPage(): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ path: "/mercado" }),
+    });
+  } catch {
+    /* melhor esforço */
+  }
+}

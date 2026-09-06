@@ -1136,7 +1136,7 @@ Gestión: `market_sales` (ventas del balcón, con `cost_amount` opcional), `mark
 `market_cost_categories` (categorías **opcionales**, creadas por la propia feira),
 `market_vendor_admins` (equipo).
 
-### SQL (fases 32→38, TODAS corridas por el usuario ✅)
+### SQL (fases 32→39, TODAS corridas por el usuario ✅)
 - `fase-32` estructura + carga del catálogo + `get_market_catalog` (todo anidado en 1 consulta,
   sin N+1) + `create_market_order` (**precios calculados en el servidor**, nunca del navegador).
 - `fase-33` el comprador suma lo que llevó de más en la retirada (`added_at_pickup`,
@@ -1152,6 +1152,10 @@ Gestión: `market_sales` (ventas del balcón, con `cost_amount` opcional), `mark
 - `fase-37` `fill_missing_costs`: rellena SOLO los huecos históricos con el costo actual; nunca
   toca un item que ya tiene costo. Resuelve el callejón que crea (a propósito) el congelado.
 - `fase-38` `get_db_usage()`: indicador de espacio de la base en `/admin`, solo admin global.
+- `fase-39` **control de pedidos** (2026-09-06): `items_hash` + `delivered_at` en `market_orders`,
+  `market_items_hash()`, `create_market_order` con trava de reenvío, `set_market_order_delivered`,
+  `delete_market_order`, `get_market_dashboard` reescrito (solo lo entregado es caixa) y una
+  limpieza única de los duplicados que ya habían entrado.
 
 ### Regla de producto: el lucro es "todo o nada"
 `resultado_caixa` (entradas − custos operacionais) SIEMPRE se muestra. `lucro_liquido` y
@@ -1166,6 +1170,11 @@ incompleta (los custos operacionais no se reparten por sección: se dice en la p
 - `/mercado/meus-pedidos` — historial del comprador por mes, con total del mes.
 - `/mercado/gerenciar` — panel de la feira (Catálogo / Pedidos / Caixa / Ajustes / Equipe).
   El gate es la propia base: quien no es del equipo recibe vacío de `get_market_catalog_admin`.
+  **Acceso (2026-09-05, commit `959ed4d`)**: botón naranja destacado en `/mercado`, debajo del
+  encabezado verde. Solo lo ve el equipo: `is_market_admin(vendor_id)` se consulta DESPUÉS del
+  render y se cachea en `sessionStorage` (`mercado_equipe_<user>_<vendor>`) → no toca la ruta
+  estática ni el tiempo de apertura. Antes era un link gris al final de la lista, visible para
+  cualquier usuario logueado.
 - Acceso desde el Início: `MercadoBanner.tsx`, entre la fila de pills y el grid, vía la prop
   nueva `beforeGrid` de `ListingsFeed.tsx`. Config en `admin_settings.mercado_agro_button`;
   si la feira se pausa (`market_vendors.is_active = false`) el banner desaparece solo.
@@ -1178,14 +1187,48 @@ incompleta (los custos operacionais no se reparten por sección: se dice en la p
   igual. Tras enviar, el carrito NO se borra solo: queda con "Pedido enviado" y opción de
   reenviar o limpiar.
 
+### Pedidos: reenvío, entregue/pendente y borrado (fase-39, 2026-09-06)
+Los tres agujeros que aparecieron en el primer uso real, con la regla de cada uno:
+
+- **Reenvío ≠ pedido nuevo.** El pedido se registra en el mismo toque que abre WhatsApp; si el
+  envío fallaba y la persona reintentaba, cada intento era un pedido. Ahora el pedido guarda la
+  huella del carrito: `items_hash` = `md5` de `variant_id x round(quantity,3)` ordenado por
+  `variant_id` (`1x0.500,3x1.000`). Mismo carrito + misma persona + misma feira dentro de **6h**
+  → `create_market_order` devuelve el pedido que ya existe (`reenvio: true`) en vez de crear otro.
+  Un pedido con compra en la retirada nunca entra en esa comparación: ya pasó del envío.
+  El `round(x,3)` fija la escala en los dos lados (JSON del carrito y columna `numeric(10,3)`),
+  así que el hash es idéntico venga de donde venga — verificado contra los 3 pedidos reales.
+- **Limpieza única** al final de la fase: mismo cliente + mismo carrito + mismo día → queda el
+  primero. Nunca toca un pedido entregado, cancelado o con compra en la retirada.
+- **Entregue vs pendente.** Un pedido hecho no es caja hasta que la persona retira. En
+  `get_market_dashboard`, `pedidos` = solo `status='entregue'` (receita, CMV, margem por sección,
+  ticket, `por_dia`, top productos); `pedidos_all` = todo lo no cancelado y alimenta **solo**
+  `por_hora` y `por_dia_semana` (ahí lo que se estudia es cuándo pide la gente, no la retirada);
+  `pedidos_pendentes_total/count` se informan aparte y el Caixa los muestra en amarillo.
+  Efecto lateral buscado: mientras no marquen entregas, el caixa da 0 — el aviso lo explica.
+- **Borrar pedido** (`delete_market_order`, solo equipo de la feira, con confirmación en dos
+  toques). Es la **única** eliminación real del módulo: en el catálogo sigue valiendo ocultar.
+
+**`/mercado` se regenera al guardar.** La pantalla es ISR de 60s, y eso hacía que un cambio
+recién guardado (el WhatsApp de destino, un precio) siguiera saliendo viejo hasta un minuto —
+el usuario lo reportó como "cambié el número y no se actualiza". `GerenciarClient.saveAndReload`
+llama a `refreshMercadoPage()` (`lib/mercadoApi.ts`) → `POST /api/revalidate {path:"/mercado"}`,
+que ahora acepta una ruta de una **lista fija** (`/`, `/categorias`, `/mercado`) con sesión válida.
+Es "mejor esfuerzo": si falla, el refresco de 60s lo resuelve igual.
+
 ### Rendimiento (medido contra el estado anterior al módulo)
 Início 2,41 → 3,02 kB de página, 183 → 184 kB de JS inicial, bundle compartido 87,5 → 87,7 kB;
 el resto de las rutas, idéntico. `/mercado` pesa 12,3 kB comprimidos con el catálogo entero
 (el Início son 9,9 kB). Todo lo pesado (carrito, panel, cada pestaña) entra por `next/dynamic`.
 
-### ⚠️ PENDIENTE AL SUBIR
-`market_vendors.whatsapp` = **56945619025 (número de PRUEBAS)**. Cambiarlo por el de la feira
+### ⚠️ PENDIENTE
+`market_vendors.whatsapp` = **+56945619025 (número de PRUEBAS)**. Cambiarlo por el de la feira
 desde el panel → Ajustes, sin tocar código. Mientras tanto, los pedidos reales llegan ahí.
+
+**Regla del número** (`lib/whatsappUrl.ts`): sin `+` se asume Brasil y se antepone `55`; con `+`
+se respeta el código de país tal cual. El seed de fase-32 lo tenía sin `+` y el app mandaba a
+`wa.me/5556945619025` → los envíos fallaban y el usuario reintentaba (de ahí los duplicados).
+Un número que no sea de Brasil va **siempre** con `+` y su código.
 
 ## 21. CORRER LOCALMENTE
 
@@ -1203,6 +1246,17 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-09-06** — **Desplegado** (merge `pedidos-controle` → `main`). Primer uso real del
+  mercado, tres arreglos: (1) el WhatsApp de la feira estaba guardado sin `+`, el app le
+  anteponía el 55 y los envíos fallaban → corregido, y ahora guardar en el panel **regenera
+  `/mercado` al instante** en vez de esperar el ISR de 60s; (2) cada reintento de envío cargaba
+  un pedido nuevo → trava de reenvío por huella del carrito (6h) + limpieza única de los
+  duplicados ya existentes; (3) **entregue vs pendente**: solo lo entregado entra en el caixa y
+  en el lucro, lo pendiente se informa aparte, y la feira puede **borrar** un pedido. También:
+  acceso a "Área da feira" restringido al equipo y en destaque (commit `959ed4d`).
+  `fase-39-pedidos-controle.sql` corrida por el usuario y verificada contra la base.
+  Detalle en **§23**.
 
 - **2026-09-05** — **Desplegado** (merge `mercado-agro` → `main`). **Módulo Mercado
   Agroecológico completo**: catálogo con carrito y pedido por WhatsApp, historial del comprador,

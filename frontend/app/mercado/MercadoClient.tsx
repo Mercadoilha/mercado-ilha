@@ -22,6 +22,10 @@ const PedidoSheet = dynamic(() => import("./PedidoSheet"), { ssr: false });
 // no ponto exato onde a pessoa estava.
 const PENDING_KEY = "mercado_pedido_pendente";
 
+// Lembrete de quem já foi reconhecido como equipe da feira nesta sessão: evita
+// repetir a pergunta ao banco a cada vez que a tela abre.
+const TEAM_KEY = "mercado_equipe";
+
 export default function MercadoClient({ catalog }: { catalog: Catalog }) {
   const router = useRouter();
   const { session } = useSession();
@@ -32,6 +36,7 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
   const [cart, setCart] = useState<CartMap>({});
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [isTeam, setIsTeam] = useState(false);
   const [customer, setCustomer] = useState<{ name: string; whatsapp: string | null }>({ name: "", whatsapp: null });
   const headerRef = useRef<HTMLDivElement | null>(null);
   const chipsRef = useRef<HTMLDivElement | null>(null);
@@ -80,6 +85,26 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
       }, () => {});
     return () => { alive = false; };
   }, [session]);
+
+  // A entrada da equipe só aparece para quem realmente administra a feira. A
+  // pergunta ao banco sai depois que a tela já está pintada e fica guardada na
+  // sessão, então não atrasa nada de quem vem comprar.
+  useEffect(() => {
+    if (!session || !vendor) { setIsTeam(false); return; }
+    const key = `${TEAM_KEY}_${session.user.id}_${vendor.id}`;
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (cached !== null) { setIsTeam(cached === "1"); return; }
+    } catch { /* sessionStorage indisponível */ }
+    let alive = true;
+    supabase.rpc("is_market_admin", { p_vendor_id: vendor.id }).then(({ data, error }) => {
+      if (!alive || error) return;
+      const ok = data === true;
+      setIsTeam(ok);
+      try { sessionStorage.setItem(key, ok ? "1" : "0"); } catch { /* ignorar */ }
+    }, () => {});
+    return () => { alive = false; };
+  }, [session, vendor]);
 
   const setQty = useCallback((variantId: number, qty: number) => {
     if (!vendor) return;
@@ -156,6 +181,37 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
         </div>
       </div>
 
+      {/* Entrada da equipe da feira: só quem administra a feira chega a ver isto. */}
+      {isTeam && (
+        <Link
+          href="/mercado/gerenciar"
+          prefetch={false}
+          style={{
+            display: "flex", alignItems: "center", gap: 12, textDecoration: "none",
+            margin: "0.75rem 1rem", padding: "0.8rem 0.9rem", borderRadius: 14,
+            background: "linear-gradient(135deg, #EF9F27 0%, #E28C10 100%)",
+            color: "#fff", boxShadow: "0 4px 14px rgba(226,140,16,0.35)",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              flexShrink: 0, width: 38, height: 38, borderRadius: 10, fontSize: "1.15rem",
+              background: "rgba(255,255,255,0.22)", display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            🛠️
+          </span>
+          <span style={{ flex: 1, lineHeight: 1.25 }}>
+            <span style={{ display: "block", fontSize: "0.92rem", fontWeight: 800 }}>Área da feira</span>
+            <span style={{ display: "block", fontSize: "0.72rem", opacity: 0.95 }}>
+              Catálogo, pedidos, caixa e equipe
+            </span>
+          </span>
+          <span aria-hidden="true" style={{ fontSize: "1.1rem", fontWeight: 800 }}>→</span>
+        </Link>
+      )}
+
       {/* Histórico do próprio cliente: o que ele já pediu e quanto gastou por mês. */}
       <Link
         href="/mercado/meus-pedidos"
@@ -211,16 +267,6 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
           </div>
         </section>
       ))}
-
-      {/* Acesso da equipe da feira. Quem não é da equipe vê um aviso ao entrar —
-          não há consulta nenhuma aqui, então isto não custa nada à tela. */}
-      {session && (
-        <div style={{ padding: "0.9rem 1rem 0", textAlign: "center" }}>
-          <Link href="/mercado/gerenciar" prefetch={false} style={{ fontSize: "0.74rem", color: "var(--text-muted)", textDecoration: "none" }}>
-            🔒 Área da feira
-          </Link>
-        </div>
-      )}
 
       {vendor.footer_note && (
         <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.45, padding: "1rem 1rem 1.5rem", background: "#F7FBF9" }}>

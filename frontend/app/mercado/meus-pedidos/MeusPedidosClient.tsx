@@ -27,6 +27,8 @@ type Order = {
   id: number;
   created_at: string;
   total: number;
+  // 'entregue' quando a feira confirma que o pedido foi retirado.
+  status?: string;
   market_order_items: Item[];
 };
 
@@ -63,7 +65,7 @@ export default function MeusPedidosClient() {
     // "na retirada".
     const withMark = await supabase
       .from("market_orders")
-      .select("id,created_at,total,market_order_items(id,product_name,variant_label,unit_label,quantity,line_total,added_at_pickup)")
+      .select("id,created_at,total,status,market_order_items(id,product_name,variant_label,unit_label,quantity,line_total,added_at_pickup)")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -71,7 +73,7 @@ export default function MeusPedidosClient() {
     const res = withMark.error
       ? await supabase
           .from("market_orders")
-          .select("id,created_at,total,market_order_items(id,product_name,variant_label,unit_label,quantity,line_total)")
+          .select("id,created_at,total,status,market_order_items(id,product_name,variant_label,unit_label,quantity,line_total)")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false })
           .limit(100)
@@ -172,6 +174,11 @@ export default function MeusPedidosClient() {
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
                       {items.length} {items.length === 1 ? "item" : "itens"} · toque para ver
                     </div>
+                    {order.status === "entregue" && (
+                      <span style={{ display: "inline-block", marginTop: 4, fontSize: "0.64rem", fontWeight: 800, color: "#065F46", background: "#DCFCE7", borderRadius: 4, padding: "2px 6px" }}>
+                        ✓ Entregue
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--green-dark)" }}>

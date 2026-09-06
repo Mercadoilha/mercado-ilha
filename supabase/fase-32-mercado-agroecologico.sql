@@ -436,7 +436,8 @@ values (
   'Feira Agroecológica da Gamboa',
   'Alimentos naturais, frutas, hortaliças e produtos do Kilombo Tenondé',
   'Feira de alimentos agroecológicos da Gamboa. Faça seu pedido pelo app e retire na feira.',
-  '56945619025',   -- ⚠️ número de PRUEBAS por ahora (cambiar por el da feira antes de abrir ao público)
+  '+56945619025',  -- ⚠️ número de PRUEBAS por ahora (cambiar por el da feira antes de abrir ao público).
+                   -- Número de outro país: SEMPRE com '+' e o código, senão o app assume Brasil e adiciona 55.
   'Praia da Argila — Casa Gêmeos Viva',
   'Todas as sextas-feiras',
   'Pedidos até quarta-feira, às 17h',   -- a feira é na sexta; o pedido fecha na quarta
