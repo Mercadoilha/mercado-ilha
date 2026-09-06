@@ -203,7 +203,7 @@ export default function MercadoClient({ catalog }: { catalog: Catalog }) {
             🛠️
           </span>
           <span style={{ flex: 1, lineHeight: 1.25 }}>
-            <span style={{ display: "block", fontSize: "0.92rem", fontWeight: 800 }}>Área da feira</span>
+            <span style={{ display: "block", fontSize: "0.92rem", fontWeight: 800 }}>Painel do administrador</span>
             <span style={{ display: "block", fontSize: "0.72rem", opacity: 0.95 }}>
               Catálogo, pedidos, caixa e equipe
             </span>
