@@ -1170,13 +1170,16 @@ incompleta (los custos operacionais no se reparten por sección: se dice en la p
 - `/mercado/meus-pedidos` — historial del comprador por mes, con total del mes.
 - `/mercado/gerenciar` — panel de la feira (Catálogo / Pedidos / Caixa / Ajustes / Equipe).
   El gate es la propia base: quien no es del equipo recibe vacío de `get_market_catalog_admin`.
-  **Acceso (2026-09-05, commit `959ed4d`)**: botón naranja destacado en `/mercado`, debajo del
+  **Acceso (2026-09-05, commit `959ed4d`)**: botón naranja destacado —rotulado **"Painel do
+  administrador"** desde 2026-09-06— en `/mercado`, debajo del
   encabezado verde. Solo lo ve el equipo: `is_market_admin(vendor_id)` se consulta DESPUÉS del
   render y se cachea en `sessionStorage` (`mercado_equipe_<user>_<vendor>`) → no toca la ruta
   estática ni el tiempo de apertura. Antes era un link gris al final de la lista, visible para
   cualquier usuario logueado.
 - Acceso desde el Início: `MercadoBanner.tsx`, entre la fila de pills y el grid, vía la prop
-  nueva `beforeGrid` de `ListingsFeed.tsx`. Config en `admin_settings.mercado_agro_button`;
+  nueva `beforeGrid` de `ListingsFeed.tsx`. **Rediseño 2026-09-06**: se eliminó la línea
+  superior "MERCADO" (redundante con el título), el nombre subió a 1.6rem y la flecha de
+  entrada de 30 a 42px. Config en `admin_settings.mercado_agro_button`;
   si la feira se pausa (`market_vendors.is_active = false`) el banner desaparece solo.
 - Carrito en `localStorage` (`lib/mercadoCart.ts`): recargar, salir o pasar por el login no lo
   borra. **Por eso el login se pide solo al ENVIAR** — nunca al agregar el primer ítem
@@ -1246,6 +1249,12 @@ habilitado en Supabase; `admin_settings.admin_whatsapp` con el número real; pri
 
 Registro cronológico de cierres de sesión (más reciente arriba). Detalle estructural de cada
 feature va en su sección numerada correspondiente; acá solo un resumen con fecha y commit.
+
+- **2026-09-06** — **Desplegado** (merge `botoes-mercado` → `main`). Retoques de rótulo y
+  legibilidad en los dos accesos al mercado: el botón del equipo pasa de "Área da feira" a
+  **"Painel do administrador"** (botón, `<h1>` y `metadata.title` de `/mercado/gerenciar`), y el
+  banner del Início pierde la línea "MERCADO" para agrandar el nombre y la flecha de entrada.
+  Solo estilos y texto: `/` y `/mercado` siguen `○ Static`, shared JS igual (87.7 kB).
 
 - **2026-09-06** — **Desplegado** (merge `pedidos-controle` → `main`). Primer uso real del
   mercado, tres arreglos: (1) el WhatsApp de la feira estaba guardado sin `+`, el app le

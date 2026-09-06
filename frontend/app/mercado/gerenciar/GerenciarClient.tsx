@@ -69,7 +69,7 @@ export default function GerenciarClient() {
     <div className="page-body">
       <div className="page-header">
         <BackButton fallbackHref="/mercado" />
-        <h1>Área da feira</h1>
+        <h1>Painel do administrador</h1>
       </div>
 
       {(loading || sessionLoading) && (

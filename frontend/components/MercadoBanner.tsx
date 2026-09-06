@@ -49,23 +49,15 @@ export default function MercadoBanner({ title, subtitle, badge }: Props) {
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.18em",
-            color: "var(--green-sea)", textTransform: "uppercase",
-          }}
-        >
-          Mercado
-        </div>
-        <div
-          style={{
             fontFamily: "Georgia, 'Iowan Old Style', 'Times New Roman', serif",
-            fontSize: "1.4rem", fontWeight: 700, color: "#fff", lineHeight: 1.15,
-            letterSpacing: "-0.01em", marginTop: 1,
+            fontSize: "1.6rem", fontWeight: 700, color: "#fff", lineHeight: 1.12,
+            letterSpacing: "-0.01em",
           }}
         >
           {title}
         </div>
         {subtitle && (
-          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.85)", marginTop: 4, lineHeight: 1.3 }}>
+          <div style={{ fontSize: "0.74rem", color: "rgba(255,255,255,0.9)", marginTop: 5, lineHeight: 1.3 }}>
             {subtitle}
           </div>
         )}
@@ -85,9 +77,9 @@ export default function MercadoBanner({ title, subtitle, badge }: Props) {
         <span
           aria-hidden="true"
           style={{
-            width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,0.18)",
+            width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.24)",
             color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "0.95rem", fontWeight: 700,
+            fontSize: "1.4rem", fontWeight: 700, lineHeight: 1,
           }}
         >
           →
