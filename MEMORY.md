@@ -1166,6 +1166,11 @@ incompleta (los custos operacionais no se reparten por sección: se dice en la p
 - `/mercado/meus-pedidos` — historial del comprador por mes, con total del mes.
 - `/mercado/gerenciar` — panel de la feira (Catálogo / Pedidos / Caixa / Ajustes / Equipe).
   El gate es la propia base: quien no es del equipo recibe vacío de `get_market_catalog_admin`.
+  **Acceso (2026-09-05, commit `959ed4d`)**: botón naranja destacado en `/mercado`, debajo del
+  encabezado verde. Solo lo ve el equipo: `is_market_admin(vendor_id)` se consulta DESPUÉS del
+  render y se cachea en `sessionStorage` (`mercado_equipe_<user>_<vendor>`) → no toca la ruta
+  estática ni el tiempo de apertura. Antes era un link gris al final de la lista, visible para
+  cualquier usuario logueado.
 - Acceso desde el Início: `MercadoBanner.tsx`, entre la fila de pills y el grid, vía la prop
   nueva `beforeGrid` de `ListingsFeed.tsx`. Config en `admin_settings.mercado_agro_button`;
   si la feira se pausa (`market_vendors.is_active = false`) el banner desaparece solo.
