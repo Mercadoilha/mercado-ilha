@@ -10,7 +10,10 @@ import type { CostCategory } from "./LancamentoSheet";
 const LancamentoSheet = dynamic(() => import("./LancamentoSheet"), { ssr: false });
 
 type Dashboard = {
+  // Só o que foi ENTREGUE (fase-39): pedido feito e não retirado não é caixa.
   pedidos_total: number; pedidos_count: number; ticket_medio: number;
+  // O que foi pedido e ainda espera retirada — informado, mas fora das contas.
+  pedidos_pendentes_total: number; pedidos_pendentes_count: number;
   vendas_total: number; vendas_count: number;
   custos_total: number; custos_count: number;
   receita_total: number;
@@ -142,11 +145,19 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
       {/* Resultado do período */}
       <div style={{ padding: "0.9rem 1rem", background: "#F7FBF9", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <Stat label="Pedidos do app" value={formatBRL(Number(data.pedidos_total))} sub={`${data.pedidos_count} ${data.pedidos_count === 1 ? "pedido" : "pedidos"}`} />
+          <Stat label="Pedidos entregues" value={formatBRL(Number(data.pedidos_total))} sub={`${data.pedidos_count} ${data.pedidos_count === 1 ? "pedido" : "pedidos"}`} />
           <Stat label="Vendas na feira" value={formatBRL(Number(data.vendas_total))} sub={`${data.vendas_count} ${data.vendas_count === 1 ? "lançamento" : "lançamentos"}`} />
           <Stat label="Custos" value={formatBRL(Number(data.custos_total))} sub={`${data.custos_count} ${data.custos_count === 1 ? "lançamento" : "lançamentos"}`} negative />
           <Stat label="Resultado de caixa" value={formatBRL(Number(data.resultado_caixa ?? 0))} sub={`ticket médio ${formatBRL(Number(data.ticket_medio))}`} highlight />
         </div>
+
+        {Number(data.pedidos_pendentes_count ?? 0) > 0 && (
+          <div style={{ marginTop: 8, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "0.6rem 0.75rem", fontSize: "0.76rem", color: "#92400E", lineHeight: 1.45 }}>
+            <strong>{formatBRL(Number(data.pedidos_pendentes_total ?? 0))}</strong> em{" "}
+            {data.pedidos_pendentes_count} {data.pedidos_pendentes_count === 1 ? "pedido ainda não entregue" : "pedidos ainda não entregues"}.
+            Não entra nestas contas até ser marcado como entregue, na aba Pedidos.
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button type="button" onClick={() => setSheet("venda")} className="btn" style={{ flex: 1, background: "var(--green-dark)", color: "#fff", fontSize: "0.82rem", fontWeight: 800 }}>

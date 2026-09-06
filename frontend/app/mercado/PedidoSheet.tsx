@@ -47,6 +47,8 @@ export default function PedidoSheet({
   const handleSend = () => {
     // Registro do pedido em segundo plano, no mesmo toque: se falhar, o cliente
     // manda o WhatsApp do mesmo jeito — só se perde a estatística.
+    // Reenviar não duplica: a base reconhece o mesmo carrinho da mesma pessoa
+    // dentro de 6h e devolve o pedido que já existe (fase-39).
     registerOrder({
       vendorId: vendor.id,
       cart,
@@ -103,7 +105,7 @@ export default function PedidoSheet({
 
           {sent && (
             <div style={{ background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: 10, padding: "0.7rem 0.85rem", marginBottom: 12, fontSize: "0.82rem", color: "#065F46", fontWeight: 600 }}>
-              Pedido enviado! Ele fica guardado aqui caso você precise reenviar.
+              Pedido enviado! Ele fica guardado aqui caso você precise reenviar — reenviar o mesmo pedido não gera um pedido repetido para a feira.
             </div>
           )}
 
