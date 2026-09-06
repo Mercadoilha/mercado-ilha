@@ -6,8 +6,10 @@ import { supabase } from "../../../lib/supabaseClient";
 import { formatBRL } from "../../../lib/mercadoCart";
 import { DOW_LABELS, PERIODS, periodRange, shortDate, type PeriodKey } from "./periodo";
 import type { CostCategory } from "./LancamentoSheet";
+import type { AdminSection } from "./types";
 
 const LancamentoSheet = dynamic(() => import("./LancamentoSheet"), { ssr: false });
+const CustosSheet = dynamic(() => import("./CustosSheet"), { ssr: false });
 
 type Dashboard = {
   // Só o que foi ENTREGUE (fase-39): pedido feito e não retirado não é caixa.
@@ -47,7 +49,14 @@ type Cost = { id: number; spent_on: string; amount: number; description: string;
 
 // O caixa da feira: o que entrou pelo app, o que se vendeu no balcão, o que se
 // gastou e o que sobrou. Tudo do período escolhido, numa consulta só.
-export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: number; onGoToCatalogo: () => void }) {
+export default function CaixaTab({
+  vendorId, sections, onGoToCatalogo, onCatalogReload,
+}: {
+  vendorId: number;
+  sections: AdminSection[];
+  onGoToCatalogo: () => void;
+  onCatalogReload: () => Promise<void>;
+}) {
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const range = useMemo(() => periodRange(period), [period]);
 
@@ -57,6 +66,7 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
   const [categories, setCategories] = useState<CostCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"venda" | "custo" | null>(null);
+  const [corrigir, setCorrigir] = useState(false);
   const [filling, setFilling] = useState(false);
   const [fillMsg, setFillMsg] = useState<string | null>(null);
 
@@ -167,6 +177,17 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
             + Custo
           </button>
         </div>
+
+        {/* Corrigir um custo que já foi gravado. O catálogo muda daqui em diante;
+            isto é para o custo que só se soube DEPOIS da venda. */}
+        <button
+          type="button"
+          onClick={() => setCorrigir(true)}
+          className="btn btn-outline btn-block"
+          style={{ marginTop: 8, fontSize: "0.78rem", fontWeight: 700, borderColor: "var(--border)", color: "#475569" }}
+        >
+          ✏️ Corrigir custos de um período
+        </button>
       </div>
 
       {/* Lucro: só sai quando a informação está completa. */}
@@ -426,6 +447,15 @@ export default function CaixaTab({ vendorId, onGoToCatalogo }: { vendorId: numbe
           defaultDate={range.to}
           onClose={() => setSheet(null)}
           onDone={async () => { setSheet(null); await load(); }}
+        />
+      )}
+
+      {corrigir && (
+        <CustosSheet
+          vendorId={vendorId}
+          sections={sections}
+          onClose={() => setCorrigir(false)}
+          onDone={async () => { await onCatalogReload(); await load(); }}
         />
       )}
     </div>

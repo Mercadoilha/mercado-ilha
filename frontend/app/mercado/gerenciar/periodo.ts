@@ -10,7 +10,7 @@ export const PERIODS: { key: PeriodKey; label: string }[] = [
   { key: "mes_passado", label: "Mês passado" },
 ];
 
-function ilhaToday(): string {
+export function ilhaToday(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Bahia" });
 }
 
