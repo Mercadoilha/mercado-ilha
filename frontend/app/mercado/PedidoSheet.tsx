@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import BottomSheet from "../../components/BottomSheet";
 import QtyStepper from "./QtyStepper";
 import { buildWaUrl } from "../../lib/whatsappUrl";
@@ -28,6 +28,10 @@ type Props = {
 export default function PedidoSheet({
   vendor, cart, index, total, sent, hasSession, customer, onQty, onClear, onSent, onLogin, onClose,
 }: Props) {
+  // "Limpar" pede confirmação: agora está à vista, no alto da lista, e um toque
+  // sem querer não pode apagar um carrinho inteiro.
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const rows = useMemo(
     () =>
       Object.entries(cart)
@@ -66,6 +70,49 @@ export default function PedidoSheet({
         </p>
       ) : (
         <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)" }}>
+              {rows.length} {rows.length === 1 ? "item" : "itens"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5, lineHeight: 1, cursor: "pointer",
+                border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C",
+                borderRadius: 999, padding: "6px 12px", fontSize: "0.75rem", fontWeight: 800,
+              }}
+            >
+              🗑 Limpar
+            </button>
+          </div>
+
+          {confirmClear && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "0.7rem 0.8rem", marginBottom: 12 }}>
+              <p style={{ fontSize: "0.78rem", color: "#991B1B", lineHeight: 1.4, margin: "0 0 8px" }}>
+                Limpar o pedido? Todos os itens saem da lista.
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmClear(false); onClear(); }}
+                  className="btn"
+                  style={{ flex: 1, background: "#DC2626", color: "#fff", fontSize: "0.8rem", fontWeight: 800 }}
+                >
+                  Sim, limpar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(false)}
+                  className="btn btn-ghost"
+                  style={{ flex: 1, fontSize: "0.8rem" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {rows.map(({ entry, qty }) => {
               const { variant, product } = entry!;
@@ -134,15 +181,6 @@ export default function PedidoSheet({
               O WhatsApp da feira ainda não foi configurado.
             </p>
           )}
-
-          <button
-            type="button"
-            onClick={onClear}
-            className="btn btn-ghost btn-block"
-            style={{ marginTop: 6, fontSize: "0.8rem" }}
-          >
-            Limpar pedido
-          </button>
         </>
       )}
     </BottomSheet>
